@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -58,6 +59,12 @@ namespace ColorGateBlast
                 return Input.mousePosition;
 #endif
             }
+        }
+
+        /// <summary>True when the pointer is on a UI element (buttons must not start block drags).</summary>
+        public static bool OverUi
+        {
+            get { return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(); }
         }
     }
 }
