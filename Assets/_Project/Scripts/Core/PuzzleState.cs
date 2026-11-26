@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace ColorGateBlast
 {
-    /// <summary>A turret waiting on the conveyor because it has ammo left but nothing it can currently hit.</summary>
+    /// <summary>A turret parked on the belt: it has ammo but nothing it can currently hit.</summary>
     public sealed class TurretInfo
     {
         public int color;
@@ -10,32 +10,47 @@ namespace ColorGateBlast
     }
 
     /// <summary>
-    /// Instantaneous abstraction of the whole game used by the level solver:
-    /// board + target core + the turrets that are still parked on the track.
-    /// Exiting a block spawns a turret with ammo = tile count, which immediately fires at every brick it can
-    /// reach; leftover ammo keeps the turret parked (occupying a track slot) until other turrets expose
-    /// bricks of its colour.
+    /// Instantaneous abstraction of the whole game used by the level solver: tray + monument + the turrets still
+    /// parked on the belt. A block leaving the tray spawns a turret with ammo = tile count that immediately shoots
+    /// everything it can; leftover ammo keeps it parked (occupying a slot). A turret of a colour that is already
+    /// parked MERGES into it (one slot, combined ammo) - the Mega-Turret rule.
     /// </summary>
     public sealed class PuzzleState
     {
         public readonly LevelDefinition Def;
         public readonly BoardModel Board;
-        public readonly CoreModel Core;
+        public readonly MonumentModel Monument;
         public readonly List<TurretInfo> Parked;
 
         public PuzzleState(LevelDefinition def)
         {
             Def = def;
             Board = new BoardModel(def);
-            Core = new CoreModel(def);
+            Monument = new MonumentModel(def);
             Parked = new List<TurretInfo>();
+        }
+
+        /// <summary>Snapshot of a LIVE game (used by the hint system). All arguments are cloned.</summary>
+        public PuzzleState(LevelDefinition def, BoardModel board, MonumentModel monument, List<TurretInfo> parked)
+        {
+            Def = def;
+            Board = board.Clone();
+            Monument = monument.Clone();
+            Parked = new List<TurretInfo>(parked.Count);
+            for (int i = 0; i < parked.Count; i++)
+            {
+                TurretInfo t = new TurretInfo();
+                t.color = parked[i].color;
+                t.ammo = parked[i].ammo;
+                Parked.Add(t);
+            }
         }
 
         private PuzzleState(PuzzleState o)
         {
             Def = o.Def;
             Board = o.Board.Clone();
-            Core = o.Core.Clone();
+            Monument = o.Monument.Clone();
             Parked = new List<TurretInfo>(o.Parked.Count);
             for (int i = 0; i < o.Parked.Count; i++)
             {
@@ -48,13 +63,25 @@ namespace ColorGateBlast
 
         public PuzzleState Clone() { return new PuzzleState(this); }
 
-        public bool TrackFull { get { return Parked.Count >= Def.maxTrackSlots; } }
+        public bool IsWon { get { return Board.RemainingMovable == 0 && Monument.AliveCount == 0; } }
 
-        public bool IsWon { get { return Board.ExitedCount == Board.BlockCount && Core.RemainingLayers == 0; } }
+        private bool HasParked(int color)
+        {
+            for (int i = 0; i < Parked.Count; i++) if (Parked[i].color == color) return true;
+            return false;
+        }
+
+        /// <summary>A block of this colour may leave if there is a free slot, or if its turret would merge.</summary>
+        public bool CanExit(int color)
+        {
+            return Def.UnlimitedTrack || Parked.Count < Def.maxTrackSlots || HasParked(color);
+        }
 
         public void GenerateMoves(List<Move> moves)
         {
-            Board.GenerateMoves(moves, !TrackFull);
+            bool[] allowed = new bool[4];
+            for (int c = 0; c < 4; c++) allowed[c] = CanExit(c);
+            Board.GenerateMoves(moves, allowed);
         }
 
         public void Apply(Move m)
@@ -65,12 +92,21 @@ namespace ColorGateBlast
                 return;
             }
 
-            BlockSpec spec = Def.blocks[m.block];
-            Board.ExitBlock(m.block);
-            TurretInfo t = new TurretInfo();
-            t.color = (int)spec.color;
-            t.ammo = spec.TileCount;
-            Parked.Add(t);
+            BlockInfo b = Board.Blocks[m.block];
+            Board.ExitBlock(m.block, null);
+            int color = (int)b.color;
+            bool merged = false;
+            for (int i = 0; i < Parked.Count; i++)
+            {
+                if (Parked[i].color == color) { Parked[i].ammo += b.Tiles; merged = true; break; }
+            }
+            if (!merged)
+            {
+                TurretInfo t = new TurretInfo();
+                t.color = color;
+                t.ammo = b.Tiles;
+                Parked.Add(t);
+            }
             Resolve();
         }
 
@@ -86,9 +122,9 @@ namespace ColorGateBlast
                     TurretInfo t = Parked[i];
                     while (t.ammo > 0)
                     {
-                        int b = Core.FindHit(t.color);
-                        if (b < 0) break;
-                        Core.Hit(b);
+                        int target = Monument.FindTarget(t.color);
+                        if (target < 0) break;
+                        Monument.Hit(target, null, null);
                         t.ammo--;
                         progress = true;
                     }
@@ -97,15 +133,15 @@ namespace ColorGateBlast
             for (int i = Parked.Count - 1; i >= 0; i--)
             {
                 TurretInfo t = Parked[i];
-                if (t.ammo <= 0 || Core.RemainingOfColor(t.color) == 0) Parked.RemoveAt(i);
+                if (t.ammo <= 0 || Monument.AliveOfColor(t.color) == 0) Parked.RemoveAt(i);
             }
         }
 
         public string Key()
         {
-            List<char> k = new List<char>(Board.BlockCount + Core.Bricks.Length + 8);
+            List<char> k = new List<char>(Board.BlockCount + Monument.Hp.Length + 8);
             Board.AppendKey(k);
-            Core.AppendKey(k);
+            Monument.AppendKey(k);
             List<int> p = new List<int>(Parked.Count);
             for (int i = 0; i < Parked.Count; i++) p.Add(Parked[i].color * 100 + Parked[i].ammo);
             p.Sort();

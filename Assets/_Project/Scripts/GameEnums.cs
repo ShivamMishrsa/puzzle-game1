@@ -1,38 +1,40 @@
 namespace ColorGateBlast
 {
-    /// <summary>Block / gate / turret / brick colour identity. Index doubles as palette index.</summary>
+    /// <summary>Gray = indestructible scrap-iron obstacle (never moves, never exits, no gate).</summary>
     public enum BlockColor
     {
         Red = 0,
         Blue = 1,
-        Green = 2,
-        Yellow = 3,
-        Purple = 4,
-        Orange = 5
+        Yellow = 2,
+        Gray = 3
     }
 
-    /// <summary>Side of the board (for gates) or of the target core (for turret firing lanes).</summary>
-    public enum Side
+    /// <summary>Which edge of the tray a gate is on = the direction a block moves to leave through it.</summary>
+    public enum GateDirection
     {
-        Top = 0,
-        Right = 1,
-        Bottom = 2,
-        Left = 3
+        Up = 0,
+        Down = 1,
+        Left = 2,
+        Right = 3
     }
 
-    /// <summary>Special behaviour of a block. Exclusive per block.</summary>
-    public enum BlockKind
+    public enum GameState
     {
-        Normal = 0,
-        /// <summary>Frozen until <c>iceThawExits</c> blocks have left the board.</summary>
-        Ice = 1,
-        /// <summary>When this block leaves the board all locked gates open.</summary>
-        Key = 2,
-        /// <summary>Colour is hidden until the block is first touched (visual only).</summary>
-        Mystery = 3
+        Preparing,
+        Playing,
+        Won,
+        Lost
     }
 
-    /// <summary>Movement restriction of a block ("Directional-Only" blocks).</summary>
+    public enum BlockShape
+    {
+        /// <summary>width x height rectangle.</summary>
+        Rect,
+        /// <summary>3-tile L inside a 2x2 box; <c>rotation</c> picks the missing corner.</summary>
+        L
+    }
+
+    /// <summary>"Directional arrow" blocks may only slide along one axis.</summary>
     public enum MoveAxis
     {
         Free = 0,
@@ -40,25 +42,34 @@ namespace ColorGateBlast
         Vertical = 2
     }
 
+    /// <summary>The destructible pieces of the Retro Alarm Clock monument.</summary>
+    public enum PartType
+    {
+        Casing,
+        Bell,
+        Hand,
+        Gear,
+        Glass,
+        /// <summary>TNT box (alarm clock) / TNT capacitor (cassette player).</summary>
+        Tnt,
+        // ---- Chapter 2: Retro Cassette Player ----
+        Door,
+        Cassette,
+        Pcb,
+        Button
+    }
+
+    /// <summary>Which 3D monument a level disassembles.</summary>
+    public enum MonumentKind
+    {
+        AlarmClock = 0,
+        CassettePlayer = 1
+    }
+
     public enum LevelTier
     {
         Normal = 0,
         MiniBoss = 1,
         ChapterBoss = 2
-    }
-
-    public enum Difficulty
-    {
-        Easy = 0,
-        Medium = 1,
-        Hard = 2
-    }
-
-    public enum GameState
-    {
-        Loading,
-        Playing,
-        Won,
-        Failed
     }
 }

@@ -1,22 +1,26 @@
 # Color Gate Blast
 
-Hybrid-casual puzzle for Android (Unity 6.3 LTS, URP, portrait 1080x1920).
-Slide polyomino blocks into the matching-colour gate on the board border. Each block that leaves becomes a
-turret (ammo = tile count) on the outer conveyor and shoots matching shield bricks on the Target Core.
+Hybrid-casual ASMR puzzle for Android (Unity 6.3 LTS, URP, portrait 1080x1920).
+Slide blocks into the matching-colour gate on the tray border. Each block that leaves becomes a turret (ammo = tile
+count) on the conveyor and shoots the matching parts of a 3D monument (alarm clock, cassette player, ...), which
+physically falls apart. Same-colour turrets merge into a laser Mega-Turret.
 
-## Open and play Level 1
-1. Install Unity 6.3 LTS (6000.3.x) with Android Build Support, then add this folder in Unity Hub.
-2. Menu **Tools > Color Gate Blast > Setup Main Scene** (builds camera, light, board, conveyor, core, UI).
-3. Menu **Tools > Color Gate Blast > Generate Starter Levels 1-10**.
-4. Set the Game view to **1080 x 1920 (Portrait)** and press **Play**.
+## Status
+- [x] Engine-free rules core: tray (gates, obstacles, ice, peeled blocks, shutters), monument model, turret
+      merging, solver (BFS + weighted best-first) - `Assets/_Project/Scripts/Core`
+- [x] Levels, one class per level in `Assets/_Project/Editor/Levels`, every one proven winnable within its move limit
+- [ ] Unity runtime (3D visuals, physics, audio, UI, ads, hints) and one-click scene setup
+- [ ] Authentication / security / database (after game + levels)
 
-Other tools: **Verify All Levels (re-solve)** and **Configure Android (API 36, AAB)**.
+## Levels
+| Chapter | Levels | Monument | New mechanics |
+|---|---|---|---|
+| 1 | 1-10 | Retro Alarm Clock | gates, turret merging, scrap iron, TNT, L-shapes |
+| 2 | 11-20 | Retro Cassette Player | ice, peeled (dual-layer) blocks, shutter gates |
 
-## Layout
-- `Assets/_Project/Scripts/` runtime game code. `Core/` is UnityEngine-free rules code (board, core, solver state).
-- `Assets/_Project/Editor/` level generator (sawtooth difficulty), solver (BFS + weighted best-first), menus.
-- `Assets/_Project/Resources/Levels/` generated `LevelData` assets.
+## Verify levels without Unity
+See `Tools~/LevelVerifier/README.md`.
 
-## Roadmap
-Levels are built in parts of 10 (1-10, 11-20, ...) up to 150. Authentication, security and a database come after
-the game and levels are done.
+## In Unity
+`Tools > Color Gate Blast > Generate Levels 1-10` (and `11-20`) writes `Resources/Levels/Level_NNN.asset`, saving a
+level only if the solver proves it winnable in its move limit. `Verify All Levels (solver)` re-checks them.
