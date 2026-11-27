@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(53, "Prism Chain", 7, 7, 13, 5, LevelTier.Normal, "Both prisms turn Green on odd exits - send them out together to merge!");
+            LevelDefinition d = Make(53, "Prism Chain", 7, 7, 12, 5, LevelTier.Normal, "Both prisms turn Green on odd exits - send them out together to merge!");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Rect(G, 2, 2, 4, 2));
             d.placements.Add(Rect(B, 2, 2, 3, 4));
