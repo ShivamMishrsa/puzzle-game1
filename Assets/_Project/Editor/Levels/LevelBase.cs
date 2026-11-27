@@ -14,6 +14,7 @@ namespace ColorGateBlast.EditorTools
         protected const BlockColor Y = BlockColor.Yellow;
         protected const BlockColor X = BlockColor.Gray;
         protected const BlockColor G = BlockColor.Green;
+        protected const BlockColor P = BlockColor.Purple;
 
         protected const GateDirection Up = GateDirection.Up;
         protected const GateDirection Down = GateDirection.Down;
@@ -94,6 +95,17 @@ namespace ColorGateBlast.EditorTools
         /// <summary>Colour-shifting prism block: starts as cycle[0] and advances one step on every block exit.</summary>
         protected static Placement Prism(Placement p, params BlockColor[] cycle) { p.cycle = cycle; p.color = cycle[0]; return p; }
 
+        /// <summary>Crated mystery block: the colour passed to Rect/Ell is the colour revealed when a neighbour leaves.</summary>
+        protected static Placement Crate(Placement p) { p.crate = true; return p; }
+
+        /// <summary>Typewriter carriage row: after every exit, blocks lying inside row <paramref name="row"/> slide one tile (dir +1 right, -1 left).</summary>
+        protected static CarriageSpec Carriage(int row, int dir)
+        {
+            CarriageSpec c = new CarriageSpec();
+            c.row = row; c.dir = dir;
+            return c;
+        }
+
         /// <summary>Electromagnet pad at (x, y) that pulls a resting neighbour one tile in direction <paramref name="pull"/>.</summary>
         protected static MagnetSpec Magnet(int x, int y, GateDirection pull)
         {
@@ -124,7 +136,7 @@ namespace ColorGateBlast.EditorTools
             LevelDefinition d = new LevelDefinition();
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
-            d.monument = id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
+            d.monument = id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -169,6 +181,15 @@ namespace ColorGateBlast.EditorTools
                         {
                             mask = MaskOf(d, PartType.GroupHead);
                             if (mask == 0) mask = MaskOf(d, PartType.Boiler);
+                        }
+                        break;
+                    case MonumentKind.Typewriter:
+                        // stage 2 (typebar basket, ribbon spools) sits behind the hood; stage 3 (rack, springs, TNT) behind the typebars
+                        if (p.type == PartType.Typebar || p.type == PartType.Ribbon) mask = MaskOf(d, PartType.Hood);
+                        else if (p.type == PartType.Rack || p.type == PartType.Spring || p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Typebar);
+                            if (mask == 0) mask = MaskOf(d, PartType.Hood);
                         }
                         break;
                     case MonumentKind.TlrCamera:
