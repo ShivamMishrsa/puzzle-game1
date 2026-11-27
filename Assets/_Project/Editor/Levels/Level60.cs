@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(60, "TLR Camera Finale", 7, 7, 19, 4, LevelTier.ChapterBoss, "Rotate the camera for the rear bolts. Time the prisms, open the padlock, blow the film chamber!");
+            LevelDefinition d = Make(60, "TLR Camera Finale", 7, 7, 17, 4, LevelTier.ChapterBoss, "Rotate the camera for the rear bolts. Time the prisms, open the padlock, blow the film chamber!");
             d.showRotateHint = true;
             d.reward = "Chapter 6 Complete: Vintage TLR Camera Dismantled! Camera trophy placed on your workshop shelf.";
             d.placements.Add(Scrap(1, 2, 3, 3));
