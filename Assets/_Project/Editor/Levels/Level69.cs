@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(69, "Ink and Iron", 7, 7, 25, 4, LevelTier.Normal, "Ice, crates, carriages and magnets - read the whole board before you move!");
+            LevelDefinition d = Make(69, "Ink and Iron", 7, 7, 22, 4, LevelTier.Normal, "Ice, crates, carriages and magnets - read the whole board before you move!");
             d.carriages.Add(Carriage(1, 1));
             d.magnets.Add(Magnet(4, 3, Right));
             d.placements.Add(Scrap(2, 2, 2, 3));
