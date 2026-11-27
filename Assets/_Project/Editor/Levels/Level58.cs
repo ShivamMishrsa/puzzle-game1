@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(58, "Exposed Film Spools", 7, 7, 15, 5, LevelTier.Normal, "The shell is already gone - shoot the iris, spools and gears. Twin TNT inside!");
+            LevelDefinition d = Make(58, "Exposed Film Spools", 7, 7, 13, 5, LevelTier.Normal, "The shell is already gone - shoot the iris, spools and gears. Twin TNT inside!");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 5, 1));
             d.placements.Add(Rect(Y, 2, 2, 0, 3));
