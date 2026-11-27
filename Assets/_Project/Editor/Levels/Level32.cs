@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(32, "Piercing Showcase", 6, 6, 17, 5, LevelTier.Normal, "Brass gears frame the top gate: green shots pierce the lid and the dome behind it!");
+            LevelDefinition d = Make(32, "Piercing Showcase", 6, 6, 10, 5, LevelTier.Normal, "Brass gears frame the top gate: green shots pierce the lid and the dome behind it!");
             d.placements.Add(Scrap(1, 1, 2, 3));
             d.placements.Add(Scrap(1, 1, 3, 2));
             d.placements.Add(Rect(Y, 2, 2, 3, 3));
