@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -944,7 +944,7 @@ namespace ColorGateBlast
                 while (go != null && s < 1f)
                 {
                     s += Time.deltaTime / 0.3f;
-                    go.transform.localScale = sc * (1f - s);
+                    go.transform.localScale = sc * (1f - Mathf.Clamp01(s));
                     yield return null;
                 }
                 if (go != null) Destroy(go);

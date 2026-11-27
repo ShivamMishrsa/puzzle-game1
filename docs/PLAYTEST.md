@@ -1,7 +1,13 @@
-# Playtest checklist (Unity Editor)
+﻿# Playtest checklist (Unity Editor)
 
 What the solver already proved (`Tools~/LevelVerifier`): every level 1-40 is **winnable within its move limit**.
 What only a human in Unity can confirm: how it **looks, sounds and feels**. Tick these off.
+
+## Automated play-through (already done)
+An autoplay bot (`Assets/_Project/Scripts/Testing/AutoPlayer.cs`) plays every level inside Unity's Play Mode: it asks the solver for the next move from the LIVE game state, performs it through the real drag code, waits for turrets / projectiles / monument to settle, and repeats until the level ends. Result with Unity 6000.3.29f1: **all 40 levels WON, 0 errors, 0 warnings.** Re-run it:
+```powershell
+& 'C:\Program Files\Unity\Hub\Editor\6000.3.29f1\Editor\Unity.exe' -batchmode -nographics -projectPath <project> -executeMethod ColorGateBlast.EditorTools.AutoPlayLauncher.Run -cgbBot [-cgbFrom 1 -cgbTo 40]
+```n(Run Setup Phase 1 once first so the scene and level assets exist.) It proves the game logic end to end; it cannot judge how things look or sound.
 
 ## Quick start (4 steps)
 1. Open the folder in Unity 6.3 LTS; wait for packages; fix any red Console error first.

@@ -84,6 +84,7 @@ namespace ColorGateBlast
 
         public void Clear()
         {
+            StopAllCoroutines(); // door / key-flight animations must not outlive the objects they animate
             dragging = -1;
             if (root != null) Destroy(root.gameObject);
             root = null;
@@ -423,12 +424,14 @@ namespace ColorGateBlast
             float t = 0f, dur = open ? 0.35f : 0.16f; // opens smoothly, slams shut
             while (t < 1f)
             {
+                if (door == null) yield break;
                 t += Time.deltaTime / dur;
                 float e = open ? 1f - (1f - t) * (1f - t) : t * t * t;
                 door.position = Vector3.Lerp(p0, pos, e);
                 door.localScale = Vector3.Lerp(s0, scale, e);
                 yield return null;
             }
+            if (door == null) yield break;
             door.position = pos;
             door.localScale = scale;
             if (!open && FXManager.Instance != null) FXManager.Instance.Sparks(pos + new Vector3(0f, 0.3f, 0f), 6);
@@ -582,6 +585,45 @@ namespace ColorGateBlast
             }
         }
 
+        /// <summary>
+        /// Performs a move exactly like a finished drag would (cell-by-cell stepping, warps, exits, move count).
+        /// Used by the autoplay test bot; returns false if the move could not be completed.
+        /// </summary>
+        public bool AutoMove(Move m)
+        {
+            if (board == null || views == null || m.block < 0 || m.block >= views.Length) return false;
+            int i = m.block;
+            if (views[i] == null || board.Exited[i] || board.Dormant[i] || board.Blocks[i].IsObstacle || board.Ice[i] > 0) return false;
+
+            dragging = i;
+            startPos = board.Pos[i];
+            dragExited = false;
+            Int2 dir = Dirs.Of(m.dir);
+            Int2 cur = board.Pos[i];
+            for (int guard = 0; guard < 64; guard++)
+            {
+                if (!m.exit && cur == m.to) break;
+                StepResult r = board.Probe(i, cur, dir);
+                if (r == StepResult.Blocked) break;
+                if (r == StepResult.Exit)
+                {
+                    if (!m.exit || (CanExit != null && !CanExit(board.Blocks[i].color))) { dragging = -1; HidePreview(); return false; }
+                    DoExit(i, dir);
+                    return true;
+                }
+                Int2 landing = board.Land(i, cur, dir);
+                bool warped = landing != cur + dir;
+                Int2 before = cur;
+                cur = landing;
+                board.Commit(i, cur);
+                if (warped) WarpEffect(i, before + dir, cur);
+                else views[i].SetTarget(CellWorld(cur));
+            }
+            bool reached = board.Pos[i] == m.to;
+            EndDrag();
+            return reached;
+        }
+
         private void DoExit(int i, Int2 dir)
         {
             BlockView view = views[i];
@@ -665,6 +707,7 @@ namespace ColorGateBlast
             float t = 0f;
             while (t < 1f)
             {
+                if (key == null) yield break;
                 t += Time.deltaTime / 0.7f;
                 float e = Mathf.Clamp01(t);
                 Vector3 p = Vector3.Lerp(start, to, e);
@@ -673,7 +716,7 @@ namespace ColorGateBlast
                 key.transform.Rotate(0f, 540f * Time.deltaTime, 0f, Space.World);
                 yield return null;
             }
-            Destroy(key);
+            if (key != null) Destroy(key);
             if (FXManager.Instance != null) FXManager.Instance.GoldSparks(to, 28);
             if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PadlockSnap);
             if (gv.lockVisual != null)
