@@ -7,12 +7,16 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(13, "Peeled Core", 6, 6, 16, 5, LevelTier.Normal, "The stripe shows what is inside: the yellow block leaves a blue core behind!");
-            d.placements.Add(Peeled(Rect(Y, 2, 1, 1, 1), B));
-            d.placements.Add(Ice(Rect(B, 1, 2, 3, 1), 1));
-            d.placements.Add(Rect(R, 1, 2, 1, 2));
-            d.placements.Add(Rect(B, 1, 1, 0, 3));
-            d.placements.Add(Rect(R, 1, 1, 3, 0));
+            LevelDefinition d = Make(13, "Peeled Core", 7, 7, 21, 5, LevelTier.Normal, "The stripe shows what is inside: the yellow block leaves a blue core behind!");
+            d.placements.Add(Rect(R, 1, 2, 5, 3));
+            d.placements.Add(Rect(Y, 2, 1, 3, 0));
+            d.placements.Add(Rect(B, 2, 1, 2, 2));
+            d.placements.Add(Peeled(Rect(Y, 2, 1, 2, 5), B));
+            d.placements.Add(Ice(Rect(B, 1, 2, 0, 1), 1));
+            d.placements.Add(Rect(R, 1, 2, 6, 4));
+            d.placements.Add(Rect(B, 1, 1, 1, 5));
+            d.placements.Add(Rect(B, 1, 1, 4, 5));
+            d.placements.Add(Rect(R, 1, 1, 5, 1));
             d.gates.Add(Gate(Down, 1, 2, Y));
             d.gates.Add(Gate(Up, 3, 1, B));
             d.gates.Add(Gate(Left, 0, 3, B));
