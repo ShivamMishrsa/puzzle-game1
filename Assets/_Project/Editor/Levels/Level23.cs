@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(23, "Steel Guide Rails", 6, 6, 16, 5, LevelTier.Normal, "Rail blocks only slide along their steel guide. Arrows show the direction.");
+            LevelDefinition d = Make(23, "Steel Guide Rails", 6, 6, 12, 5, LevelTier.Normal, "Rail blocks only slide along their steel guide. Arrows show the direction.");
             d.placements.Add(Scrap(1, 1, 2, 3));
             d.placements.Add(Scrap(1, 1, 3, 2));
             d.placements.Add(Rect(B, 2, 2, 4, 2));
