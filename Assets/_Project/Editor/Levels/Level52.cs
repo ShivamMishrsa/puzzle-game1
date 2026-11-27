@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(52, "Electromagnet Assist", 6, 6, 10, 5, LevelTier.Normal, "Magnet pads pull a block that rests next to them one tile - for free!");
+            LevelDefinition d = Make(52, "Electromagnet Assist", 6, 6, 8, 5, LevelTier.Normal, "Magnet pads pull a block that rests next to them one tile - for free!");
             d.placements.Add(Scrap(1, 2, 2, 2));
             d.placements.Add(Rect(R, 2, 2, 2, 0));
             d.placements.Add(Rect(B, 1, 2, 0, 3));
