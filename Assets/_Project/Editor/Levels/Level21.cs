@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(21, "Emerald Key", 6, 6, 15, 5, LevelTier.Normal, "Green leaves only through the padlocked gate - send the brass key block out first! Drag the phone to spin it.");
+            LevelDefinition d = Make(21, "Emerald Key", 6, 6, 11, 5, LevelTier.Normal, "Green leaves only through the padlocked gate - send the brass key block out first! Drag the phone to spin it.");
             d.showRotateHint = true;
             d.placements.Add(Scrap(1, 1, 2, 3));
             d.placements.Add(Scrap(1, 1, 3, 2));
