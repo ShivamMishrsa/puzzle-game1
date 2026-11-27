@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(63, "Carriage Portal", 7, 7, 18, 5, LevelTier.Normal, "The carriage rolls the green block onto the pad - it warps across the tray!");
+            LevelDefinition d = Make(63, "Carriage Portal", 7, 7, 16, 5, LevelTier.Normal, "The carriage rolls the green block onto the pad - it warps across the tray!");
             d.carriages.Add(Carriage(2, 1));
             d.portals.Add(Pad(0, 3, 2, 5, 6));
             d.placements.Add(Scrap(1, 1, 1, 4));
