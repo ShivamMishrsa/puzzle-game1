@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(37, "Peeled Through the Portal", 7, 7, 19, 5, LevelTier.Normal, "A 2x1 block cannot warp. Peel it first - its 1x1 core can!");
+            LevelDefinition d = Make(37, "Peeled Through the Portal", 7, 7, 11, 5, LevelTier.Normal, "A 2x1 block cannot warp. Peel it first - its 1x1 core can!");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Peeled(Rect(Y, 2, 1, 1, 5), R));
             d.placements.Add(Rect(R, 2, 2, 3, 0));
