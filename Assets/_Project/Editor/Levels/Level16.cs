@@ -7,11 +7,16 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(16, "Domino Cascade", 6, 6, 12, 5, LevelTier.Normal, "Slide the central blue block out: three ice shells crack and the shutter opens!");
+            LevelDefinition d = Make(16, "Domino Cascade", 7, 7, 14, 5, LevelTier.Normal, "Slide the central blue block out: three ice shells crack and the shutter opens!");
+            d.placements.Add(Rect(B, 2, 2, 2, 0));
             d.placements.Add(Rect(B, 2, 2, 2, 2));
+            d.placements.Add(Ell(R, 3, 5, 2));
+            d.placements.Add(Rect(B, 1, 2, 6, 5));
+            d.placements.Add(Rect(R, 2, 1, 2, 5));
+            d.placements.Add(Ice(Rect(R, 1, 2, 4, 4), 1));
             d.placements.Add(Ice(Rect(R, 1, 2, 1, 2), 1));
-            d.placements.Add(Ice(Rect(R, 1, 2, 4, 2), 1));
-            d.placements.Add(Ice(Rect(R, 2, 1, 2, 4), 1));
+            d.placements.Add(Ice(Rect(R, 2, 1, 0, 0), 1));
+            d.placements.Add(Rect(R, 1, 1, 0, 3));
             d.gates.Add(Gate(Down, 2, 2, B));
             d.gates.Add(Shutter(Left, 2, 2, R, false));
             d.gates.Add(Gate(Right, 2, 2, R));
