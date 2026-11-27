@@ -25,7 +25,7 @@ namespace ColorGateBlast
         private Transform head;
         private TextMesh badge;
         private Transform badgeT;
-        private LineRenderer laser;
+        private LineRenderer laser, laserCore;
         private float armTimer = 0.7f;
         private float fireTimer;
         private float spawnT;
@@ -62,8 +62,17 @@ namespace ColorGateBlast
 
             Material body = GameMaterials.ForBlock(color);
             Material glow = GameMaterials.Glow(color);
-            Prims.Make("Base", transform, Prims.Cylinder, GameMaterials.Gunmetal, new Vector3(0, 0.1f, 0), new Vector3(0.9f, 0.1f, 0.9f));
+            // circular swivel base: steel plate, gunmetal bearing ring and six bolt heads
+            Prims.Make("Base", transform, Prims.Cylinder, GameMaterials.Steel, new Vector3(0, 0.06f, 0), new Vector3(1.0f, 0.06f, 1.0f));
+            Prims.Make("Bearing", transform, Prims.Cylinder, GameMaterials.Gunmetal, new Vector3(0, 0.14f, 0), new Vector3(0.84f, 0.08f, 0.84f));
+            for (int b = 0; b < 6; b++)
+            {
+                float a = b * 60f * Mathf.Deg2Rad;
+                Prims.Make("Bolt" + b, transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(Mathf.Cos(a) * 0.44f, 0.115f, Mathf.Sin(a) * 0.44f), new Vector3(0.07f, 0.025f, 0.07f));
+            }
             Prims.Make("Body", transform, Prims.Cylinder, body, new Vector3(0, 0.38f, 0), new Vector3(0.72f, 0.18f, 0.72f));
+            for (int v = 0; v < 3; v++)
+                Prims.Make("Vent" + v, transform, Prims.Cube, GameMaterials.Rubber, new Vector3(-0.2f + v * 0.2f, 0.4f, -0.365f), new Vector3(0.1f, 0.12f, 0.02f));
             Prims.Make("Ring", transform, Prims.Cylinder, glow, new Vector3(0, 0.22f, 0), new Vector3(0.8f, 0.03f, 0.8f));
             head = new GameObject("Head").transform;
             head.SetParent(transform, false);
@@ -92,8 +101,16 @@ namespace ColorGateBlast
             laser.positionCount = 2;
             laser.startWidth = 0.14f;
             laser.endWidth = 0.05f;
-            laser.sharedMaterial = GameMaterials.UnlitGlow(GameMaterials.ColorOf(Color), 3f);
+            laser.sharedMaterial = GameMaterials.UnlitGlow(GameMaterials.NeonOf(Color), 3.2f);
             laser.enabled = false;
+            GameObject cg = new GameObject("LaserCore");
+            cg.transform.SetParent(lg.transform, false);
+            laserCore = cg.AddComponent<LineRenderer>();
+            laserCore.positionCount = 2;
+            laserCore.startWidth = 0.05f;
+            laserCore.endWidth = 0.02f;
+            laserCore.sharedMaterial = GameMaterials.UnlitGlow(new Color(1f, 1f, 1f), 5f);
+            laserCore.enabled = false;
         }
 
         public void AddAmmo(int n)
@@ -114,6 +131,7 @@ namespace ColorGateBlast
             if (finished) return;
             finished = true;
             if (laser != null) laser.enabled = false;
+            if (laserCore != null) laserCore.enabled = false;
             StartCoroutine(DespawnRoutine());
         }
 
@@ -189,12 +207,13 @@ namespace ColorGateBlast
             // fire
             if (armTimer > 0f) { armTimer -= dt; return; }
             fireTimer -= dt;
-            if (fireTimer > 0f) { if (laser != null && fireTimer < 0.05f) laser.enabled = false; return; }
+            if (fireTimer > 0f) { if (laser != null && fireTimer < 0.05f) { laser.enabled = false; if (laserCore != null) laserCore.enabled = false; } return; }
 
             int part = monument != null ? monument.FindTarget((int)Color) : -1;
             if (part < 0 || Ammo <= 0)
             {
                 if (laser != null) laser.enabled = false;
+                if (laserCore != null) laserCore.enabled = false;
                 // a pinned plate of my colour deflects shots: harmless metallic ping (no ammo spent)
                 int pinned = (Ammo > 0 && monument != null) ? monument.FindDeflectedPlate((int)Color) : -1;
                 if (pinned >= 0 && Time.time > nextPing)
@@ -225,6 +244,18 @@ namespace ColorGateBlast
                     laser.enabled = true;
                     laser.SetPosition(0, muzzle);
                     laser.SetPosition(1, tp);
+                    if (laserCore != null)
+                    {
+                        laserCore.enabled = true;
+                        laserCore.SetPosition(0, muzzle);
+                        laserCore.SetPosition(1, tp);
+                    }
+                    if (FXManager.Instance != null)
+                    {
+                        FXManager.Instance.Burst(FxKind.Spark, tp, 3, GameMaterials.NeonOf(Color), 3.5f, 0.8f);
+                        if (Random.value < 0.25f) FXManager.Instance.Burst(FxKind.Smoke, muzzle, 1, new Color(0.7f, 0.7f, 0.72f, 0.6f), 0.8f, 1f);
+                        if (Random.value < 0.15f) FXManager.Instance.Burst(FxKind.Splinter, tp, 2, GameMaterials.ColorOf(Color), 3f, 0.7f);
+                    }
                 }
                 if (SoundSynth.Instance != null) SoundSynth.Instance.Play(IsMega ? Sfx.Laser : Sfx.TurretShoot, IsMega ? Random.Range(0.95f, 1.1f) : Random.Range(0.9f, 1.15f), IsMega ? 0.5f : 0.6f);
             }

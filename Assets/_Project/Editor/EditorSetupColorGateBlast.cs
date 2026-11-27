@@ -51,7 +51,7 @@ namespace ColorGateBlast.EditorTools
             camGo.AddComponent<AudioListener>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.07f, 0.06f, 0.06f);
-            cam.fieldOfView = 45f;
+            cam.fieldOfView = 38f; // Photorealistic Workshop rig: WorkshopCameraRig re-frames it for every level at runtime
             camGo.transform.position = new Vector3(0f, 22f, -12f);
             camGo.transform.LookAt(new Vector3(0f, 0.8f, 0.9f));
             UniversalAdditionalCameraData camData = camGo.AddComponent<UniversalAdditionalCameraData>();
@@ -59,14 +59,14 @@ namespace ColorGateBlast.EditorTools
             camData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
 
             // ---- soft directional light + warm ambient ----
-            GameObject lightGo = new GameObject("Directional Light");
+            GameObject lightGo = new GameObject("WorkshopKeyLight");
             Light light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.35f;
-            light.color = new Color(1f, 0.95f, 0.86f);
+            light.intensity = 1.5f;
+            light.color = new Color(1f, 0.93f, 0.8f);
             light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.8f;
-            lightGo.transform.rotation = Quaternion.Euler(58f, -28f, 0f);
+            light.shadowStrength = 0.75f;
+            lightGo.transform.rotation = Quaternion.LookRotation(new Vector3(-0.42f, -0.82f, -0.38f), Vector3.up);
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.36f, 0.35f, 0.4f);
             RenderSettings.skybox = null;
@@ -94,6 +94,10 @@ namespace ColorGateBlast.EditorTools
             progressor.sound = sound;
             progressor.ads = ads;
             progressor.cam = cam;
+            // the Photorealistic Workshop style pipeline: identical camera framing, props and lighting for EVERY LevelData
+            progressor.gameObject.AddComponent<WorkshopCameraRig>();
+            progressor.gameObject.AddComponent<WorkshopEnvironmentBuilder>();
+            progressor.gameObject.AddComponent<WorkshopLightingSetup>();
 
             // bind every generated LevelData asset
             string[] guids = AssetDatabase.FindAssets("t:LevelData", new[] { Root + "/Resources/Levels" });
@@ -102,10 +106,7 @@ namespace ColorGateBlast.EditorTools
             found.Sort(delegate (LevelData a, LevelData b) { return a.LevelNumber.CompareTo(b.LevelNumber); });
             progressor.levels = found.ToArray();
 
-            // ---- HUD ----
-            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            ui.BuildUI(rounded);
-            EditorUtility.SetDirty(ui);
+            // ---- HUD: the riveted industrial HUD is generated at runtime by UIManager (HudSkin), nothing to serialize ----
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -231,12 +232,12 @@ namespace ColorGateBlast.EditorTools
 
                 Bloom bloom = profile.Add<Bloom>(true);
                 bloom.intensity.Override(0.8f);
-                bloom.threshold.Override(1.0f);
+                bloom.threshold.Override(0.95f);
                 bloom.scatter.Override(0.65f);
                 AssetDatabase.AddObjectToAsset(bloom, profile);
 
                 Vignette vig = profile.Add<Vignette>(true);
-                vig.intensity.Override(0.28f);
+                vig.intensity.Override(0.22f);
                 vig.smoothness.Override(0.5f);
                 AssetDatabase.AddObjectToAsset(vig, profile);
 

@@ -15,6 +15,21 @@ physically falls apart. Same-colour turrets merge into a laser Mega-Turret.
 
 See `docs/PLAYTEST.md` for the in-Unity checklist (what the solver cannot prove: look, sound, feel).
 
+## Photorealistic ASMR Workshop style (every level)
+One look for every `LevelData` (1-40 today, 41-150 automatically): `Assets/_Project/Scripts/Visuals`
+- `WorkshopCameraRig` - FOV 38, pitch 58, 9:16; solves distance + look-at so the single rounded conveyor loop (monument on top,
+  riveted tray below) fills the screen between a 12 % top HUD clearance and a 15 % bottom margin.
+- `WorkshopEnvironmentBuilder` - scratched walnut plank bench with grain normal map, coffee mug (top-left), bit kit +
+  black/yellow flathead screwdriver (top-right), 18 scattered wood screws / washers.
+- `WorkshopLightingSetup` - warm soft-shadow key light (falls bottom-left), cool rim light, runtime URP volume: bloom 0.95,
+  depth of field, vignette 0.22, ACES.
+- `HudSkin` + `UIManager` - embossed LEVEL title, riveted steel MOVES / REMAINING plaques with badges, Track Capacity LED
+  pips, Restart plaque, pliers + gear medallions with padlock badges (rewarded-ad gated, test ids only).
+- Materials in `GameMaterials`: block colours #B8332A / #2E649E / #C9A236 / #1E825C (metallic 0.45, smooth 0.58),
+  scrap iron #5A5856 with rust, gunmetal riveted tray, U-bracket gates with neon chevrons + coloured point light,
+  brushed-steel belt with scrolling dashed centre line.
+- Pliers booster: rewarded ad, then tap any tray piece to snip it off. Drag arrow: a coloured floor arrow points into the open gate.
+
 ## Levels
 | Chapter | Levels | Monument | New mechanics |
 |---|---|---|---|

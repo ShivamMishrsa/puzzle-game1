@@ -25,9 +25,8 @@ namespace ColorGateBlast
         private float length;
         private float overdriveUntil;
         private Vector3 trayCenter;
-        private GameObject[] pips;
-        private int lastShown = -1;
-        private float pipZ;
+        private float beltScroll;
+        private const float DashPeriod = 2.4f; // belt length covered by one texture repeat
 
         public float Speed { get { return BaseSpeed * (OverdriveActive ? 1.75f : 1f); } }
         public bool OverdriveActive { get { return Time.time < overdriveUntil; } }
@@ -45,29 +44,26 @@ namespace ColorGateBlast
             root = null;
             pts.Clear();
             cum.Clear();
-            pips = null;
-            lastShown = -1;
         }
 
-        public void Build(LevelDefinition def, MonumentManager mon, Vector3 trayCenterWorld, float cellSize)
+        /// <summary>
+        /// Builds the single rounded-rectangle conveyor loop that encloses BOTH the monument (top) and the puzzle tray (bottom).
+        /// loopCenter / loopHalfX / loopHalfZ describe the belt centre line in world space.
+        /// </summary>
+        public void Build(LevelDefinition def, MonumentManager mon, Vector3 loopCenter, float loopHalfX, float loopHalfZ)
         {
             Clear();
             monument = mon;
-            trayCenter = trayCenterWorld;
+            trayCenter = loopCenter;
             maxSlots = def.maxTrackSlots;
             unlimited = def.UnlimitedTrack;
             overdriveUntil = 0f;
 
-            float gap = cellSize * 0.85f + 0.3f;
-            float hx = def.GridWidth * cellSize * 0.5f + gap;
-            float hz = def.GridHeight * cellSize * 0.5f + gap;
-            BuildPath(hx, hz, 0.75f);
-            pipZ = trayCenterWorld.z - hz - 0.9f;
+            BuildPath(loopHalfX, loopHalfZ, 1.1f);
 
             root = new GameObject("TrackRoot").transform;
             root.SetParent(transform, false);
             BuildBelt();
-            BuildPips();
         }
 
         // ------------------------------------------------------------------ path
@@ -151,10 +147,13 @@ namespace ColorGateBlast
         private void BuildBelt()
         {
             float halfW = 0.38f;
-            MeshBuilder top = new MeshBuilder();
+            List<Vector3> tv = new List<Vector3>();
+            List<Vector2> tuv = new List<Vector2>();
+            List<int> tt = new List<int>();
             MeshBuilder rails = new MeshBuilder();
             MeshBuilder bolts = new MeshBuilder();
-            float boltAcc = 0f;
+            MeshBuilder plates = new MeshBuilder();
+            float boltAcc = 0f, plateAcc = 1.6f;
             for (int i = 0; i < pts.Count; i++)
             {
                 Vector3 a = pts[i], b = pts[(i + 1) % pts.Count];
@@ -166,8 +165,29 @@ namespace ColorGateBlast
                 Vector3 up = Vector3.up;
                 float y0 = 0.14f, y1 = 0.2f;
 
-                // belt top
-                top.AddQuad(a + n * halfW + up * y1, b + n * halfW + up * y1, b - n * halfW + up * y1, a - n * halfW + up * y1, up);
+                // belt top: flat brushed steel strip, u across, v along the belt (the dashed line scrolls via the v offset)
+                int vi = tv.Count;
+                tv.Add(a + n * halfW + up * y1); tuv.Add(new Vector2(0f, cum[i] / DashPeriod));
+                tv.Add(b + n * halfW + up * y1); tuv.Add(new Vector2(0f, (cum[i] + segLen) / DashPeriod));
+                tv.Add(b - n * halfW + up * y1); tuv.Add(new Vector2(1f, (cum[i] + segLen) / DashPeriod));
+                tv.Add(a - n * halfW + up * y1); tuv.Add(new Vector2(1f, cum[i] / DashPeriod));
+                if (Vector3.Dot(Vector3.Cross(tv[vi + 1] - tv[vi], tv[vi + 2] - tv[vi]), up) < 0f)
+                { tt.Add(vi); tt.Add(vi + 2); tt.Add(vi + 1); tt.Add(vi); tt.Add(vi + 3); tt.Add(vi + 2); }
+                else
+                { tt.Add(vi); tt.Add(vi + 1); tt.Add(vi + 2); tt.Add(vi); tt.Add(vi + 2); tt.Add(vi + 3); }
+
+                // bolted seam plates every few units: a thin steel plate across the belt with four corner bolts
+                plateAcc += segLen;
+                if (plateAcc > 3.6f)
+                {
+                    plateAcc = 0f;
+                    float pw = halfW + 0.04f, pl = 0.34f;
+                    Vector3 c0 = a;
+                    plates.AddQuad(c0 + n * pw - t * pl + up * 0.215f, c0 + n * pw + t * pl + up * 0.215f, c0 - n * pw + t * pl + up * 0.215f, c0 - n * pw - t * pl + up * 0.215f, up);
+                    for (int sx = -1; sx <= 1; sx += 2)
+                        for (int sz = -1; sz <= 1; sz += 2)
+                            bolts.AddSphere(c0 + n * (pw - 0.1f) * sx + t * (pl - 0.1f) * sz + up * 0.225f, 0.045f, 6, 3);
+                }
                 // rails: raised lips on both sides
                 for (int side = -1; side <= 1; side += 2)
                 {
@@ -185,20 +205,33 @@ namespace ColorGateBlast
                 }
             }
 
+            Mesh topMesh = new Mesh();
+            topMesh.name = "BeltTop";
+            topMesh.SetVertices(tv);
+            topMesh.SetUVs(0, tuv);
+            topMesh.SetTriangles(tt, 0);
+            topMesh.RecalculateNormals();
+            topMesh.RecalculateTangents();
+            topMesh.RecalculateBounds();
             GameObject topGo = new GameObject("BeltTop");
             topGo.transform.SetParent(root, false);
-            topGo.AddComponent<MeshFilter>().sharedMesh = top.ToMesh("BeltTop", 0.6f);
-            topGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.MetallicBelt;
+            topGo.AddComponent<MeshFilter>().sharedMesh = topMesh;
+            topGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.BeltDashed;
 
             GameObject railGo = new GameObject("BeltRails");
             railGo.transform.SetParent(root, false);
             railGo.AddComponent<MeshFilter>().sharedMesh = rails.ToMesh("BeltRails", 0.6f);
-            railGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.ScrapIron;
+            railGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.TrayFrame;
+
+            GameObject plateGo = new GameObject("BeltSeamPlates");
+            plateGo.transform.SetParent(root, false);
+            plateGo.AddComponent<MeshFilter>().sharedMesh = plates.ToMesh("BeltSeamPlates", 0.6f);
+            plateGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Gunmetal;
 
             GameObject boltGo = new GameObject("BeltBolts");
             boltGo.transform.SetParent(root, false);
             boltGo.AddComponent<MeshFilter>().sharedMesh = bolts.ToMesh("BeltBolts");
-            boltGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Brass;
+            boltGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Steel;
 
             // colliders so falling debris bounces off the conveyor
             int segs = Mathf.Max(12, Mathf.CeilToInt(length / 1.2f));
@@ -215,21 +248,6 @@ namespace ColorGateBlast
                 BoxCollider bc = cg.AddComponent<BoxCollider>();
                 bc.size = new Vector3(0.8f, 0.3f, dir.magnitude + 0.12f);
             }
-        }
-
-        private void BuildPips()
-        {
-            if (pips != null) for (int i = 0; i < pips.Length; i++) if (pips[i] != null) Destroy(pips[i]);
-            if (unlimited) { pips = new GameObject[0]; return; }
-            pips = new GameObject[maxSlots];
-            for (int i = 0; i < maxSlots; i++)
-            {
-                GameObject p = Prims.Make("SlotPip_" + i, root, Prims.Sphere, GameMaterials.Rubber,
-                    new Vector3(trayCenter.x + (i - (maxSlots - 1) * 0.5f) * 0.55f, 0.18f, pipZ),
-                    Vector3.one * 0.32f);
-                pips[i] = p;
-            }
-            lastShown = -1;
         }
 
         // ------------------------------------------------------------------ turrets
@@ -250,7 +268,6 @@ namespace ColorGateBlast
         public void AddSlot()
         {
             maxSlots++;
-            BuildPips();
             if (SlotsChanged != null) SlotsChanged();
         }
 
@@ -321,11 +338,11 @@ namespace ColorGateBlast
             }
             if (changed && SlotsChanged != null) SlotsChanged();
 
-            if (pips != null && turrets.Count != lastShown)
+            // the white dashed centre line scrolls in the direction the turrets travel
+            if (root != null)
             {
-                lastShown = turrets.Count;
-                for (int i = 0; i < pips.Length; i++)
-                    pips[i].GetComponent<MeshRenderer>().sharedMaterial = i < lastShown ? GameMaterials.Brass : GameMaterials.Rubber;
+                beltScroll = Mathf.Repeat(beltScroll - Speed * Time.deltaTime / DashPeriod, 1f);
+                GameMaterials.BeltDashed.SetTextureOffset("_BaseMap", new Vector2(0f, beltScroll));
             }
         }
     }

@@ -26,6 +26,12 @@ namespace ColorGateBlast
         /// <summary>Asked before a block may exit; return false when the conveyor has no free slot for that colour.</summary>
         public Func<BlockColor, bool> CanExit;
         public bool InputEnabled;
+        /// <summary>Pliers booster armed: the next tap on any tray piece snips it off the board.</summary>
+        public bool PliersArmed;
+        /// <summary>Raised after the pliers removed a piece.</summary>
+        public event Action PliersUsed;
+        private GameObject dragArrow;
+        private MeshRenderer dragArrowRenderer;
 
         private sealed class PortalView
         {
@@ -86,6 +92,9 @@ namespace ColorGateBlast
         {
             StopAllCoroutines(); // door / key-flight animations must not outlive the objects they animate
             dragging = -1;
+            PliersArmed = false;
+            dragArrow = null;
+            dragArrowRenderer = null;
             if (root != null) Destroy(root.gameObject);
             root = null;
             views = null;
@@ -126,7 +135,7 @@ namespace ColorGateBlast
             GameObject baseGo = new GameObject("TrayBase");
             baseGo.transform.SetParent(root, false);
             baseGo.AddComponent<MeshFilter>().sharedMesh = new MeshBuilder().AddSlabReturn(center.x, center.z, w, d, TrayTop, cs * 0.35f, cs * 0.08f, 0f, 4).ToMesh("TrayBase", 0.4f);
-            baseGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Gunmetal;
+            baseGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.TrayFrame;
 
             MeshBuilder wells = new MeshBuilder();
             float size = cs * 0.95f;
@@ -139,23 +148,36 @@ namespace ColorGateBlast
             GameObject wellGo = new GameObject("CellWells");
             wellGo.transform.SetParent(root, false);
             wellGo.AddComponent<MeshFilter>().sharedMesh = wells.ToMesh("CellWells");
-            wellGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Rubber;
+            wellGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.TrayTile;
 
-            // corner bolts
+            // riveted frame: a rivet at every cell boundary around the perimeter + the four corners
             MeshBuilder bolts = new MeshBuilder();
             float bx = w * 0.5f - margin * 0.5f, bz = d * 0.5f - margin * 0.5f;
+            float rr = cs * 0.075f;
             for (int sx = -1; sx <= 1; sx += 2)
                 for (int sz = -1; sz <= 1; sz += 2)
-                    bolts.AddSphere(new Vector3(center.x + sx * bx, TrayTop + 0.02f, center.z + sz * bz), cs * 0.09f, 8, 4);
+                    bolts.AddSphere(new Vector3(center.x + sx * bx, TrayTop + 0.02f, center.z + sz * bz), cs * 0.11f, 8, 4);
+            for (int i = 1; i < def.GridWidth; i++)
+            {
+                float x = originBL.x + i * cs;
+                bolts.AddSphere(new Vector3(x, TrayTop + 0.015f, center.z + bz), rr, 6, 3);
+                bolts.AddSphere(new Vector3(x, TrayTop + 0.015f, center.z - bz), rr, 6, 3);
+            }
+            for (int i = 1; i < def.GridHeight; i++)
+            {
+                float z = originBL.z + i * cs;
+                bolts.AddSphere(new Vector3(center.x + bx, TrayTop + 0.015f, z), rr, 6, 3);
+                bolts.AddSphere(new Vector3(center.x - bx, TrayTop + 0.015f, z), rr, 6, 3);
+            }
             GameObject boltGo = new GameObject("TrayBolts");
             boltGo.transform.SetParent(root, false);
             boltGo.AddComponent<MeshFilter>().sharedMesh = bolts.ToMesh("TrayBolts");
-            boltGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Brass;
+            boltGo.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Steel;
         }
 
         private void BuildGates()
         {
-            float thick = cs * 0.3f;
+            float thick = cs * 0.38f;
             for (int g = 0; g < def.gates.Count; g++)
             {
                 GateSpec gs = def.gates[g];
@@ -184,14 +206,16 @@ namespace ColorGateBlast
                 GameObject frame = new GameObject("Frame");
                 frame.transform.SetParent(go.transform, false);
                 frame.AddComponent<MeshFilter>().sharedMesh = fb.ToMesh("GateFrame");
-                frame.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Brass;
+                frame.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.TrayFrame;
+                BuildGateBracket(go.transform, c, gs, horiz, gw, gd, thick);
 
                 MeshBuilder bb = new MeshBuilder();
                 bb.AddSlab(c.x, c.z, gw, gd, 0.07f, thick * 0.28f, thick * 0.08f, TrayTop + 0.1f, 3);
                 GameObject bar = new GameObject("GlowBar");
                 bar.transform.SetParent(go.transform, false);
                 bar.AddComponent<MeshFilter>().sharedMesh = bb.ToMesh("GateBar");
-                bar.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Glow(gs.color);
+                bar.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.ForBlock(gs.color);
+                BuildChevrons(go.transform, c, gs, horiz, thick);
 
                 GateView gv = new GateView();
                 gv.index = g;
@@ -227,6 +251,68 @@ namespace ColorGateBlast
                 if (gs.isPiercingGate) BuildPiercingGears(go.transform, c, horiz, gw, gd);
                 gateViews.Add(gv);
             }
+        }
+
+        /// <summary>U-shaped metallic bracket (back wall + two end walls, open towards the tray) with four corner bolts.</summary>
+        private void BuildGateBracket(Transform parent, Vector3 c, GateSpec gs, bool horiz, float gw, float gd, float thick)
+        {
+            Int2 dd = Dirs.Of(gs.direction);
+            Vector3 outward = new Vector3(dd.x, 0f, dd.y);
+            Vector3 along = horiz ? new Vector3(1f, 0f, 0f) : new Vector3(0f, 0f, 1f);
+            float len = horiz ? gw : gd;
+            float wall = 0.11f, h = 0.34f, y = TrayTop + 0.05f + h * 0.5f;
+            // back wall on the outer side
+            Vector3 backPos = c + outward * (thick * 0.5f + wall * 0.5f);
+            Vector3 backSize = horiz ? new Vector3(len + 0.3f, h, wall) : new Vector3(wall, h, len + 0.3f);
+            Prims.Make("BracketBack", parent, Prims.Cube, GameMaterials.TrayFrame, new Vector3(backPos.x, y, backPos.z), backSize);
+            // end walls
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 pos = c + along * (side * (len * 0.5f + wall * 0.5f + 0.02f)) + outward * (wall * 0.5f);
+                Vector3 size = horiz ? new Vector3(wall, h, thick + wall + 0.04f) : new Vector3(thick + wall + 0.04f, h, wall);
+                Prims.Make("BracketEnd", parent, Prims.Cube, GameMaterials.TrayFrame, new Vector3(pos.x, y, pos.z), size);
+                // corner bolts on the end walls (4 in total with the back wall ends)
+                Vector3 b1 = c + along * (side * (len * 0.5f + wall * 0.5f + 0.02f)) + outward * (thick * 0.5f + wall * 0.5f);
+                Prims.Make("Bolt", parent, Prims.Sphere, GameMaterials.Steel, new Vector3(b1.x, TrayTop + 0.05f + h + 0.01f, b1.z), Vector3.one * 0.11f);
+                Vector3 b2 = c + along * (side * (len * 0.5f + wall * 0.5f + 0.02f)) - outward * (thick * 0.5f - 0.03f);
+                Prims.Make("Bolt", parent, Prims.Sphere, GameMaterials.Steel, new Vector3(b2.x, TrayTop + 0.05f + h + 0.01f, b2.z), Vector3.one * 0.11f);
+            }
+            // coloured light that spills neon onto the wood in front of the gate
+            GameObject lg = new GameObject("GateLight");
+            lg.transform.SetParent(parent, false);
+            lg.transform.position = new Vector3(c.x, TrayTop + 0.9f, c.z) + outward * 0.5f;
+            Light l = lg.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = GameMaterials.NeonOf(gs.color);
+            l.intensity = 1.6f;
+            l.range = 3.4f;
+            l.shadows = LightShadows.None;
+        }
+
+        /// <summary>Glowing neon chevrons (&lt; &gt; ^) on the gate bar pointing along the exit direction.</summary>
+        private void BuildChevrons(Transform parent, Vector3 c, GateSpec gs, bool horiz, float thick)
+        {
+            Int2 dd = Dirs.Of(gs.direction);
+            Vector3 d = new Vector3(dd.x, 0f, dd.y);
+            Vector3 p = horiz ? new Vector3(1f, 0f, 0f) : new Vector3(0f, 0f, 1f);
+            float len = gs.length * cs;
+            int n = Mathf.Max(1, Mathf.RoundToInt(len / (cs * 0.9f)));
+            float arm = thick * 0.4f, hh = thick * 0.3f, th = thick * 0.19f;
+            MeshBuilder mb = new MeshBuilder();
+            float y = TrayTop + 0.185f;
+            for (int i = 0; i < n; i++)
+            {
+                float f = (i + 0.5f) / n - 0.5f;
+                Vector3 mid = new Vector3(c.x, y, c.z) + p * (f * len * 0.94f);
+                Vector3 tip = mid + d * hh;
+                Vector3 e1 = mid - d * hh + p * arm, e2 = mid - d * hh - p * arm;
+                mb.AddQuad(tip, e1, e1 - d * th, tip - d * th, Vector3.up);
+                mb.AddQuad(tip, e2, e2 - d * th, tip - d * th, Vector3.up);
+            }
+            GameObject ch = new GameObject("Chevrons");
+            ch.transform.SetParent(parent, false);
+            ch.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("Chevrons");
+            ch.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Neon(gs.color);
         }
 
         /// <summary>Heavy iron chains and a brass padlock sealing a gate until its key has left.</summary>
@@ -491,6 +577,7 @@ namespace ColorGateBlast
             Vector2 g = ScreenToGrid(screen);
             int idx = board.At(Mathf.FloorToInt(g.x), Mathf.FloorToInt(g.y));
             if (idx < 0) return;
+            if (PliersArmed) { UsePliers(idx); return; }
 
             if (board.Blocks[idx].IsObstacle)
             {
@@ -661,6 +748,34 @@ namespace ColorGateBlast
             if (MoveCommitted != null) MoveCommitted();
         }
 
+        /// <summary>Pliers booster: snips piece <paramref name="idx"/> (scrap, ice-locked or normal) off the tray. No turret is produced.</summary>
+        private void UsePliers(int idx)
+        {
+            PliersArmed = false;
+            BlockView view = views[idx];
+            if (view == null || board.Exited[idx]) return;
+            Vector3 center = view.CentroidWorld;
+            ExitEffects fx = new ExitEffects();
+            board.ExitBlock(idx, fx, GateDirection.Up, board.Pos[idx], board.Pos[idx]);
+            views[idx] = null;
+            Destroy(view.gameObject);
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PadlockSnap);
+            if (FXManager.Instance != null)
+            {
+                FXManager.Instance.GoldSparks(center + new Vector3(0f, 0.4f, 0f), 24);
+                FXManager.Instance.Haptic();
+            }
+            for (int k = 0; k < fx.thawed.Count; k++)
+            {
+                int j = fx.thawed[k];
+                if (views[j] != null) views[j].SetIce(board.Ice[j], true);
+            }
+            if (fx.spawned >= 0 && views[fx.spawned] != null) views[fx.spawned].Appear(CellWorld(fx.spawnCell));
+            if (fx.shutterToggled) UpdateShutters(true);
+            if (fx.unlockedLock >= 0) UnlockPadlocks(fx.unlockedLock, center);
+            if (PliersUsed != null) PliersUsed();
+        }
+
         private void EndDrag()
         {
             int idx = dragging;
@@ -745,6 +860,7 @@ namespace ColorGateBlast
             BlockInfo b = board.Blocks[dragging];
             Vector3 start = views[dragging].CentroidWorld;
             start.y = TrayTop + 0.04f;
+            bool arrowShown = false;
             for (int d = 0; d < 4; d++)
             {
                 Int2 dir = Dirs.Of(Dirs.All[d]);
@@ -762,6 +878,7 @@ namespace ColorGateBlast
                 LineRenderer lr = preview[d];
                 if (steps == 0) { lr.enabled = false; continue; }
                 Vector3 end = start + new Vector3(dir.x, 0f, dir.y) * (steps * cs);
+                if (exit && !arrowShown) { ShowDragArrow(start, dir, b.color, ((dir.x != 0 ? b.ExtentX() : b.ExtentY()) * 0.5f + Mathf.Min(0.8f, steps * 0.5f)) * cs); arrowShown = true; }
                 lr.enabled = true;
                 lr.SetPosition(0, start);
                 lr.SetPosition(1, end);
@@ -770,10 +887,36 @@ namespace ColorGateBlast
                 lr.startWidth = cs * (exit ? 0.16f : 0.07f);
                 lr.endWidth = lr.startWidth;
             }
+            if (!arrowShown && dragArrow != null) dragArrow.SetActive(false);
+        }
+
+        /// <summary>Glowing coloured arrow on the tray floor, under the dragged block, pointing into the open gate.</summary>
+        private void ShowDragArrow(Vector3 blockCenter, Int2 dir, BlockColor color, float ahead)
+        {
+            if (dragArrow == null)
+            {
+                MeshBuilder mb = new MeshBuilder();
+                float y = 0f;
+                mb.AddQuad(new Vector3(-0.17f, y, -0.5f), new Vector3(0.17f, y, -0.5f), new Vector3(0.17f, y, 0.12f), new Vector3(-0.17f, y, 0.12f), Vector3.up);
+                mb.AddTriangleUp(new Vector3(-0.46f, y, 0.1f), new Vector3(0.46f, y, 0.1f), new Vector3(0f, y, 0.72f));
+                dragArrow = new GameObject("DragArrow");
+                dragArrow.transform.SetParent(root, false);
+                dragArrow.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("DragArrow");
+                dragArrowRenderer = dragArrow.AddComponent<MeshRenderer>();
+                dragArrowRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            dragArrow.SetActive(true);
+            dragArrowRenderer.sharedMaterial = GameMaterials.Neon(color);
+            Vector3 d = new Vector3(dir.x, 0f, dir.y);
+            float slide = Mathf.Sin(Time.time * 7f) * 0.12f * cs;
+            dragArrow.transform.position = new Vector3(blockCenter.x, TrayTop + 0.012f, blockCenter.z) + d * (ahead + slide);
+            dragArrow.transform.rotation = Quaternion.LookRotation(d, Vector3.up);
+            dragArrow.transform.localScale = Vector3.one * (cs * 1.05f);
         }
 
         private void HidePreview()
         {
+            if (dragArrow != null) dragArrow.SetActive(false);
             for (int i = 0; i < preview.Length; i++) if (preview[i] != null) preview[i].enabled = false;
         }
     }

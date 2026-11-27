@@ -69,11 +69,25 @@ namespace ColorGateBlast
             bodyFilter.sharedMesh = Poly(info.cells, cs, 0.9f, height, 0f, 3).ToMesh("Block", 0.6f);
             body.sharedMaterial = GameMaterials.ForBlock(info.color);
 
+            if (!info.hasInner && info.axis == MoveAxis.Free) BuildPanels();
             BuildRivets();
             if (info.hasInner) BuildStripe();
             if (info.axis != MoveAxis.Free) BuildArrows();
             if (info.hasKey) BuildKey();
             if (info.iceLayer > 0) SetIce(info.iceLayer, false);
+        }
+
+        /// <summary>Square top panel pressed into each cell (darker, bevelled) so every piece reads as machined metal.</summary>
+        private void BuildPanels()
+        {
+            MeshBuilder pb = new MeshBuilder();
+            float s = cs * 0.52f;
+            for (int i = 0; i < info.cells.Length; i++)
+                pb.AddSlab(info.cells[i].x * cs, info.cells[i].y * cs, s, s, 0.02f, cs * 0.07f, 0.012f, height - 0.004f, 2);
+            GameObject go = new GameObject("TopPanels");
+            go.transform.SetParent(transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = pb.ToMesh("TopPanels", 0.6f);
+            go.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.PanelOf(info.color);
         }
 
         private void BuildRivets()

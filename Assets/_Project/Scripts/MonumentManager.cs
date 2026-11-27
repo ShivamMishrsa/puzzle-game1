@@ -28,7 +28,7 @@ namespace ColorGateBlast
         }
 
         /// <summary>The monument is built at a modelling scale of about 3 units; this makes it fill the upper half of the screen.</summary>
-        public const float MonumentScale = 1.5f;
+        public const float MonumentScale = 1.25f;
 
         public MonumentModel Model { get; private set; }
         public int InFlight { get; private set; }
@@ -56,6 +56,18 @@ namespace ColorGateBlast
         private Camera cam;
 
         public void SetCamera(Camera c) { cam = c; }
+
+        /// <summary>Highest point of the freshly built monument (used so the camera rig keeps its top inside the HUD-safe area).</summary>
+        public Vector3 TopWorldPoint()
+        {
+            Vector3 p = anchor;
+            if (pivot == null) return p;
+            Renderer[] rs = pivot.GetComponentsInChildren<Renderer>();
+            float maxY = 0f;
+            for (int i = 0; i < rs.Length; i++) maxY = Mathf.Max(maxY, rs[i].bounds.max.y);
+            p.y = maxY;
+            return p;
+        }
 
         /// <summary>World position of a part, or of its screw when <paramref name="code"/> is a screw target.</summary>
         public Vector3 PartWorld(int code)

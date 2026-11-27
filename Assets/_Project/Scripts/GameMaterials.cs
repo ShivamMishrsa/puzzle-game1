@@ -16,17 +16,17 @@ namespace ColorGateBlast
         private static Shader lit, unlit, particleLit, particleUnlit;
         private static Font font;
         private static readonly Dictionary<string, Material> Cache = new Dictionary<string, Material>();
-        private static Texture2D scratchNormal, rustTex, woodTex, noiseTex, crackTex, hazardTex, beltTex;
+        private static Texture2D scratchNormal, rustTex, woodTex, woodNormal, noiseTex, crackTex, hazardTex, beltTex, dashTex;
 
         // ---------------------------------------------------------------- named materials from the spec
-        public static Material MetalRed { get { Ensure(); return Named("MetalRed", ColorOf(BlockColor.Red), 0.8f, 0.65f, TexKind.Scratch); } }
-        public static Material MetalBlue { get { Ensure(); return Named("MetalBlue", ColorOf(BlockColor.Blue), 0.8f, 0.65f, TexKind.Scratch); } }
+        public static Material MetalRed { get { Ensure(); return Named("MetalRed", ColorOf(BlockColor.Red), 0.45f, 0.58f, TexKind.Scratch); } }
+        public static Material MetalBlue { get { Ensure(); return Named("MetalBlue", ColorOf(BlockColor.Blue), 0.45f, 0.58f, TexKind.Scratch); } }
         /// <summary>Emerald Enamel Green #10B981: baked-enamel metal (metallic 0.75, smoothness 0.68).</summary>
-        public static Material EmeraldEnamel { get { Ensure(); return Named("EmeraldEnamel", ColorOf(BlockColor.Green), 0.75f, 0.68f, TexKind.Scratch); } }
-        public static Material PlasticYellow { get { Ensure(); return Named("PlasticYellow", ColorOf(BlockColor.Yellow), 0.08f, 0.55f, TexKind.Noise); } }
-        public static Material ScrapIron { get { Ensure(); return Named("ScrapIron", Color.white, 0.9f, 0.2f, TexKind.Rust); } }
-        public static Material WorkshopWood { get { Ensure(); return Named("WorkshopWood", Color.white, 0.02f, 0.18f, TexKind.Wood); } }
-        public static Material MetallicBelt { get { Ensure(); return Named("MetallicBelt", Color.white, 0.95f, 0.45f, TexKind.Belt); } }
+        public static Material EmeraldEnamel { get { Ensure(); return Named("EmeraldEnamel", ColorOf(BlockColor.Green), 0.45f, 0.58f, TexKind.Scratch); } }
+        public static Material PlasticYellow { get { Ensure(); return Named("PlasticYellow", ColorOf(BlockColor.Yellow), 0.45f, 0.58f, TexKind.Scratch); } }
+        public static Material ScrapIron { get { Ensure(); return Named("ScrapIron", new Color(0.353f, 0.345f, 0.337f), 0.85f, 0.25f, TexKind.Rust); } }
+        public static Material WorkshopWood { get { Ensure(); return Named("WorkshopWood", new Color(0.82f, 0.76f, 0.72f), 0.02f, 0.45f, TexKind.Wood); } }
+        public static Material MetallicBelt { get { Ensure(); return Named("MetallicBelt", Color.white, 0.8f, 0.45f, TexKind.Belt); } }
         public static Material Glass { get { Ensure(); return Transparent("Glass", new Color(0.8f, 0.93f, 1f, 0.22f), 0.05f, 0.97f); } }
         // ---------------------------------------------------------------- extras
         public static Material Copper { get { Ensure(); return Plain("Copper", new Color(0.78f, 0.45f, 0.22f), 0.92f, 0.55f); } }
@@ -81,11 +81,11 @@ namespace ColorGateBlast
         {
             switch (c)
             {
-                case BlockColor.Red: return new Color(0.86f, 0.14f, 0.16f);
-                case BlockColor.Blue: return new Color(0.15f, 0.38f, 0.92f);
-                case BlockColor.Yellow: return new Color(0.98f, 0.8f, 0.12f);
-                case BlockColor.Green: return new Color(0.063f, 0.725f, 0.506f);
-                default: return new Color(0.35f, 0.36f, 0.4f);
+                case BlockColor.Red: return new Color(0.722f, 0.2f, 0.165f);      // #B8332A
+                case BlockColor.Blue: return new Color(0.18f, 0.392f, 0.62f);     // #2E649E
+                case BlockColor.Yellow: return new Color(0.788f, 0.635f, 0.212f); // #C9A236
+                case BlockColor.Green: return new Color(0.118f, 0.51f, 0.361f);   // #1E825C
+                default: return new Color(0.353f, 0.345f, 0.337f);                // scrap iron #5A5856
             }
         }
 
@@ -95,6 +95,66 @@ namespace ColorGateBlast
             Ensure();
             Color col = ColorOf(c);
             return Emissive("Glow_" + c, col * 0.6f, col, 1.8f);
+        }
+
+        /// <summary>Saturated neon tone of a block colour, used for gate chevrons, the floor arrow and lights.</summary>
+        public static Color NeonOf(BlockColor c)
+        {
+            switch (c)
+            {
+                case BlockColor.Red: return new Color(1f, 0.22f, 0.18f);
+                case BlockColor.Blue: return new Color(0.2f, 0.55f, 1f);
+                case BlockColor.Yellow: return new Color(1f, 0.85f, 0.2f);
+                case BlockColor.Green: return new Color(0.15f, 1f, 0.55f);
+                default: return new Color(0.7f, 0.7f, 0.75f);
+            }
+        }
+
+        /// <summary>Glowing neon chevron material (bloom picks it up).</summary>
+        public static Material Neon(BlockColor c)
+        {
+            Ensure();
+            Color col = NeonOf(c);
+            return Emissive("Neon_" + c, col * 0.5f, col, 2.6f);
+        }
+
+        /// <summary>Gunmetal riveted tray frame.</summary>
+        public static Material TrayFrame { get { Ensure(); return Named("TrayFrame", new Color(0.33f, 0.35f, 0.39f), 0.85f, 0.42f, TexKind.Scratch); } }
+        /// <summary>Recessed dark-grey tray tiles.</summary>
+        public static Material TrayTile { get { Ensure(); return Named("TrayTile", new Color(0.13f, 0.14f, 0.16f), 0.55f, 0.3f, TexKind.Scratch); } }
+        /// <summary>Flat brushed-steel belt with a white dashed centre line (scroll via ScrollBelt).</summary>
+        public static Material BeltDashed
+        {
+            get
+            {
+                Ensure();
+                Material m;
+                if (Cache.TryGetValue("BeltDashed", out m) && m != null) return m;
+                m = NewLit("BeltDashed", Color.white, 0.8f, 0.45f);
+                m.SetTexture("_BaseMap", dashTex);
+                m.SetTexture("_BumpMap", scratchNormal);
+                m.SetFloat("_BumpScale", 0.4f);
+                m.EnableKeyword("_NORMALMAP");
+                Cache["BeltDashed"] = m;
+                return m;
+            }
+        }
+
+        /// <summary>Slightly darker copy of a block colour: the recessed square top panel.</summary>
+        public static Material PanelOf(BlockColor c)
+        {
+            Ensure();
+            string key = "Panel_" + c;
+            Material m;
+            if (Cache.TryGetValue(key, out m) && m != null) return m;
+            Material b = ForBlock(c);
+            m = new Material(b);
+            m.name = key;
+            Color col = b.GetColor("_BaseColor");
+            m.SetColor("_BaseColor", new Color(col.r * 0.72f, col.g * 0.72f, col.b * 0.72f, 1f));
+            m.SetFloat("_Smoothness", 0.4f);
+            Cache[key] = m;
+            return m;
         }
 
         /// <summary>Tinted translucent acrylic (cassette door).</summary>
@@ -186,6 +246,8 @@ namespace ColorGateBlast
             crackTex = MakeCracks(256, 21);
             hazardTex = MakeHazard(128);
             beltTex = MakeBelt(128, 7);
+            woodNormal = MakeWoodNormal(256, 3);
+            dashTex = MakeDash(64);
             ready = true;
         }
 
@@ -238,6 +300,10 @@ namespace ColorGateBlast
                 case TexKind.Wood:
                     m.SetTexture("_BaseMap", woodTex);
                     m.SetTextureScale("_BaseMap", new Vector2(2f, 2f));
+                    m.SetTexture("_BumpMap", woodNormal);
+                    m.SetTextureScale("_BumpMap", new Vector2(2f, 2f));
+                    m.SetFloat("_BumpScale", 0.7f);
+                    m.EnableKeyword("_NORMALMAP");
                     break;
                 case TexKind.Belt:
                     m.SetTexture("_BaseMap", beltTex);
@@ -347,10 +413,13 @@ namespace ColorGateBlast
                 {
                     float baseN = Perlin(x * 0.08f, y * 0.08f, seed);
                     float speck = Perlin(x * 0.5f, y * 0.5f, seed + 3f);
-                    float v = 0.16f + baseN * 0.12f;
-                    Color c = new Color(v, v * 1.02f, v * 1.08f);
-                    if (speck > 0.72f) c = Color.Lerp(c, new Color(0.55f, 0.27f, 0.1f), Mathf.Clamp01((speck - 0.72f) * 5f));
-                    if (baseN < 0.3f) c = Color.Lerp(c, new Color(0.05f, 0.05f, 0.06f), 0.5f);
+                    float v = 0.78f + baseN * 0.3f; // multiplies the material's iron tint
+                    Color c = new Color(v, v, v);
+                    float patch = Perlin(x * 0.05f, y * 0.05f, seed + 8f);
+                    if (patch > 0.6f) c = Color.Lerp(c, new Color(1.5f, 0.62f, 0.26f), Mathf.Clamp01((patch - 0.6f) * 3.2f) * 0.85f);
+                    if (speck > 0.74f) c = Color.Lerp(c, new Color(1.2f, 0.5f, 0.2f), Mathf.Clamp01((speck - 0.74f) * 5f));
+                    if (baseN < 0.3f) c = Color.Lerp(c, new Color(0.35f, 0.35f, 0.37f), 0.5f);
+                    c = new Color(Mathf.Min(c.r, 1f), Mathf.Min(c.g, 1f), Mathf.Min(c.b, 1f));
                     px[y * size + x] = c;
                 }
             }
@@ -363,7 +432,7 @@ namespace ColorGateBlast
         {
             Texture2D t = NewTex(size, false);
             Color32[] px = new Color32[size * size];
-            Color light = new Color(0.48f, 0.31f, 0.17f), dark = new Color(0.3f, 0.18f, 0.09f);
+            Color light = new Color(0.36f, 0.22f, 0.12f), dark = new Color(0.17f, 0.095f, 0.05f); // dark walnut / oak
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
@@ -376,6 +445,69 @@ namespace ColorGateBlast
                 }
             }
             t.SetPixels32(px);
+            t.Apply(true, false);
+            return t;
+        }
+
+        /// <summary>Wood-grain normal map: long fibres along x plus pores, scratches from the generic scratch pass.</summary>
+        private static Texture2D MakeWoodNormal(int size, int seed)
+        {
+            float[] h = new float[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float warp = Perlin(x * 0.01f, y * 0.04f, seed) * 6f;
+                    float grain = 0.5f + 0.5f * Mathf.Sin(y * 0.18f + warp * 3f + Perlin(x * 0.2f, y * 0.02f, seed) * 2f);
+                    h[y * size + x] = grain * 0.5f + Perlin(x * 0.05f, y * 0.8f, seed + 2f) * 0.35f;
+                }
+            System.Random rng = new System.Random(seed + 77);
+            for (int s = 0; s < 40; s++)
+            {
+                float x0 = (float)rng.NextDouble() * size, y0 = (float)rng.NextDouble() * size;
+                float ang = (float)rng.NextDouble() * Mathf.PI;
+                float len = 10f + (float)rng.NextDouble() * 40f;
+                for (float k = 0; k < len; k += 0.5f)
+                {
+                    int px = ((int)(x0 + Mathf.Cos(ang) * k) % size + size) % size;
+                    int py = ((int)(y0 + Mathf.Sin(ang) * k) % size + size) % size;
+                    h[py * size + px] -= 0.45f;
+                }
+            }
+            Texture2D t = NewTex(size, true);
+            Color32[] px2 = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float hl = h[y * size + (x + size - 1) % size], hr = h[y * size + (x + 1) % size];
+                    float hd = h[((y + size - 1) % size) * size + x], hu = h[((y + 1) % size) * size + x];
+                    Vector3 n = new Vector3((hl - hr) * 1.5f, (hd - hu) * 1.5f, 1f).normalized;
+                    px2[y * size + x] = new Color32((byte)((n.x * 0.5f + 0.5f) * 255f), (byte)((n.y * 0.5f + 0.5f) * 255f), (byte)((n.z * 0.5f + 0.5f) * 255f), 255);
+                }
+            t.SetPixels32(px2);
+            t.Apply(true, false);
+            return t;
+        }
+
+        /// <summary>Brushed steel strip (u across the belt, v along it) with a white dashed centre line.</summary>
+        private static Texture2D MakeDash(int size)
+        {
+            Texture2D t = NewTex(size, false);
+            Color32[] px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float brushed = Perlin(x * 0.9f, y * 0.04f, 4f);
+                    float v = 0.34f + brushed * 0.14f;
+                    Color c = new Color(v, v, v * 1.04f);
+                    float cx = Mathf.Abs((x + 0.5f) / size - 0.5f);
+                    bool dash = ((y * 2) / size) % 2 == 0 || (y * 2 / size) == 0;
+                    dash = (y < size * 0.5f);
+                    if (cx < 0.055f && dash) c = new Color(0.95f, 0.95f, 0.92f);
+                    if (cx > 0.43f) c *= 0.7f;
+                    px[y * size + x] = c;
+                }
+            t.SetPixels32(px);
+            t.wrapMode = TextureWrapMode.Repeat;
             t.Apply(true, false);
             return t;
         }

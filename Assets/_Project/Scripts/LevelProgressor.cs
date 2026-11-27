@@ -31,13 +31,14 @@ namespace ColorGateBlast
         [Tooltip("Optional: levels to play. Empty = all LevelData assets in Resources/Levels.")]
         public LevelData[] levels;
 
-        [Header("World layout (table plane y = 0, +z away from the player)")]
-        public Vector3 trayCenter = new Vector3(0f, 0f, -3.3f);
-        public Vector3 monumentAnchor = new Vector3(0f, 0f, 4.5f);
-        public Vector3 cameraTarget = new Vector3(0f, 0.8f, 2.0f);
-        public float cameraPitch = 50f;
-        public float cameraDistance = 28f;
+        [Header("Workshop style (applied identically to every level)")]
+        public float cameraFov = 38f;
+        public float cameraPitch = 58f;
         private int urlLevel = -1;
+        private WorkshopCameraRig rig;
+        private WorkshopEnvironmentBuilder environment;
+        private WorkshopLightingSetup lighting;
+        private Vector3 trayCenter, monumentAnchor;
 
         private enum LoseKind { OutOfMoves, TrackJam, NoMoves, NoAmmo }
 
@@ -48,7 +49,6 @@ namespace ColorGateBlast
         private bool adBusy;
         private LoseKind loseKind;
         private float checkTimer;
-        private Transform table;
         private int streak;
         private float lastExitTime = -10f;
         private int sameColorStreak;
@@ -87,12 +87,7 @@ namespace ColorGateBlast
                 switch (kv[0])
                 {
                     case "pitch": cameraPitch = v; break;
-                    case "dist": cameraDistance = v; break;
-                    case "tx": cameraTarget.x = v; break;
-                    case "ty": cameraTarget.y = v; break;
-                    case "tz": cameraTarget.z = v; break;
-                    case "mz": monumentAnchor.z = v; break;
-                    case "bz": trayCenter.z = v; break;
+                    case "fov": cameraFov = v; break;
                     case "level": urlLevel = (int)v; break;
                 }
             }
@@ -102,8 +97,13 @@ namespace ColorGateBlast
         private void Start()
         {
             ApplyUrlOverrides();
-            ConfigureCamera();
-            BuildTable();
+            if (cam == null) cam = Camera.main;
+            rig = GetComponent<WorkshopCameraRig>(); if (rig == null) rig = gameObject.AddComponent<WorkshopCameraRig>();
+            environment = GetComponent<WorkshopEnvironmentBuilder>(); if (environment == null) environment = gameObject.AddComponent<WorkshopEnvironmentBuilder>();
+            lighting = GetComponent<WorkshopLightingSetup>(); if (lighting == null) lighting = gameObject.AddComponent<WorkshopLightingSetup>();
+            rig.Fov = cameraFov;
+            rig.Pitch = cameraPitch;
+            rig.Init(cam);
             if (fx != null) fx.SetCamera(cam);
             grid.SetCamera(cam);
             monument.SetCamera(cam);
@@ -119,6 +119,8 @@ namespace ColorGateBlast
             ui.HintClicked += OnHintClicked;
             ui.ExtraSlotClicked += OnExtraSlotClicked;
             ui.ReviveClicked += OnReviveClicked;
+            ui.PliersClicked += OnPliersClicked;
+            grid.PliersUsed += delegate { ui.SetPliersArmed(false); ui.ShowToast("Snip!"); };
             hint.Init(grid, track, monument);
             hint.Message += ui.ShowToast;
 
@@ -139,33 +141,35 @@ namespace ColorGateBlast
 
         // ------------------------------------------------------------------ camera + bench
 
-        private void ConfigureCamera()
+        /// <summary>
+        /// One layout for every level: a single rounded conveyor loop encloses the monument turntable (top) and the riveted tray (bottom).
+        /// The camera rig frames that loop; the workshop props and lighting are rebuilt around it.
+        /// </summary>
+        private void LayoutWorkshop(float cs)
         {
-            float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 0.5625f;
-            float tanHalfH = 5.9f / cameraDistance;                       // keep 11.8 world units visible across the screen
-            float fov = 2f * Mathf.Atan(tanHalfH / aspect) * Mathf.Rad2Deg;
-            cam.orthographic = false;
-            cam.fieldOfView = Mathf.Clamp(fov, 32f, 70f);
-            Vector3 dir = new Vector3(0f, Mathf.Sin(cameraPitch * Mathf.Deg2Rad), -Mathf.Cos(cameraPitch * Mathf.Deg2Rad));
-            cam.transform.position = cameraTarget + dir * cameraDistance;
-            cam.transform.LookAt(cameraTarget, Vector3.up);
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.07f, 0.06f, 0.06f);
-            cam.nearClipPlane = 0.3f;
-            cam.farClipPlane = 80f;
+            float trayHalfW = def.GridWidth * cs * 0.5f, trayHalfH = def.GridHeight * cs * 0.5f;
+            float gap = cs * 0.85f + 0.3f;
+            float monRadius = MonumentManager.MonumentScale * 1.8f + 0.15f; // turntable radius + margin
+            float loopHalfX = Mathf.Max(trayHalfW + gap, monRadius + 0.9f);
+            float zBottom = -(trayHalfH + gap);
+            trayCenter = new Vector3(0f, 0f, 0f);
+            monumentAnchor = new Vector3(0f, 0f, trayHalfH + gap + monRadius + 0.5f);
+            float zTop = monumentAnchor.z + monRadius + 0.6f;
+            Vector3 loopCenter = new Vector3(0f, 0f, (zTop + zBottom) * 0.5f);
+            loopHalf = new Vector2(loopHalfX, (zTop - zBottom) * 0.5f);
+            loopMid = loopCenter;
         }
 
-        private void BuildTable()
+        /// <summary>Frames the finished monument + loop and rebuilds the props / lighting around them.</summary>
+        private void FrameWorkshop()
         {
-            table = new GameObject("WorkshopBench").transform;
-            table.SetParent(transform, false);
-            MeshBuilder mb = new MeshBuilder();
-            mb.AddSlab(0f, 0f, 44f, 44f, 0.4f, 0.6f, 0.12f, -0.4f, 3);
-            GameObject top = new GameObject("BenchTop");
-            top.transform.SetParent(table, false);
-            top.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("BenchTop", 0.14f);
-            top.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.WorkshopWood;
+            rig.Frame(loopMid, loopHalf.x, loopHalf.y, monument.TopWorldPoint());
+            environment.Build(rig, loopMid, loopHalf.x, loopHalf.y, def.levelID);
+            lighting.Apply(cam, rig.Distance);
         }
+
+        private Vector2 loopHalf;
+        private Vector3 loopMid;
 
         // ------------------------------------------------------------------ level flow
 
@@ -184,10 +188,13 @@ namespace ColorGateBlast
             lastExitColor = BlockColor.Gray;
             overdriveSurges = 0;
             ui.HidePanels();
+            ui.SetPliersArmed(false);
 
             float cs = Mathf.Min(1.25f, 7.0f / def.GridWidth, 7.0f / def.GridHeight);
+            LayoutWorkshop(cs);
             monument.Build(def, monumentAnchor);
-            track.Build(def, monument, trayCenter, cs);
+            FrameWorkshop();
+            track.Build(def, monument, loopMid, loopHalf.x, loopHalf.y);
             grid.Build(def, trayCenter, cs);
 
             movesLeft = def.moveLimit;
@@ -372,6 +379,27 @@ namespace ColorGateBlast
             {
                 adBusy = false;
                 if (earned && state == GameState.Playing) hint.RequestHint();
+            });
+        }
+
+        /// <summary>Pliers booster: a rewarded ad arms it, then the next tapped tray piece is snipped off. Tapping again cancels.</summary>
+        private void OnPliersClicked()
+        {
+            if (state != GameState.Playing || adBusy || ads == null) return;
+            if (grid.PliersArmed)
+            {
+                grid.PliersArmed = false;
+                ui.SetPliersArmed(false);
+                return;
+            }
+            adBusy = true;
+            ads.ShowRewarded(RewardPlacement.Pliers, delegate (bool earned)
+            {
+                adBusy = false;
+                if (!earned || state != GameState.Playing) return;
+                grid.PliersArmed = true;
+                ui.SetPliersArmed(true);
+                ui.ShowToast("Tap any piece to snip it off");
             });
         }
 

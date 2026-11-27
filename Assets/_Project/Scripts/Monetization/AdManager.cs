@@ -15,7 +15,9 @@ namespace ColorGateBlast
         /// <summary>"+1 Track Slot" button when the conveyor is at capacity.</summary>
         ExtraTrackSlot,
         /// <summary>Out-of-moves popup: +5 moves and resume.</summary>
-        Revive
+        Revive,
+        /// <summary>Pliers booster: snip one chosen piece off the tray.</summary>
+        Pliers
     }
 
     /// <summary>

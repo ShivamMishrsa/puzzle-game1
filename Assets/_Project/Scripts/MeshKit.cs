@@ -43,6 +43,8 @@ namespace ColorGateBlast
                     }
                 }
             }
+            int topCopy = v.Count;
+            for (int i = 0; i < n; i++) v.Add(v[baseIndex + 2 * n + i]); // separate vertices => flat top normal
             int centerIdx = v.Count;
             v.Add(new Vector3(cx, y0 + height, cz));
 
@@ -58,8 +60,7 @@ namespace ColorGateBlast
                     AddTri(a0 + i, b0 + i2, b0 + i, reference);
                 }
             }
-            int top = baseIndex + 2 * n;
-            for (int i = 0; i < n; i++) AddTri(centerIdx, top + i, top + (i + 1) % n, reference);
+            for (int i = 0; i < n; i++) AddTri(centerIdx, topCopy + i, topCopy + (i + 1) % n, reference);
         }
 
         /// <summary>Low-poly sphere (rivets, bolts, bearings).</summary>

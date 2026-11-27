@@ -61,3 +61,11 @@ Ads: test ids + an on-screen simulator are used until you import the Google Mobi
 Same-colour turrets **merge into one slot**. With only 3 colours (levels 15, 19, 20) four slots can never fill, so the
 "Track Full" lose screen and the **+1 Track Slot** button cannot appear there; the **Hint** button is the monetisation
 moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 can fill the belt.
+
+## Workshop style check (every level)
+- [ ] Top 12 % shows only the LEVEL title + MOVES / REMAINING plaques; monument sits inside the top of the conveyor loop.
+- [ ] Riveted tray inside the loop; bottom strip has Track Capacity LED pips (amber when occupied), Restart, pliers + gear medallions.
+- [ ] Dragging a block towards an open gate shows a glowing colour arrow on the tray floor pointing into the gate.
+- [ ] Gates are U-shaped brackets with neon chevrons and a coloured glow on the wood.
+- [ ] Pliers medallion: rewarded-ad simulator -> medallion glows gold -> tap any tray piece -> it is snipped off (no turret, no move cost).
+- [ ] Merged Mega-Turret: twin barrels, white-hot laser core with coloured glow, sparks at the target.

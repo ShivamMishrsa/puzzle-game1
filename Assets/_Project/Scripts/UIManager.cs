@@ -22,6 +22,7 @@ namespace ColorGateBlast
         public event Action HintClicked;
         public event Action ExtraSlotClicked;
         public event Action ReviveClicked;
+        public event Action PliersClicked;
 
         [SerializeField] private Text levelText;
         [SerializeField] private GameObject bannerRoot;
@@ -34,6 +35,11 @@ namespace ColorGateBlast
         [SerializeField] private Button restartButton;
         [SerializeField] private Button hintButton;
         [SerializeField] private Button extraSlotButton;
+        [SerializeField] private Button pliersButton;
+        private Image pliersImage;
+        private RectTransform pipRow;
+        private Image[] pipLit = new Image[0];
+        private int pipCount = -1;
         [SerializeField] private GameObject rotateHint;
         [SerializeField] private GameObject winPanel;
         [SerializeField] private Text winTitle;
@@ -55,7 +61,7 @@ namespace ColorGateBlast
 
         private void Awake()
         {
-            if (!IsBuilt) BuildUI(null);
+            BuildUI(null); // the industrial HUD is generated from code at runtime (HudSkin sprites are not serializable)
             Wire();
         }
 
@@ -75,6 +81,8 @@ namespace ColorGateBlast
             extraSlotButton.onClick.AddListener(delegate { if (ExtraSlotClicked != null) ExtraSlotClicked(); });
             reviveButton.onClick.RemoveAllListeners();
             reviveButton.onClick.AddListener(delegate { if (ReviveClicked != null) ReviveClicked(); });
+            pliersButton.onClick.RemoveAllListeners();
+            pliersButton.onClick.AddListener(delegate { if (PliersClicked != null) PliersClicked(); });
         }
 
         private void Update()
@@ -98,18 +106,60 @@ namespace ColorGateBlast
             }
         }
 
-        public void SetTargets(int remaining) { targetsText.text = "TARGETS " + remaining; }
+        public void SetTargets(int remaining) { targetsText.text = "REMAINING: " + remaining; }
 
         public void SetMoves(int left)
         {
-            movesText.text = "MOVES " + left;
-            movesText.color = left <= 2 ? new Color(1f, 0.45f, 0.45f) : Color.white;
+            movesText.text = "MOVES: " + left;
+            movesText.color = left <= 2 ? new Color(0.65f, 0.05f, 0.05f) : PlaqueText;
         }
 
+        /// <summary>Track Capacity label + recessed LED pips (amber when occupied, dark socket when empty).</summary>
         public void SetTrack(int used, int max, bool unlimited)
         {
-            trackText.text = unlimited ? "TRACK " + used + "/INF" : "TRACK " + used + "/" + max;
-            trackText.color = (!unlimited && used >= max) ? new Color(1f, 0.45f, 0.45f) : Color.white;
+            trackText.text = unlimited ? "Track Capacity: " + used + "/INF" : "Track Capacity: " + used + "/" + max;
+            trackText.color = (!unlimited && used >= max) ? new Color(1f, 0.62f, 0.45f) : CreamText;
+            int want = unlimited ? 0 : max;
+            if (want != pipCount) RebuildPips(want);
+            for (int i = 0; i < pipLit.Length; i++) pipLit[i].enabled = i < used;
+        }
+
+        private void RebuildPips(int count)
+        {
+            pipCount = count;
+            for (int i = pipRow.childCount - 1; i >= 0; i--) Destroy(pipRow.GetChild(i).gameObject);
+            pipLit = new Image[count];
+            for (int i = 0; i < count; i++)
+            {
+                GameObject sock = new GameObject("LedSocket" + i, typeof(RectTransform));
+                sock.transform.SetParent(pipRow, false);
+                RectTransform rt = sock.GetComponent<RectTransform>();
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+                rt.pivot = new Vector2(0f, 0.5f);
+                rt.anchoredPosition = new Vector2(i * 62f, 0f);
+                rt.sizeDelta = new Vector2(52f, 52f);
+                Image si = sock.AddComponent<Image>();
+                si.sprite = HudSkin.LedSocket;
+                si.raycastTarget = false;
+                GameObject led = new GameObject("Led", typeof(RectTransform));
+                led.transform.SetParent(rt, false);
+                RectTransform lr = led.GetComponent<RectTransform>();
+                lr.anchorMin = lr.anchorMax = new Vector2(0.5f, 0.5f);
+                lr.sizeDelta = new Vector2(92f, 92f);
+                Image li = led.AddComponent<Image>();
+                li.sprite = HudSkin.LedLit;
+                li.raycastTarget = false;
+                li.enabled = false;
+                pipLit[i] = li;
+            }
+        }
+
+        /// <summary>Pliers booster armed: the medallion glows gold until a piece is snipped or it is tapped again.</summary>
+        public void SetPliersArmed(bool armed)
+        {
+            if (pliersImage == null) return;
+            pliersImage.color = armed ? new Color(1f, 0.82f, 0.35f) : Color.white;
+            pliersImage.rectTransform.localScale = Vector3.one * (armed ? 1.12f : 1f);
         }
 
         public void SetHintAvailable(bool interactable) { hintButton.interactable = interactable; }
@@ -159,6 +209,9 @@ namespace ColorGateBlast
 
         // ------------------------------------------------------------------ construction
 
+        private static readonly Color PlaqueText = new Color(0.1f, 0.1f, 0.12f);
+        private static readonly Color CreamText = new Color(0.96f, 0.9f, 0.74f);
+        private Image hintImage;
         private static readonly Color PanelColor = new Color(0.06f, 0.07f, 0.12f, 0.92f);
         private static readonly Color ButtonBlue = new Color(0.25f, 0.5f, 0.96f, 1f);
         private static readonly Color ButtonGray = new Color(0.4f, 0.43f, 0.55f, 1f);
@@ -189,34 +242,63 @@ namespace ColorGateBlast
             RectTransform root = canvasGo.GetComponent<RectTransform>();
 
             Vector2 topC = new Vector2(0.5f, 1f);
-            // --- header ---
-            levelText = MakeText(root, "LevelText", font, 54, TextAnchor.MiddleCenter, topC, new Vector2(0, -60), new Vector2(900, 80));
+            // --- header: embossed gold-beige LEVEL, then two riveted steel plaques with coloured badges ---
+            levelText = MakeText(root, "LevelText", font, 80, TextAnchor.MiddleCenter, topC, new Vector2(0, -62), new Vector2(900, 100));
+            levelText.color = new Color(0.95f, 0.86f, 0.62f);
+            Outline lo = levelText.GetComponent<Outline>();
+            lo.effectColor = new Color(0.32f, 0.2f, 0.06f, 0.9f);
+            lo.effectDistance = new Vector2(2f, -2f);
+            Shadow ls = levelText.gameObject.AddComponent<Shadow>();
+            ls.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            ls.effectDistance = new Vector2(0f, -8f);
+
             GameObject banner = new GameObject("BossBanner", typeof(RectTransform));
             banner.transform.SetParent(root, false);
             RectTransform brt = banner.GetComponent<RectTransform>();
             brt.anchorMin = topC; brt.anchorMax = topC; brt.pivot = new Vector2(0.5f, 0.5f);
-            brt.anchoredPosition = new Vector2(0, -130); brt.sizeDelta = new Vector2(900, 64);
+            brt.anchoredPosition = new Vector2(0, -292); brt.sizeDelta = new Vector2(900, 60);
             bannerImage = banner.AddComponent<Image>();
-            bannerImage.sprite = sprite;
-            bannerImage.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            bannerImage.sprite = HudSkin.Plate;
+            bannerImage.type = Image.Type.Sliced;
             bannerRoot = banner;
-            bannerText = MakeText(brt, "BannerText", font, 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880, 60));
+            bannerText = MakeText(brt, "BannerText", font, 32, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880, 56));
             banner.SetActive(false);
 
-            targetsText = MakeText(root, "TargetsText", font, 34, TextAnchor.MiddleLeft, new Vector2(0f, 1f), new Vector2(40, -215), new Vector2(330, 60));
-            targetsText.rectTransform.pivot = new Vector2(0f, 0.5f);
-            movesText = MakeText(root, "MovesText", font, 34, TextAnchor.MiddleCenter, topC, new Vector2(0, -215), new Vector2(330, 60));
-            trackText = MakeText(root, "TrackText", font, 34, TextAnchor.MiddleRight, new Vector2(1f, 1f), new Vector2(-40, -215), new Vector2(360, 60));
-            trackText.rectTransform.pivot = new Vector2(1f, 0.5f);
+            movesText = MakePlaque(root, "MovesPlaque", font, new Vector2(0f, 1f), new Vector2(240, -178), new Vector2(430, 108), new Color(0.78f, 0.16f, 0.12f));
+            targetsText = MakePlaque(root, "RemainingPlaque", font, new Vector2(1f, 1f), new Vector2(-240, -178), new Vector2(430, 108), new Color(0.2f, 0.45f, 0.85f));
+            targetsText.fontSize = 32;
 
-            // --- Restart + Hint (with AD badge), side by side ---
-            restartButton = MakeButton(root, "RestartButton", font, sprite, ButtonGray, "RESTART", 30, new Vector2(0f, 1f), new Vector2(150, -300), new Vector2(240, 80));
-            hintButton = MakeButton(root, "HintButton", font, sprite, ButtonBlue, "HINT", 34, new Vector2(0f, 1f), new Vector2(420, -300), new Vector2(240, 80));
-            MakeBadge(hintButton.GetComponent<RectTransform>(), font, sprite);
+            // --- bottom row: track capacity LEDs (left), Restart plaque (centre), booster medallions (right) ---
+            trackText = MakeText(root, "TrackText", font, 34, TextAnchor.MiddleLeft, new Vector2(0f, 0f), new Vector2(44, 178), new Vector2(520, 50));
+            trackText.rectTransform.pivot = new Vector2(0f, 0.5f);
+            trackText.rectTransform.anchoredPosition = new Vector2(44, 178);
+            trackText.color = CreamText;
+            Shadow ts = trackText.gameObject.AddComponent<Shadow>();
+            ts.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            ts.effectDistance = new Vector2(0f, -4f);
+            GameObject row = new GameObject("PipRow", typeof(RectTransform));
+            row.transform.SetParent(root, false);
+            pipRow = row.GetComponent<RectTransform>();
+            pipRow.anchorMin = pipRow.anchorMax = new Vector2(0f, 0f);
+            pipRow.pivot = new Vector2(0f, 0.5f);
+            pipRow.anchoredPosition = new Vector2(44, 108);
+            pipRow.sizeDelta = new Vector2(380, 56);
+            pipCount = -1;
+            pipLit = new Image[0];
+
+            restartButton = MakeButton(root, "RestartButton", font, null, Color.white, "Restart", 38, new Vector2(0.5f, 0f), new Vector2(60, 108), new Vector2(270, 100));
+            restartButton.GetComponentInChildren<Text>().color = new Color(0.1f, 0.1f, 0.12f);
+            Shadow rs = restartButton.GetComponentInChildren<Text>().gameObject.AddComponent<Shadow>();
+            rs.effectColor = new Color(1f, 1f, 1f, 0.45f);
+            rs.effectDistance = new Vector2(0f, -2f);
+            restartButton.GetComponentInChildren<Outline>().enabled = false;
+
+            pliersButton = MakeMedallion(root, "PliersButton", HudSkin.Pliers, new Vector2(1f, 0f), new Vector2(-270, 112), out pliersImage);
+            hintButton = MakeMedallion(root, "HintButton", HudSkin.Gear, new Vector2(1f, 0f), new Vector2(-100, 112), out hintImage);
 
             // --- rescue: +1 track slot (only while at capacity) ---
-            extraSlotButton = MakeButton(root, "ExtraSlotButton", font, sprite, ButtonGold, "+1 TRACK SLOT", 36, new Vector2(0.5f, 0f), new Vector2(0, 90), new Vector2(560, 100));
-            MakeBadge(extraSlotButton.GetComponent<RectTransform>(), font, sprite);
+            extraSlotButton = MakeButton(root, "ExtraSlotButton", font, null, new Color(1f, 0.82f, 0.4f), "+1 TRACK SLOT", 36, new Vector2(0.5f, 0f), new Vector2(0, 262), new Vector2(560, 100));
+            MakeBadge(extraSlotButton.GetComponent<RectTransform>(), font, null);
             extraSlotButton.gameObject.SetActive(false);
 
             // --- 360 rotate hint (shown next to the monument) ---
@@ -224,13 +306,15 @@ namespace ColorGateBlast
             rot.transform.SetParent(root, false);
             RectTransform rr = rot.GetComponent<RectTransform>();
             rr.anchorMin = new Vector2(1f, 1f); rr.anchorMax = new Vector2(1f, 1f); rr.pivot = new Vector2(0.5f, 0.5f);
-            rr.anchoredPosition = new Vector2(-110, -520); rr.sizeDelta = new Vector2(130, 130);
+            rr.anchoredPosition = new Vector2(-110, -470); rr.sizeDelta = new Vector2(130, 130);
             Image ri = rot.AddComponent<Image>();
-            ri.sprite = sprite; ri.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple;
-            ri.color = new Color(0.1f, 0.12f, 0.2f, 0.7f);
+            ri.sprite = HudSkin.Plate; ri.type = Image.Type.Sliced;
+            ri.color = new Color(1f, 1f, 1f, 0.8f);
             ri.raycastTarget = false;
-            Text rt = MakeText(rr, "Label", font, 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130, 130));
+            Text rt = MakeText(rr, "Label", font, 28, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130, 130));
             rt.text = "360\n<->\nDRAG";
+            rt.color = PlaqueText;
+            rt.GetComponent<Outline>().enabled = false;
             rotateHint = rot;
             rot.SetActive(false);
 
@@ -310,8 +394,8 @@ namespace ColorGateBlast
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             Image img = go.AddComponent<Image>();
-            img.sprite = sprite;
-            img.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            img.sprite = HudSkin.Plate;
+            img.type = Image.Type.Sliced;
             img.color = color;
             Button b = go.AddComponent<Button>();
             b.targetGraphic = img;
@@ -322,6 +406,89 @@ namespace ColorGateBlast
             b.colors = cb;
             Text t = MakeText(rt, "Label", font, fontSize, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, size);
             t.text = label;
+            return b;
+        }
+
+        /// <summary>Riveted brushed-steel plaque with a coloured round badge on the left and the text to its right.</summary>
+        private static Text MakePlaque(RectTransform parent, string name, Font font, Vector2 anchor, Vector2 pos, Vector2 size, Color badge)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = anchor; rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos; rt.sizeDelta = size;
+            Image img = go.AddComponent<Image>();
+            img.sprite = HudSkin.Plate; img.type = Image.Type.Sliced; img.raycastTarget = false;
+
+            GameObject bd = new GameObject("Badge", typeof(RectTransform));
+            bd.transform.SetParent(rt, false);
+            RectTransform br = bd.GetComponent<RectTransform>();
+            br.anchorMin = br.anchorMax = new Vector2(0f, 0.5f);
+            br.pivot = new Vector2(0.5f, 0.5f);
+            br.anchoredPosition = new Vector2(62f, 0f);
+            br.sizeDelta = new Vector2(62f, 62f);
+            Image bi = bd.AddComponent<Image>();
+            bi.sprite = HudSkin.Disc; bi.color = badge; bi.raycastTarget = false;
+            GameObject sheen = new GameObject("BadgeRing", typeof(RectTransform));
+            sheen.transform.SetParent(br, false);
+            RectTransform sr = sheen.GetComponent<RectTransform>();
+            sr.anchorMin = sr.anchorMax = new Vector2(0.5f, 0.5f);
+            sr.sizeDelta = new Vector2(30f, 30f);
+            Image si = sheen.AddComponent<Image>();
+            si.sprite = HudSkin.Disc; si.color = new Color(1f, 1f, 1f, 0.35f); si.raycastTarget = false;
+
+            Text t = MakeText(rt, "Text", font, 38, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(40f, 0f), new Vector2(300, 90));
+            t.color = PlaqueText;
+            t.GetComponent<Outline>().enabled = false;
+            Shadow sh = t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(1f, 1f, 1f, 0.5f);
+            sh.effectDistance = new Vector2(0f, -2f);
+            return t;
+        }
+
+        /// <summary>Round metallic medallion with an icon and a padlock badge (the booster needs a rewarded ad to unlock).</summary>
+        private static Button MakeMedallion(RectTransform parent, string name, Sprite icon, Vector2 anchor, Vector2 pos, out Image medalImage)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = anchor; rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(150f, 150f);
+            Image img = go.AddComponent<Image>();
+            img.sprite = HudSkin.Medallion;
+            medalImage = img;
+            Button b = go.AddComponent<Button>();
+            b.targetGraphic = img;
+            ColorBlock cb = b.colors;
+            cb.highlightedColor = new Color(0.92f, 0.92f, 0.92f, 1f);
+            cb.pressedColor = new Color(0.72f, 0.72f, 0.72f, 1f);
+            cb.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+            b.colors = cb;
+
+            GameObject ic = new GameObject("Icon", typeof(RectTransform));
+            ic.transform.SetParent(rt, false);
+            RectTransform ir = ic.GetComponent<RectTransform>();
+            ir.anchorMin = ir.anchorMax = new Vector2(0.5f, 0.5f);
+            ir.sizeDelta = new Vector2(92f, 92f);
+            Image ii = ic.AddComponent<Image>();
+            ii.sprite = icon; ii.raycastTarget = false;
+
+            GameObject lk = new GameObject("PadlockBadge", typeof(RectTransform));
+            lk.transform.SetParent(rt, false);
+            RectTransform lr = lk.GetComponent<RectTransform>();
+            lr.anchorMin = lr.anchorMax = new Vector2(1f, 1f);
+            lr.pivot = new Vector2(0.5f, 0.5f);
+            lr.anchoredPosition = new Vector2(-14f, -14f);
+            lr.sizeDelta = new Vector2(54f, 54f);
+            Image lbg = lk.AddComponent<Image>();
+            lbg.sprite = HudSkin.Disc; lbg.color = new Color(0.16f, 0.17f, 0.2f); lbg.raycastTarget = false;
+            GameObject lp = new GameObject("Lock", typeof(RectTransform));
+            lp.transform.SetParent(lr, false);
+            RectTransform lpr = lp.GetComponent<RectTransform>();
+            lpr.anchorMin = lpr.anchorMax = new Vector2(0.5f, 0.5f);
+            lpr.sizeDelta = new Vector2(34f, 34f);
+            Image li = lp.AddComponent<Image>();
+            li.sprite = HudSkin.Padlock; li.color = new Color(1f, 0.8f, 0.3f); li.raycastTarget = false;
             return b;
         }
 
@@ -337,9 +504,9 @@ namespace ColorGateBlast
             rt.anchoredPosition = new Vector2(14, 14);
             rt.sizeDelta = new Vector2(84, 44);
             Image img = go.AddComponent<Image>();
-            img.sprite = sprite;
-            img.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple;
-            img.color = new Color(0.95f, 0.38f, 0.08f, 1f);
+            img.sprite = HudSkin.Plate;
+            img.type = Image.Type.Sliced;
+            img.color = new Color(1f, 0.5f, 0.2f, 1f);
             img.raycastTarget = false;
             Text t = MakeText(rt, "AdText", font, 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(84, 44));
             t.text = "> AD";
