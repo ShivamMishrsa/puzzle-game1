@@ -15,6 +15,8 @@ namespace ColorGateBlast.EditorTools
         protected const BlockColor X = BlockColor.Gray;
         protected const BlockColor G = BlockColor.Green;
         protected const BlockColor P = BlockColor.Purple;
+        protected const BlockColor O = BlockColor.Orange;
+        protected const BlockColor C = BlockColor.Cyan;
 
         protected const GateDirection Up = GateDirection.Up;
         protected const GateDirection Down = GateDirection.Down;
@@ -95,6 +97,22 @@ namespace ColorGateBlast.EditorTools
         /// <summary>Colour-shifting prism block: starts as cycle[0] and advances one step on every block exit.</summary>
         protected static Placement Prism(Placement p, params BlockColor[] cycle) { p.cycle = cycle; p.color = cycle[0]; return p; }
 
+        /// <summary>Repulsor coil at (x, y): shoves a block that rests on / beside it one tile away.</summary>
+        protected static RepulsorSpec Repulsor(int x, int y)
+        {
+            RepulsorSpec r = new RepulsorSpec();
+            r.cell = new Int2(x, y);
+            return r;
+        }
+
+        /// <summary>One-way ratchet turnstile at (x, y): blocks may only slide onto it moving in direction <paramref name="dir"/>.</summary>
+        protected static TurnstileSpec Turnstile(int x, int y, GateDirection dir)
+        {
+            TurnstileSpec t = new TurnstileSpec();
+            t.cell = new Int2(x, y); t.dir = dir;
+            return t;
+        }
+
         /// <summary>Crated mystery block: the colour passed to Rect/Ell is the colour revealed when a neighbour leaves.</summary>
         protected static Placement Crate(Placement p) { p.crate = true; return p; }
 
@@ -136,7 +154,8 @@ namespace ColorGateBlast.EditorTools
             LevelDefinition d = new LevelDefinition();
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
-            d.monument = id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
+            d.megaPierces = id >= 81;
+            d.monument = id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -182,6 +201,31 @@ namespace ColorGateBlast.EditorTools
                             mask = MaskOf(d, PartType.GroupHead);
                             if (mask == 0) mask = MaskOf(d, PartType.Boiler);
                         }
+                        break;
+                    case MonumentKind.Orrery:
+                        // 3-layer vault armour: zodiac rings shield the orbiting planets, the planets shield the gear cage, the cage shields the dynamite
+                        if (p.type == PartType.Planet) mask = MaskOf(d, PartType.Ring);
+                        else if (p.type == PartType.Cage)
+                        {
+                            mask = MaskOf(d, PartType.Planet);
+                            if (mask == 0) mask = MaskOf(d, PartType.Ring);
+                        }
+                        else if (p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Cage);
+                            if (mask == 0) mask = MaskOf(d, PartType.Planet);
+                        }
+                        break;
+                    case MonumentKind.Gramophone:
+                        // 2-layer nested armour: the inner bracket / governor / mainspring are shielded until their outer shell is gone
+                        if (p.type == PartType.Bracket || p.type == PartType.Record) mask = MaskOf(d, PartType.Horn);
+                        else if (p.type == PartType.Governor) mask = MaskOf(d, PartType.Record);
+                        else if (p.type == PartType.Cabinet)
+                        {
+                            mask = MaskOf(d, PartType.Record);
+                            if (mask == 0) mask = MaskOf(d, PartType.Horn);
+                        }
+                        else if (p.type == PartType.Mainspring || p.type == PartType.Tnt) mask = MaskOf(d, PartType.Cabinet);
                         break;
                     case MonumentKind.Typewriter:
                         // stage 2 (typebar basket, ribbon spools) sits behind the hood; stage 3 (rack, springs, TNT) behind the typebars
