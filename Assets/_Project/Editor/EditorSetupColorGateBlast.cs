@@ -39,7 +39,7 @@ namespace ColorGateBlast.EditorTools
             ApplyProjectSettings();
 
             // ---- levels (solver-verified before they are saved) ----
-            int last = LevelLibrary.Range(1, 99).Count;
+            int last = LevelLibrary.Range(1, 150).Count;
             if (last > 0) LevelAssetTools.GenerateRange(1, last);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -279,6 +279,10 @@ namespace ColorGateBlast.EditorTools
         public static void From21() { SetStart(21); }
         [MenuItem("Tools/Color Gate Blast/Play From Level/Level 31", false, 25)]
         public static void From31() { SetStart(31); }
+        [MenuItem("Tools/Color Gate Blast/Play From Level/Level 41", false, 26)]
+        public static void From41() { SetStart(41); }
+        [MenuItem("Tools/Color Gate Blast/Play From Level/Level 51", false, 27)]
+        public static void From51() { SetStart(51); }
 
         private static void SetStart(int level)
         {

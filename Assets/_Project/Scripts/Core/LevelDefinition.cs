@@ -77,6 +77,10 @@ namespace ColorGateBlast
         public int lockId;
         /// <summary>The respawned inner core carries the brass key (opens lock <see cref="lockId"/>).</summary>
         public bool innerHasKey;
+        /// <summary>Welded twin-linked pair: exactly two placements share the same non-zero id and slide as one rigid unit.</summary>
+        public int linkGroup;
+        /// <summary>Colour-shifting prism block: colours it cycles through (first = starting colour). Advances by one on every block exit.</summary>
+        public BlockColor[] cycle;
 
         /// <summary>True while the placement still has to be given a position (x &lt; 0) - level authoring helper.</summary>
         public bool Unplaced { get { return x < 0 || y < 0; } }
@@ -122,6 +126,12 @@ namespace ColorGateBlast
         public bool hasKey;
         public int lockId;
         public bool innerKey;
+        /// <summary>Index of the welded partner block, or -1.</summary>
+        public int partner = -1;
+        public int linkGroup;
+        /// <summary>Prism colour cycle (null when this is an ordinary block).</summary>
+        public BlockColor[] cycle;
+        public bool IsPrism { get { return cycle != null && cycle.Length > 1; } }
         /// <summary>Index of the 1x1 block that respawns when this (dual-layer) block exits, or -1.</summary>
         public int companion = -1;
         /// <summary>True for the hidden 1x1 blocks created for dual-layer blocks (dormant until their parent exits).</summary>
@@ -164,6 +174,17 @@ namespace ColorGateBlast
         public int lockId;
         /// <summary>Clockwork piercing gate: turrets spawned here pierce the outer shell AND the layer behind it.</summary>
         public bool isPiercingGate;
+        /// <summary>Steam pressure gate: every N player moves the gate flips between Normal and Pressurized (an exit while pressurized gives the turret +2 bonus ammo). 0 = normal gate.</summary>
+        public int steamInterval;
+    }
+
+    /// <summary>Electromagnetic floor pad: after a block comes to rest next to it (on the side opposite <see cref="pull"/>) it is pulled one tile onto the pad for free.</summary>
+    [Serializable]
+    public struct MagnetSpec
+    {
+        public Int2 cell;
+        /// <summary>Direction the pad pulls blocks in.</summary>
+        public GateDirection pull;
     }
 
     /// <summary>A pair of teleporter pads on the tray floor. Only 1x1 blocks warp; larger blocks roll over them.</summary>
@@ -233,6 +254,45 @@ namespace ColorGateBlast
                         if (slot == 0) { x = 0.0f; y = 1.0f; } else { x = 1.1f; y = 0.8f; }
                         return;
                     default: x = 0.0f; y = 1.3f; return;
+                }
+            }
+            if (kind == MonumentKind.EspressoMachine)
+            {
+                switch (type)
+                {
+                    case PartType.Boiler: x = 0.0f; y = slot == 0 ? 2.1f : 3.05f; return;
+                    case PartType.Gauge: x = -0.55f; y = 1.75f; return;
+                    case PartType.Lever: x = 1.3f; y = 2.1f; return;
+                    case PartType.GroupHead: x = 0.0f; y = 0.95f; return;
+                    case PartType.SightTube: x = -1.25f; y = 1.5f; return;
+                    case PartType.DripGrid: x = 0.0f; y = 0.4f; return;
+                    case PartType.Coil: x = 0.0f; y = 1.7f; return;
+                    case PartType.Valve:
+                        if (slot == 0) { x = -0.55f; y = 1.35f; }
+                        else if (slot == 1) { x = 0.55f; y = 1.35f; }
+                        else { x = 0.0f; y = 2.05f; }
+                        return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 1.5f; } else { x = 0.8f; y = 1.9f; }
+                        return;
+                    default: x = 0.0f; y = 1.5f; return;
+                }
+            }
+            if (kind == MonumentKind.TlrCamera)
+            {
+                switch (type)
+                {
+                    case PartType.Body: x = 0.0f; y = 1.45f; return;
+                    case PartType.Hood: x = 0.0f; y = 2.85f; return;
+                    case PartType.Lens: x = 0.0f; y = slot == 0 ? 2.1f : 1.0f; return;
+                    case PartType.Iris: x = 0.0f; y = 1.0f; return;
+                    case PartType.Crank: x = 1.3f; y = 1.6f; return;
+                    case PartType.Spool: x = slot == 0 ? -0.65f : 0.65f; y = 1.3f; return;
+                    case PartType.ShutterGear: x = 0.0f; y = 1.7f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 0.8f; } else { x = 0.8f; y = 1.1f; }
+                        return;
+                    default: x = 0.0f; y = 1.5f; return;
                 }
             }
             if (kind == MonumentKind.PocketWatch)
@@ -306,6 +366,7 @@ namespace ColorGateBlast
         public List<GateSpec> gates = new List<GateSpec>();
         public List<PartSpec> parts = new List<PartSpec>();
         public List<PortalSpec> portals = new List<PortalSpec>();
+        public List<MagnetSpec> magnets = new List<MagnetSpec>();
         /// <summary>Level starts with the monument spin-hint (a 360 icon) visible.</summary>
         public bool showRotateHint;
 
@@ -337,8 +398,18 @@ namespace ColorGateBlast
                 b.hasKey = p.hasBrassKey && !b.immovable;
                 b.lockId = p.lockId;
                 b.innerKey = p.innerHasKey && b.hasInner;
+                b.linkGroup = b.immovable ? 0 : p.linkGroup;
+                b.cycle = (p.cycle != null && p.cycle.Length > 1 && !b.immovable) ? p.cycle : null;
                 r.Add(b);
             }
+            // resolve welded pairs
+            for (int i = 0; i < r.Count; i++)
+            {
+                if (r[i].linkGroup == 0 || r[i].partner >= 0) continue;
+                for (int j = i + 1; j < r.Count; j++)
+                    if (r[j].linkGroup == r[i].linkGroup && r[j].partner < 0) { r[i].partner = j; r[j].partner = i; break; }
+            }
+            for (int i = 0; i < r.Count; i++) if (r[i].linkGroup != 0 && r[i].partner < 0) r[i].linkGroup = 0;
             int authored = r.Count;
             for (int i = 0; i < authored; i++)
             {
@@ -412,6 +483,15 @@ namespace ColorGateBlast
                 }
                 if (ps.a == ps.b) return "portal " + pi + " has identical ends";
             }
+            for (int i = 0; i < placements.Count; i++)
+            {
+                if (placements[i].linkGroup == 0) continue;
+                int n = 0;
+                for (int j = 0; j < placements.Count; j++) if (placements[j].linkGroup == placements[i].linkGroup) n++;
+                if (n != 2) return "link group " + placements[i].linkGroup + " must have exactly two blocks";
+            }
+            for (int mi = 0; mi < magnets.Count; mi++)
+                if (magnets[mi].cell.x < 0 || magnets[mi].cell.y < 0 || magnets[mi].cell.x >= w || magnets[mi].cell.y >= h) return "magnet " + mi + " out of grid";
             if (parts.Count == 0) return "no monument parts";
             for (int i = 0; i < parts.Count; i++)
                 if (parts[i].color == BlockColor.Gray) return "monument part " + i + " cannot be gray";

@@ -163,7 +163,20 @@ namespace ColorGateBlast
         /// <summary>Frames the finished monument + loop and rebuilds the props / lighting around them.</summary>
         private void FrameWorkshop()
         {
-            rig.Frame(loopMid, loopHalf.x, loopHalf.y, monument.TopWorldPoint());
+            // the tall monument leans back on screen: make the loop's far edge clear its silhouette so nothing overlaps the belt
+            Vector3 top = monument.SilhouetteTop();
+            float zBottom = loopMid.z - loopHalf.y;
+            float zTop = loopMid.z + loopHalf.y;
+            for (int it = 0; it < 8; it++)
+            {
+                loopMid = new Vector3(0f, 0f, (zTop + zBottom) * 0.5f);
+                loopHalf = new Vector2(loopHalf.x, (zTop - zBottom) * 0.5f);
+                rig.Frame(loopMid, loopHalf.x, loopHalf.y, top);
+                float beltV = cam.WorldToViewportPoint(new Vector3(0f, 0.2f, zTop)).y;
+                float silV = cam.WorldToViewportPoint(top).y;
+                if (silV <= beltV - 0.04f) break;   // the belt's far edge is visibly above the monument's silhouette
+                zTop += 0.45f;
+            }
             environment.Build(rig, loopMid, loopHalf.x, loopHalf.y, def.levelID);
             lighting.Apply(cam, rig.Distance);
         }
@@ -172,6 +185,14 @@ namespace ColorGateBlast
         private Vector3 loopMid;
 
         // ------------------------------------------------------------------ level flow
+
+        /// <summary>QA hook (browser: unityInstance.SendMessage("LevelProgressor", "QaGoto", "21")): jump straight to a level number.</summary>
+        public void QaGoto(string levelNumber)
+        {
+            int n;
+            if (levels == null || !int.TryParse(levelNumber, out n)) return;
+            for (int i = 0; i < levels.Length; i++) if (levels[i].LevelNumber == n) { StartLevel(i); return; }
+        }
 
         public void StartLevel(int index)
         {
@@ -217,7 +238,10 @@ namespace ColorGateBlast
             BlockInfo info = grid.Board.Blocks[blockIndex];
             Int2 d = Dirs.Of(dir);
             Vector3 gateWorld = center + new Vector3(d.x, 0f, d.y) * (grid.CellSize * 3f);
-            track.SpawnTurret(info.color, info.Tiles, center, gateWorld, piercing);
+            BlockColor exitColor = grid.LastExitColor;
+            int bonus = grid.LastExitBonus;
+            track.SpawnTurret(exitColor, info.Tiles + bonus, center, gateWorld, piercing);
+            if (bonus > 0) ui.ShowToast("PRESSURIZED!  +" + bonus + " ammo");
 
             // consecutive gate exits walk up the pentatonic scale C D E G A
             streak = (Time.time - lastExitTime < 3.2f) ? streak + 1 : 0;
@@ -225,8 +249,8 @@ namespace ColorGateBlast
             if (sound != null) sound.PlayCombo(streak);
 
             // Color-Chain Overdrive (levels 21+): three same-colour exits in a row
-            sameColorStreak = (info.color == lastExitColor) ? sameColorStreak + 1 : 1;
-            lastExitColor = info.color;
+            sameColorStreak = (exitColor == lastExitColor) ? sameColorStreak + 1 : 1;
+            lastExitColor = exitColor;
             if (def.levelID >= 21 && sameColorStreak >= 3)
             {
                 sameColorStreak = 0;
@@ -314,6 +338,12 @@ namespace ColorGateBlast
                 PlayerPrefs.SetInt(LevelPref, next);
                 PlayerPrefs.Save();
             }
+            if (def.tier == LevelTier.ChapterBoss)
+            {
+                // chapter trophy goes on the workshop shelf (persisted; shown in the win panel)
+                PlayerPrefs.SetInt("cgb_trophy_" + ((def.levelID - 1) / 10 + 1), 1);
+                PlayerPrefs.Save();
+            }
             if (sound != null) sound.Play(Sfx.Win);
             if (fx != null)
             {
@@ -327,7 +357,14 @@ namespace ColorGateBlast
         private IEnumerator ShowWinLater(int stars)
         {
             yield return new WaitForSeconds(1.4f);
-            ui.ShowWin(stars, movesUsed, def.parMoves, levelIndex + 1 < levels.Length, def.reward);
+            string reward = def.reward;
+            if (def.tier == LevelTier.ChapterBoss)
+            {
+                int trophies = 0;
+                for (int c = 1; c <= 15; c++) if (PlayerPrefs.GetInt("cgb_trophy_" + c, 0) == 1) trophies++;
+                reward += "\nTrophy shelf: " + trophies + " chapter trophies";
+            }
+            ui.ShowWin(stars, movesUsed, def.parMoves, levelIndex + 1 < levels.Length, reward);
         }
 
         private void Lose(LoseKind kind)

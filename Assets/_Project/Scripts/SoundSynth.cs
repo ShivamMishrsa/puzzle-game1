@@ -8,7 +8,9 @@ namespace ColorGateBlast
         BlockPick, BlockSnap, GateExit, TurretShoot, Laser, MonumentBreak, DebrisClink, GlassSnap,
         IceCrack, ShutterClank, TapeWhir, PlasticPop, Tnt, Win, Fail, Click, ErrorBuzz, Merge, Tick,
         // batch 3 / 4
-        Ratchet, MetalPing, PadlockSnap, Overdrive, PortalZap, TickTock, DialClick, Unlock
+        Ratchet, MetalPing, PadlockSnap, Overdrive, PortalZap, TickTock, DialClick, Unlock,
+        // batch 5 / 6
+        WeldBreak, SteamHiss, PrismChime, MagnetClunk
     }
 
     /// <summary>
@@ -223,6 +225,11 @@ namespace ColorGateBlast
             Add(Sfx.TickTock, Clip("tick", Mix(Ring(2200f, 0.03f, 0.3f, 140f, 1.5f), Noise(0.01f, 0.12f, 250f, 0.8f, 1f))),
                               Clip("tock", Mix(Ring(1500f, 0.04f, 0.3f, 120f, 1.5f), Noise(0.01f, 0.12f, 250f, 0.8f, 1f))));
             Add(Sfx.DialClick, Clip("dial", Mix(Ring(1300f, 0.025f, 0.3f, 150f, 1.6f), Noise(0.008f, 0.12f, 300f, 0.7f, 1f))));
+            Add(Sfx.WeldBreak, Clip("weld", Mix(Ring(1900f, 0.1f, 0.45f, 40f, 2.3f), Noise(0.08f, 0.5f, 40f, 0.5f, 0.9f), Delay(Ring(620f, 0.25f, 0.3f, 14f, 2.9f), 0.02f), Delay(Sweep(2600f, 800f, 0.1f, 0.25f, 0.5f, 1.2f), 0.01f))));
+            Add(Sfx.SteamHiss, Clip("hiss", Mix(Noise(0.45f, 0.35f, 5f, 0.55f, 0.95f), Delay(Noise(0.3f, 0.12f, 6f, 0.7f, 1f), 0.05f))));
+            Add(Sfx.PrismChime, Clip("prism1", Mix(Ring(3300f, 0.45f, 0.22f, 8f, 1.5f), Delay(Ring(4400f, 0.35f, 0.14f, 10f, 1.5f), 0.025f))),
+                                Clip("prism2", Mix(Ring(3700f, 0.45f, 0.22f, 8f, 1.5f), Delay(Ring(4900f, 0.35f, 0.14f, 10f, 1.5f), 0.025f))));
+            Add(Sfx.MagnetClunk, Clip("clunk", Mix(Ring(130f, 0.22f, 0.6f, 20f, 2.1f), Noise(0.05f, 0.4f, 60f, 0.1f, 0.5f), Delay(Ring(900f, 0.18f, 0.2f, 14f, 2.7f), 0.02f))));
             Add(Sfx.Unlock, Clip("unlock", Mix(Marimba(BaseFreq * 2f, 0.4f, 0.4f), Delay(Marimba(BaseFreq * 3f, 0.5f, 0.4f), 0.08f))));
         }
     }

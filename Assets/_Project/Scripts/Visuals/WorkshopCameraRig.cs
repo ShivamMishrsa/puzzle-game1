@@ -13,7 +13,7 @@ namespace ColorGateBlast
     {
         public float Fov = 38f;
         public float Pitch = 58f;
-        public float TopClear = 0.12f;
+        public float TopClear = 0.135f;
         public float BottomClear = 0.15f;
         public float SideClear = 0.025f;
 

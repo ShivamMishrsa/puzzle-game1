@@ -97,6 +97,8 @@ namespace ColorGateBlast
         {
             levelText.text = "LEVEL " + number;
             bool boss = tier != LevelTier.Normal;
+            levelText.rectTransform.anchoredPosition = new Vector2(0f, boss ? -46f : -62f);
+            levelText.fontSize = boss ? 70 : 80;
             bannerRoot.SetActive(boss);
             if (boss)
             {
@@ -256,16 +258,16 @@ namespace ColorGateBlast
             banner.transform.SetParent(root, false);
             RectTransform brt = banner.GetComponent<RectTransform>();
             brt.anchorMin = topC; brt.anchorMax = topC; brt.pivot = new Vector2(0.5f, 0.5f);
-            brt.anchoredPosition = new Vector2(0, -292); brt.sizeDelta = new Vector2(900, 60);
+            brt.anchoredPosition = new Vector2(0, -112); brt.sizeDelta = new Vector2(640, 40);
             bannerImage = banner.AddComponent<Image>();
             bannerImage.sprite = HudSkin.Plate;
             bannerImage.type = Image.Type.Sliced;
             bannerRoot = banner;
-            bannerText = MakeText(brt, "BannerText", font, 32, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880, 56));
+            bannerText = MakeText(brt, "BannerText", font, 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620, 40));
             banner.SetActive(false);
 
-            movesText = MakePlaque(root, "MovesPlaque", font, new Vector2(0f, 1f), new Vector2(240, -178), new Vector2(430, 108), new Color(0.78f, 0.16f, 0.12f));
-            targetsText = MakePlaque(root, "RemainingPlaque", font, new Vector2(1f, 1f), new Vector2(-240, -178), new Vector2(430, 108), new Color(0.2f, 0.45f, 0.85f));
+            movesText = MakePlaque(root, "MovesPlaque", font, new Vector2(0f, 1f), new Vector2(240, -190), new Vector2(430, 108), new Color(0.78f, 0.16f, 0.12f));
+            targetsText = MakePlaque(root, "RemainingPlaque", font, new Vector2(1f, 1f), new Vector2(-240, -190), new Vector2(430, 108), new Color(0.2f, 0.45f, 0.85f));
             targetsText.fontSize = 32;
 
             // --- bottom row: track capacity LEDs (left), Restart plaque (centre), booster medallions (right) ---
@@ -286,7 +288,7 @@ namespace ColorGateBlast
             pipCount = -1;
             pipLit = new Image[0];
 
-            restartButton = MakeButton(root, "RestartButton", font, null, Color.white, "Restart", 38, new Vector2(0.5f, 0f), new Vector2(60, 108), new Vector2(270, 100));
+            restartButton = MakeButton(root, "RestartButton", font, null, Color.white, "Restart", 38, new Vector2(0.5f, 0f), new Vector2(-20, 108), new Vector2(270, 100));
             restartButton.GetComponentInChildren<Text>().color = new Color(0.1f, 0.1f, 0.12f);
             Shadow rs = restartButton.GetComponentInChildren<Text>().gameObject.AddComponent<Shadow>();
             rs.effectColor = new Color(1f, 1f, 1f, 0.45f);
@@ -305,13 +307,13 @@ namespace ColorGateBlast
             GameObject rot = new GameObject("RotateHint", typeof(RectTransform));
             rot.transform.SetParent(root, false);
             RectTransform rr = rot.GetComponent<RectTransform>();
-            rr.anchorMin = new Vector2(1f, 1f); rr.anchorMax = new Vector2(1f, 1f); rr.pivot = new Vector2(0.5f, 0.5f);
-            rr.anchoredPosition = new Vector2(-110, -470); rr.sizeDelta = new Vector2(130, 130);
+            rr.anchorMin = new Vector2(1f, 0f); rr.anchorMax = new Vector2(1f, 0f); rr.pivot = new Vector2(0.5f, 0.5f);
+            rr.anchoredPosition = new Vector2(-388, 108); rr.sizeDelta = new Vector2(76, 76);
             Image ri = rot.AddComponent<Image>();
             ri.sprite = HudSkin.Plate; ri.type = Image.Type.Sliced;
             ri.color = new Color(1f, 1f, 1f, 0.8f);
             ri.raycastTarget = false;
-            Text rt = MakeText(rr, "Label", font, 28, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130, 130));
+            Text rt = MakeText(rr, "Label", font, 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(76, 76));
             rt.text = "360\n<->\nDRAG";
             rt.color = PlaqueText;
             rt.GetComponent<Outline>().enabled = false;

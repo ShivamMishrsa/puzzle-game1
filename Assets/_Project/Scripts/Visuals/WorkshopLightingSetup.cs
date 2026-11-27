@@ -36,6 +36,8 @@ namespace ColorGateBlast
             if (rim == null) rim = MakeLight("WorkshopRimLight", new Color(0.55f, 0.72f, 1f), 0.45f, LightShadows.None);
             rim.transform.rotation = Quaternion.LookRotation(new Vector3(0.5f, -0.45f, 0.75f), Vector3.up);
 
+            // flat horizontal metal (belt, casings, tray) mirrors the bright default sky: tame it so nothing blows out to pure white
+            RenderSettings.reflectionIntensity = 0.38f;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.34f, 0.31f, 0.3f);
 

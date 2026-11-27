@@ -35,9 +35,15 @@ namespace ColorGateBlast
         /// <summary>Index of the gate the block left through, or -1.</summary>
         public int gateIndex = -1;
         public bool piercing;
+        /// <summary>Bonus ammo from a Pressurized steam gate (+2), else 0.</summary>
+        public int bonusAmmo;
+        /// <summary>Index of the welded partner that was freed by this exit, or -1.</summary>
+        public int linkBroken = -1;
 
         public void Clear()
         {
+            bonusAmmo = 0;
+            linkBroken = -1;
             thawed.Clear();
             spawned = -1;
             shutterToggled = false;
@@ -72,6 +78,10 @@ namespace ColorGateBlast
         public readonly bool[] Exited;
         public readonly bool[] Dormant;
         public readonly int[] Ice;
+        /// <summary>True while a welded pair is still joined (both halves share the flag).</summary>
+        public readonly bool[] Linked;
+        /// <summary>Player moves made so far (drives the Steam Pressure Gate cycle).</summary>
+        public int Moves;
         public int ExitedCount;
         /// <summary>Number of exits so far; its parity flips every shutter gate.</summary>
         public int Toggles;
@@ -80,6 +90,7 @@ namespace ColorGateBlast
 
         private readonly int[] occ;
         private readonly bool hasShutter;
+        private readonly int steamPeriod;
         private readonly Int2[] partner; // per cell: the partner pad cell, or (-1,-1)
 
         public BoardModel(LevelDefinition def)
@@ -87,13 +98,19 @@ namespace ColorGateBlast
             Def = def;
             Width = def.GridWidth;
             Height = def.GridHeight;
-            for (int g = 0; g < def.gates.Count; g++) if (def.gates[g].isShutterGate) hasShutter = true;
+            for (int g = 0; g < def.gates.Count; g++)
+            {
+                if (def.gates[g].isShutterGate) hasShutter = true;
+                if (def.gates[g].steamInterval > 0 && def.gates[g].steamInterval * 2 > steamPeriod) steamPeriod = def.gates[g].steamInterval * 2;
+            }
             Blocks = def.BuildBlocks();
             int n = Blocks.Length;
             Pos = new Int2[n];
             Exited = new bool[n];
             Dormant = new bool[n];
             Ice = new int[n];
+            Linked = new bool[n];
+            for (int i = 0; i < n; i++) Linked[i] = Blocks[i].partner >= 0;
             occ = new int[Width * Height];
             partner = BuildPartners(def);
             for (int i = 0; i < occ.Length; i++) occ[i] = -1;
@@ -116,6 +133,9 @@ namespace ColorGateBlast
             Exited = (bool[])o.Exited.Clone();
             Dormant = (bool[])o.Dormant.Clone();
             Ice = (int[])o.Ice.Clone();
+            Linked = (bool[])o.Linked.Clone();
+            Moves = o.Moves;
+            steamPeriod = o.steamPeriod;
             occ = (int[])o.occ.Clone();
             ExitedCount = o.ExitedCount;
             Toggles = o.Toggles;
@@ -158,6 +178,27 @@ namespace ColorGateBlast
         public bool InGrid(Int2 p) { return p.x >= 0 && p.y >= 0 && p.x < Width && p.y < Height; }
 
         public bool IsFrozen(int i) { return Ice[i] > 0; }
+
+        /// <summary>Current colour of block i (prism blocks cycle once per exit).</summary>
+        public BlockColor ColorOf(int i)
+        {
+            BlockInfo b = Blocks[i];
+            if (b.cycle == null || b.cycle.Length < 2) return b.color;
+            return b.cycle[Toggles % b.cycle.Length];
+        }
+
+        /// <summary>Colour block i will have after the next <paramref name="steps"/> exits.</summary>
+        public BlockColor ColorAfter(int i, int steps)
+        {
+            BlockInfo b = Blocks[i];
+            if (b.cycle == null || b.cycle.Length < 2) return b.color;
+            return b.cycle[(Toggles + steps) % b.cycle.Length];
+        }
+
+        public bool SteamPressurized(GateSpec g) { return g.steamInterval > 0 && ((Moves / g.steamInterval) & 1) == 1; }
+
+        /// <summary>Call once per completed player move (slide or exit).</summary>
+        public void CountMove() { Moves++; }
 
         /// <summary>Block index occupying the cell, or -1.</summary>
         public int At(int x, int y)
@@ -221,22 +262,25 @@ namespace ColorGateBlast
             return -1;
         }
 
-        private bool CheckPlacement(int i, Int2 origin, out int outsideCount)
+        private bool CheckPlacement(int i, Int2 origin, out int outsideCount) { return CheckPlacement(i, origin, -1, out outsideCount); }
+
+        private bool CheckPlacement(int i, Int2 origin, int ignore, out int outsideCount)
         {
             outsideCount = 0;
             BlockInfo b = Blocks[i];
             Int2[] cells = b.cells;
+            BlockColor col = ColorOf(i);
             for (int c = 0; c < cells.Length; c++)
             {
                 Int2 p = origin + cells[c];
                 if (InGrid(p))
                 {
                     int v = occ[p.y * Width + p.x];
-                    if (v != -1 && v != i) return false;
+                    if (v != -1 && v != i && v != ignore) return false;
                 }
                 else
                 {
-                    if (GateOfOutsideCell(p, b.color, true) < 0) return false;
+                    if (GateOfOutsideCell(p, col, true) < 0) return false;
                     outsideCount++;
                 }
             }
@@ -247,12 +291,27 @@ namespace ColorGateBlast
         public Int2 Land(int i, Int2 origin, Int2 dir)
         {
             Int2 o = origin + dir;
-            if (Blocks[i].cells.Length == 1 && IsPortal(o)) return PortalPartner(o);
+            if (Blocks[i].cells.Length == 1 && IsPortal(o) && !Linked[i]) return PortalPartner(o);
             return o;
         }
 
-        /// <summary>Result of pushing block <paramref name="i"/> one cell from the hypothetical origin.</summary>
+        /// <summary>
+        /// Result of pushing block <paramref name="i"/> one cell from the hypothetical origin. A welded block drags its partner
+        /// along: both halves need a free cell; the pushed half may leave through its own gate while the partner just steps forward.
+        /// </summary>
         public StepResult Probe(int i, Int2 origin, Int2 dir)
+        {
+            if (!Linked[i]) return ProbeOne(i, origin, dir, -1);
+            int j = Blocks[i].partner;
+            if (Exited[j] || Ice[j] > 0) return StepResult.Blocked;
+            StepResult ri = ProbeOne(i, origin, dir, j);
+            if (ri == StepResult.Blocked) return ri;
+            Int2 oj = Pos[j] + (origin - Pos[i]);
+            StepResult rj = ProbeOne(j, oj, dir, i);
+            return rj == StepResult.Moved ? ri : StepResult.Blocked;
+        }
+
+        private StepResult ProbeOne(int i, Int2 origin, Int2 dir, int ignore)
         {
             BlockInfo b = Blocks[i];
             if (Exited[i] || Dormant[i] || b.IsObstacle || Ice[i] > 0) return StepResult.Blocked;
@@ -261,11 +320,11 @@ namespace ColorGateBlast
 
             Int2 o = origin + dir;
             int outCount;
-            if (!CheckPlacement(i, o, out outCount)) return StepResult.Blocked;
+            if (!CheckPlacement(i, o, ignore, out outCount)) return StepResult.Blocked;
             if (outCount == 0)
             {
                 // a 1x1 block stepping onto a pad warps to the partner - only if the exit pad is free
-                if (b.cells.Length == 1 && IsPortal(o))
+                if (b.cells.Length == 1 && IsPortal(o) && !Linked[i])
                 {
                     Int2 q = PortalPartner(o);
                     int v = occ[q.y * Width + q.x];
@@ -279,7 +338,7 @@ namespace ColorGateBlast
             while (outCount < tiles)
             {
                 o = o + dir;
-                if (!CheckPlacement(i, o, out outCount)) return StepResult.Blocked;
+                if (!CheckPlacement(i, o, ignore, out outCount)) return StepResult.Blocked;
             }
             return StepResult.Exit;
         }
@@ -298,7 +357,7 @@ namespace ColorGateBlast
                     Int2 p = o + b.cells[c];
                     if (!InGrid(p))
                     {
-                        int g = GateOfOutsideCell(p, b.color, true);
+                        int g = GateOfOutsideCell(p, ColorOf(i), true);
                         if (g >= 0) return g;
                     }
                 }
@@ -309,6 +368,18 @@ namespace ColorGateBlast
 
         public void Commit(int i, Int2 newOrigin)
         {
+            if (Linked[i])
+            {
+                int j = Blocks[i].partner;
+                Int2 delta = newOrigin - Pos[i];
+                Stamp(i, Pos[i], -1);
+                Stamp(j, Pos[j], -1);
+                Pos[i] = newOrigin;
+                Pos[j] = Pos[j] + delta;
+                Stamp(i, Pos[i], i);
+                Stamp(j, Pos[j], j);
+                return;
+            }
             Stamp(i, Pos[i], -1);
             Pos[i] = newOrigin;
             Stamp(i, newOrigin, i);
@@ -333,14 +404,42 @@ namespace ColorGateBlast
         /// </summary>
         public void ExitBlock(int i, ExitEffects fx, GateDirection exitDir, Int2 startOrigin, Int2 exitOrigin)
         {
+            ExitCore(i, fx, exitDir, startOrigin, exitOrigin, true);
+        }
+
+        /// <summary>Removes a block with a tool (pliers): no gate, no steam bonus, a welded partner is simply freed in place.</summary>
+        public void RemoveByTool(int i, ExitEffects fx)
+        {
+            ExitCore(i, fx, GateDirection.Up, Pos[i], Pos[i], false);
+        }
+
+        private void ExitCore(int i, ExitEffects fx, GateDirection exitDir, Int2 startOrigin, Int2 exitOrigin, bool viaGate)
+        {
             if (fx != null) fx.Clear();
             BlockInfo b = Blocks[i];
 
-            int exitGate = ExitGateIndex(i, exitOrigin, Dirs.Of(exitDir));
+            int exitGate = viaGate ? ExitGateIndex(i, exitOrigin, Dirs.Of(exitDir)) : -1;
             if (fx != null)
             {
                 fx.gateIndex = exitGate;
                 fx.piercing = exitGate >= 0 && Def.gates[exitGate].isPiercingGate;
+                if (exitGate >= 0 && SteamPressurized(Def.gates[exitGate])) fx.bonusAmmo = 2;
+            }
+
+            // a welded partner steps forward with the leaving half and is freed
+            if (Linked[i])
+            {
+                int j = b.partner;
+                Linked[i] = false;
+                Linked[j] = false;
+                if (viaGate)
+                {
+                    Int2 disp = (exitOrigin - Pos[i]) + Dirs.Of(exitDir);
+                    Stamp(j, Pos[j], -1);
+                    Pos[j] = Pos[j] + disp;
+                    Stamp(j, Pos[j], j);
+                }
+                if (fx != null) fx.linkBroken = j;
             }
 
             // orthogonal neighbours of the block at the slot it started from
@@ -391,6 +490,48 @@ namespace ColorGateBlast
 
         public bool HasShutter() { return hasShutter; }
 
+        /// <summary>
+        /// Electromagnet pull: if a cell of block i sits directly behind a pad (relative to the pad's pull direction) the block
+        /// is pulled one tile onto it - free of charge. Returns true when the block moved (and updates <paramref name="newOrigin"/>).
+        /// </summary>
+        public bool PullOnce(int i, out Int2 newOrigin)
+        {
+            newOrigin = Pos[i];
+            BlockInfo b = Blocks[i];
+            if (Exited[i] || Dormant[i] || b.IsObstacle || Ice[i] > 0 || Linked[i]) return false;
+            for (int m = 0; m < Def.magnets.Count; m++)
+            {
+                MagnetSpec ms = Def.magnets[m];
+                Int2 pd = Dirs.Of(ms.pull);
+                if (pd.x != 0 && b.axis == MoveAxis.Vertical) continue;
+                if (pd.y != 0 && b.axis == MoveAxis.Horizontal) continue;
+                bool behind = false;
+                for (int c = 0; c < b.cells.Length; c++)
+                {
+                    Int2 p = Pos[i] + b.cells[c];
+                    if (p + pd == ms.cell) { behind = true; break; }
+                }
+                if (!behind) continue;
+                Int2 target = Pos[i] + pd;
+                int outCount;
+                if (!CheckPlacement(i, target, out outCount) || outCount != 0) continue;
+                if (b.cells.Length == 1 && IsPortal(target)) continue;
+                Commit(i, target);
+                newOrigin = target;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Applies pulls until the block settles (max 4). Returns how many pulls happened.</summary>
+        public int PullAll(int i)
+        {
+            int n = 0;
+            Int2 o;
+            while (n < 4 && PullOnce(i, out o)) n++;
+            return n;
+        }
+
         /// <summary>Appends every single-direction slide / exit available now. exitAllowed[color] gates exits (null = all).</summary>
         public void GenerateMoves(List<Move> moves, bool[] exitAllowed)
         {
@@ -409,7 +550,7 @@ namespace ColorGateBlast
                         if (r == StepResult.Blocked) break;
                         if (r == StepResult.Exit)
                         {
-                            if (exitAllowed == null || exitAllowed[(int)Blocks[i].color])
+                            if (exitAllowed == null || exitAllowed[(int)ColorOf(i)])
                             {
                                 Move m = new Move();
                                 m.block = i;
@@ -445,6 +586,8 @@ namespace ColorGateBlast
                 if (Blocks[i].iceLayer > 0) key.Add((char)(Ice[i] + 1));
             }
             if (hasShutter) key.Add((char)((Toggles & 1) + 1));
+            if (steamPeriod > 0) key.Add((char)((Moves % steamPeriod) + 1));
+            for (int i = 0; i < Pos.Length; i++) if (Blocks[i].partner > i && !Linked[i]) key.Add((char)(i + 1)); // pair already broken
             if (UnlockedMask != 0) key.Add((char)(UnlockedMask + 1));
         }
     }

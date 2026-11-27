@@ -20,6 +20,13 @@ class Program
         if (p.hasInner && p.innerHasKey) s = "PeeledKey(" + s + ", " + C(p.innerColor) + ", " + p.lockId + ")";
         else if (p.hasInner) s = "Peeled(" + s + ", " + C(p.innerColor) + ")";
         if (p.hasBrassKey) s = "Key(" + s + ", " + p.lockId + ")";
+        if (p.cycle != null && p.cycle.Length > 1)
+        {
+            string cs = "";
+            foreach (BlockColor c in p.cycle) cs += ", " + C(c);
+            s = "Prism(" + s + cs + ")";
+        }
+        if (p.linkGroup != 0) s = "Link(" + s + ", " + p.linkGroup + ")";
         return s;
     }
 
@@ -27,7 +34,7 @@ class Program
     {
         LevelDefinition d = new LevelDefinition();
         d.levelID = t.levelID; d.gridSize = t.gridSize; d.moveLimit = t.moveLimit; d.maxTrackSlots = t.maxTrackSlots;
-        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals;
+        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.targetHpScale = t.targetHpScale;
         return d;
     }
 
@@ -123,6 +130,11 @@ class Program
                     bool free = true;
                     foreach (Int2 c in cells) if (occ[(oy + c.y) * w + ox + c.x]) { free = false; break; }
                     if (!free) continue;
+                    if (m.linkGroup != 0)
+                    {
+                        Placement mate = placed.Find(delegate (Placement q) { return q.linkGroup == m.linkGroup; });
+                        if (mate.linkGroup != 0 && Math.Abs(mate.x - ox) + Math.Abs(mate.y - oy) > 2) continue;
+                    }
                     foreach (Int2 c in cells) occ[(oy + c.y) * w + ox + c.x] = true;
                     m.x = ox; m.y = oy; placed.Add(m); done = true;
                 }
@@ -150,7 +162,7 @@ class Program
         for (int i = 0; i < st.Board.BlockCount; i++)
         {
             if (st.Board.Exited[i] || st.Board.Dormant[i] || st.Board.Blocks[i].IsObstacle) continue;
-            int col = (int)st.Board.Blocks[i].color;
+            int col = (int)st.Board.ColorOf(i);
             if (!st.CanExit(col)) continue;
             PuzzleState n = st.Clone();
             Move m = new Move(); m.block = i; m.exit = true;
@@ -213,8 +225,95 @@ class Program
         Console.WriteLine("solve(<=80): " + r.solved + " moves=" + r.moves + " visited=" + r.visited);
     }
 
+    // ---- mechanics self test (welded pairs, steam gates, prism blocks, magnet pads) ----
+    static int selfFail = 0;
+    static void Check(bool ok, string what) { Console.WriteLine((ok ? "PASS " : "FAIL ") + what); if (!ok) selfFail++; }
+
+    static LevelDefinition Tiny(int w, int h)
+    {
+        LevelDefinition d = new LevelDefinition();
+        d.gridSize = new Int2(w, h); d.moveLimit = 20; d.maxTrackSlots = 5;
+        PartSpec p = new PartSpec(); p.type = PartType.Casing; p.color = BlockColor.Red; p.hp = 3; d.parts.Add(p);
+        return d;
+    }
+    static Placement Blk(BlockColor c, int x, int y) { Placement p = new Placement(); p.color = c; p.shape = BlockShape.Rect; p.width = 1; p.height = 1; p.x = x; p.y = y; return p; }
+    static GateSpec Gt(GateDirection dir, int start, int len, BlockColor c) { GateSpec g = new GateSpec(); g.direction = dir; g.start = start; g.length = len; g.color = c; return g; }
+
+    static void SelfTest()
+    {
+        // welded pair: red (1,1) + blue (2,1); red gate Left at row 1
+        LevelDefinition e = Tiny(4, 4);
+        Placement ra = Blk(BlockColor.Red, 1, 1); ra.linkGroup = 1; Placement rb = Blk(BlockColor.Blue, 2, 1); rb.linkGroup = 1;
+        e.placements.Add(ra); e.placements.Add(rb);
+        e.gates.Add(Gt(GateDirection.Left, 1, 1, BlockColor.Red));
+        BoardModel me = new BoardModel(e);
+        Check(me.Linked[0] && me.Linked[1], "pair starts linked");
+        Check(me.Probe(0, new Int2(-1, 0)) == StepResult.Moved, "pair: both halves can step left");
+        Check(me.Probe(1, new Int2(0, 1)) == StepResult.Moved, "pair: both halves can step up");
+        me.Commit(0, new Int2(0, 1));
+        Check(me.Pos[0].x == 0 && me.Pos[1].x == 1, "pair: partner slid along (red x=0, blue x=1)");
+        Check(me.Probe(0, new Int2(-1, 0)) == StepResult.Exit, "pair: red exits left, blue steps into the vacated cell");
+        Check(me.Probe(1, new Int2(-1, 0)) == StepResult.Blocked, "pair: dragging the blue half toward the red gate does nothing (blue has no gate)");
+        ExitEffects fx = new ExitEffects();
+        me.ExitBlock(0, fx, GateDirection.Left, me.Pos[0], me.Pos[0]);
+        Check(!me.Linked[1] && me.Pos[1].x == 0 && fx.linkBroken == 1, "pair: link broken, blue stepped to (0,1)");
+        Check(me.Probe(1, new Int2(0, 1)) == StepResult.Moved, "pair: freed blue moves on its own");
+        // a blocked partner blocks the pair
+        LevelDefinition f = Tiny(4, 4);
+        Placement fa = Blk(BlockColor.Red, 1, 1); fa.linkGroup = 1; Placement fb = Blk(BlockColor.Blue, 2, 1); fb.linkGroup = 1;
+        f.placements.Add(fa); f.placements.Add(fb); f.placements.Add(Blk(BlockColor.Yellow, 2, 2));
+        BoardModel mf = new BoardModel(f);
+        Check(mf.Probe(0, new Int2(0, 1)) == StepResult.Blocked, "pair: a blocker above the partner blocks the whole pair");
+
+        // steam gate: interval 2 -> moves 0,1 normal; 2,3 pressurized
+        LevelDefinition sd = Tiny(4, 3);
+        sd.placements.Add(Blk(BlockColor.Red, 1, 0));
+        GateSpec sg = Gt(GateDirection.Down, 1, 1, BlockColor.Red); sg.steamInterval = 2; sd.gates.Add(sg);
+        BoardModel sb = new BoardModel(sd);
+        Check(!sb.SteamPressurized(sg), "steam: normal at move 0");
+        sb.CountMove(); sb.CountMove();
+        Check(sb.SteamPressurized(sg), "steam: pressurized after 2 moves");
+        ExitEffects sfx = new ExitEffects();
+        sb.ExitBlock(0, sfx, GateDirection.Down, sb.Pos[0], sb.Pos[0]);
+        Check(sfx.bonusAmmo == 2, "steam: exit while pressurized gives +2 ammo");
+        PuzzleState ps = new PuzzleState(sd);
+        ps.Board.CountMove(); ps.Board.CountMove();
+        Move mv = new Move(); mv.block = 0; mv.exit = true; mv.dir = GateDirection.Down; mv.to = ps.Board.Pos[0];
+        ps.Apply(mv);
+        Check(ps.Monument.Hp[0] == 3 - 3 || ps.Monument.AliveCount == 0, "steam: 1 tile + 2 bonus ammo destroys a 3-HP part (alive=" + ps.Monument.AliveCount + ")");
+
+        // prism: cycles Blue -> Red; after one exit it matches the red gate
+        LevelDefinition pd = Tiny(4, 4);
+        Placement prism = Blk(BlockColor.Blue, 1, 1); prism.cycle = new BlockColor[] { BlockColor.Blue, BlockColor.Red };
+        pd.placements.Add(prism);
+        pd.placements.Add(Blk(BlockColor.Yellow, 3, 3));
+        pd.gates.Add(Gt(GateDirection.Down, 1, 1, BlockColor.Red));
+        pd.gates.Add(Gt(GateDirection.Up, 3, 1, BlockColor.Yellow));
+        BoardModel pb = new BoardModel(pd);
+        Check(pb.ColorOf(0) == BlockColor.Blue, "prism: starts blue");
+        Check(pb.Probe(0, new Int2(0, -1)) == StepResult.Moved, "prism: blue cannot use the red gate yet (moves to (1,0))");
+        pb.Commit(0, new Int2(1, 0));
+        Check(pb.Probe(0, new Int2(0, -1)) == StepResult.Blocked, "prism: blue at the red gate is blocked");
+        pb.ExitBlock(1, null, GateDirection.Up, pb.Pos[1], pb.Pos[1]);
+        Check(pb.ColorOf(0) == BlockColor.Red, "prism: turns red after another block exits");
+        Check(pb.Probe(0, new Int2(0, -1)) == StepResult.Exit, "prism: now exits through the red gate");
+
+        // magnets: pad at (2,1) pulling Right: a block resting at (1,1) is pulled onto (2,1)
+        LevelDefinition md = Tiny(4, 3);
+        md.placements.Add(Blk(BlockColor.Red, 0, 1));
+        md.magnets.Add(new MagnetSpec { cell = new Int2(2, 1), pull = GateDirection.Right });
+        BoardModel mb = new BoardModel(md);
+        mb.Commit(0, new Int2(1, 1));
+        int pulls = mb.PullAll(0);
+        Check(pulls == 1 && mb.Pos[0].x == 2, "magnet: block resting at (1,1) pulled to (2,1) (pulls=" + pulls + ", x=" + mb.Pos[0].x + ")");
+        Check(mb.PullAll(0) == 0, "magnet: block on the pad is not pulled further");
+
+        Console.WriteLine(selfFail == 0 ? "SELFTEST ALL PASS" : ("SELFTEST FAILURES: " + selfFail));
+    }
+
     static void Main(string[] args)
     {
+        if (args.Length >= 1 && args[0] == "selftest") { SelfTest(); return; }
         if (args.Length >= 3 && args[0] == "dbg") { Dbg(int.Parse(args[1]), int.Parse(args[2])); return; }
         if (args.Length >= 2 && args[0] == "mon") { Mon(int.Parse(args[1])); return; }
         if (args.Length >= 3 && args[0] == "search") { Search(int.Parse(args[1]), double.Parse(args[2]), args.Length > 3 ? int.Parse(args[3]) : 0, args.Length > 4 ? int.Parse(args[4]) : 0); return; }

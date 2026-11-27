@@ -45,7 +45,7 @@ namespace ColorGateBlast
             PuzzleState snap = new PuzzleState(grid.Level, grid.Board, monument.Model, track.Snapshot());
 #if UNITY_WEBGL && !UNITY_EDITOR
             // WebGL has no threads: solve on the main thread with a smaller budget so the page stays responsive.
-            Present(LevelSolver.Solve(snap, 8000, 40000));
+            Present(LevelSolver.Solve(snap, 12000, 90000));
 #else
             pending = Task<LevelSolver.SolveResult>.Factory.StartNew(delegate () { return LevelSolver.Solve(snap, 20000, 150000); });
             if (Message != null) Message("Thinking...");
@@ -92,6 +92,7 @@ namespace ColorGateBlast
             v.SetHint(true);
 
             BlockInfo info = grid.Board.Blocks[m.block];
+            BlockColor curColor = grid.Board.ColorOf(m.block);
             Vector3 start = v.CentroidWorld;
             Vector3 offset = v.CentroidWorld - grid.CellWorld(grid.Board.Pos[m.block]);
             Vector3 end;
@@ -112,14 +113,16 @@ namespace ColorGateBlast
             }
             start.y = 0.65f;
             end.y = 0.65f;
-            StartPath(start, end, GameMaterials.ColorOf(info.color));
+            StartPath(start, end, GameMaterials.ColorOf(curColor));
 
             string dirName = m.dir.ToString().ToLower();
             string msg;
-            if (viaPortal) msg = "Hint: slide the " + info.color + " block " + dirName + " onto the portal pad - it warps!";
-            else if (m.exit) msg = "Hint: slide the " + info.color + " block " + dirName + " into its gate";
-            else msg = "Hint: slide the " + info.color + " block " + dirName;
-            if (m.exit && TurretWouldUnscrew(info.color)) msg += " (its turret unscrews a brass bolt)";
+            string who = info.IsPrism ? "prism (now " + curColor + ")" : curColor + " block";
+            if (viaPortal) msg = "Hint: slide the " + who + " " + dirName + " onto the portal pad - it warps!";
+            else if (m.exit) msg = "Hint: slide the " + who + " " + dirName + " into its gate";
+            else msg = "Hint: slide the " + who + " " + dirName;
+            if (info.partner >= 0 && grid.Board.Linked[m.block]) msg += " (its welded partner comes along)";
+            if (m.exit && TurretWouldUnscrew(curColor)) msg += " (its turret unscrews a brass bolt)";
             if (Message != null) Message(msg);
         }
 
@@ -170,7 +173,7 @@ namespace ColorGateBlast
             for (int g = 0; g < gates.Count; g++)
             {
                 GateSpec gs = gates[g];
-                if (gs.direction == m.dir && gs.color == info.color && lo >= gs.start && hi < gs.start + gs.length) return g;
+                if (gs.direction == m.dir && gs.color == b.ColorOf(m.block) && lo >= gs.start && hi < gs.start + gs.length) return g;
             }
             return -1;
         }

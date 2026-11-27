@@ -31,7 +31,9 @@ namespace ColorGateBlast
         // ---------------------------------------------------------------- extras
         public static Material Copper { get { Ensure(); return Plain("Copper", new Color(0.78f, 0.45f, 0.22f), 0.92f, 0.55f); } }
         public static Material Brass { get { Ensure(); return Plain("Brass", new Color(0.9f, 0.7f, 0.28f), 0.9f, 0.62f); } }
-        public static Material Steel { get { Ensure(); return Plain("Steel", new Color(0.78f, 0.8f, 0.84f), 0.92f, 0.5f); } }
+        /// <summary>Satin silver for big flat casings (no hot specular spots).</summary>
+        public static Material Silver { get { Ensure(); return Plain("Silver", new Color(0.52f, 0.54f, 0.58f), 0.45f, 0.22f); } }
+        public static Material Steel { get { Ensure(); return Plain("Steel", new Color(0.6f, 0.62f, 0.66f), 0.85f, 0.42f); } }
         public static Material Charcoal { get { Ensure(); return Plain("Charcoal", new Color(0.13f, 0.14f, 0.16f), 0.05f, 0.4f); } }
         public static Material Cream { get { Ensure(); return Plain("Cream", new Color(0.96f, 0.93f, 0.84f), 0.02f, 0.5f); } }
         public static Material Rubber { get { Ensure(); return Plain("Rubber", new Color(0.07f, 0.07f, 0.09f), 0.0f, 0.15f); } }
@@ -130,7 +132,7 @@ namespace ColorGateBlast
                 Ensure();
                 Material m;
                 if (Cache.TryGetValue("BeltDashed", out m) && m != null) return m;
-                m = NewLit("BeltDashed", Color.white, 0.8f, 0.45f);
+                m = NewLit("BeltDashed", new Color(0.8f, 0.8f, 0.82f), 0.7f, 0.3f);
                 m.SetTexture("_BaseMap", dashTex);
                 m.SetTexture("_BumpMap", scratchNormal);
                 m.SetFloat("_BumpScale", 0.4f);

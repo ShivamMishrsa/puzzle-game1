@@ -88,18 +88,23 @@ namespace ColorGateBlast
             if (!m.exit)
             {
                 Board.Commit(m.block, m.to);
+                Board.PullAll(m.block);
+                Board.CountMove();
                 return;
             }
 
             BlockInfo b = Board.Blocks[m.block];
-            Board.ExitBlock(m.block, null, m.dir, Board.Pos[m.block], m.to);
-            int color = (int)b.color;
+            int color = (int)Board.ColorOf(m.block);
+            ExitEffects fx = new ExitEffects();
+            Board.ExitBlock(m.block, fx, m.dir, Board.Pos[m.block], m.to);
+            Board.CountMove();
+            int ammoGain = b.Tiles + fx.bonusAmmo;
             bool merged = false;
             for (int i = 0; i < Parked.Count; i++)
             {
                 if (Parked[i].color == color)
                 {
-                    Parked[i].ammo += b.Tiles;
+                    Parked[i].ammo += ammoGain;
                     Parked[i].piercing = Parked[i].piercing || m.piercing;
                     merged = true;
                     break;
@@ -109,7 +114,7 @@ namespace ColorGateBlast
             {
                 TurretInfo t = new TurretInfo();
                 t.color = color;
-                t.ammo = b.Tiles;
+                t.ammo = ammoGain;
                 t.piercing = m.piercing;
                 Parked.Add(t);
             }

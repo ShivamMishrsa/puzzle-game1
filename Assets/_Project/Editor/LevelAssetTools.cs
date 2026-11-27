@@ -25,6 +25,12 @@ namespace ColorGateBlast.EditorTools
         [MenuItem("Tools/Color Gate Blast/Generate Levels 31-40", false, 13)]
         public static void Generate31To40() { GenerateRange(31, 40); }
 
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 41-50", false, 14)]
+        public static void Generate41To50() { GenerateRange(41, 50); }
+
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 51-60", false, 15)]
+        public static void Generate51To60() { GenerateRange(51, 60); }
+
         [MenuItem("Tools/Color Gate Blast/Verify All Levels (solver)", false, 30)]
         public static void VerifyAll()
         {
@@ -116,6 +122,10 @@ namespace ColorGateBlast.EditorTools
             PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)36;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            // compact build: high managed stripping + size-optimised IL2CPP (the game has no imported art, so the .aab stays small)
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.Android, ManagedStrippingLevel.High);
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
+            PlayerSettings.stripEngineCode = true;
             PlayerSettings.Android.bundleVersionCode = 1;
             PlayerSettings.bundleVersion = "0.1.0";
             EditorUserBuildSettings.buildAppBundle = true;

@@ -28,6 +28,9 @@ namespace ColorGateBlast
         public bool InputEnabled;
         /// <summary>Pliers booster armed: the next tap on any tray piece snips it off the board.</summary>
         public bool PliersArmed;
+        /// <summary>Colour the last exiting block had at the moment it left (prism blocks change colour), and the steam bonus ammo it earned.</summary>
+        public BlockColor LastExitColor;
+        public int LastExitBonus;
         /// <summary>Raised after the pliers removed a piece.</summary>
         public event Action PliersUsed;
         private GameObject dragArrow;
@@ -72,6 +75,12 @@ namespace ColorGateBlast
         private float gatePulse;
         private readonly List<PortalView> portalViews = new List<PortalView>();
         private readonly List<Transform> spinners = new List<Transform>();
+        private sealed class LinkVisual { public int a, b; public Transform bar; public Renderer seam; }
+        private readonly List<LinkVisual> links = new List<LinkVisual>();
+        private sealed class SteamGate { public int index; public Vector3 vent; public Transform needle; public Vector3 outward; }
+        private readonly List<SteamGate> steamGates = new List<SteamGate>();
+        private int lastSteamPhase = -1;
+        private float nextPuff;
         private float nextNudge;
 
         public BoardModel Board { get { return board; } }
@@ -95,6 +104,9 @@ namespace ColorGateBlast
             PliersArmed = false;
             dragArrow = null;
             dragArrowRenderer = null;
+            links.Clear();
+            steamGates.Clear();
+            lastSteamPhase = -1;
             if (root != null) Destroy(root.gameObject);
             root = null;
             views = null;
@@ -118,8 +130,11 @@ namespace ColorGateBlast
             BuildTray(centerWorld);
             BuildGates();
             BuildPortals();
+            BuildMagnets();
             BuildRails();
             BuildBlocks();
+            BuildLinks();
+            RefreshPrisms(false);
             BuildPreviewLines();
             UpdateShutters(false);
         }
@@ -247,10 +262,191 @@ namespace ColorGateBlast
                     led.AddComponent<MeshFilter>().sharedMesh = Prims.Sphere;
                     gv.led = led.AddComponent<MeshRenderer>();
                 }
+                if (gs.steamInterval > 0) BuildSteamGauge(go.transform, c, gs, horiz, gw, gd, thick, g);
                 if (gs.isPadlocked) gv.lockVisual = BuildPadlock(go.transform, c, horiz, gw, gd);
                 if (gs.isPiercingGate) BuildPiercingGears(go.transform, c, horiz, gw, gd);
                 gateViews.Add(gv);
             }
+        }
+
+        /// <summary>Brass pressure gauge and copper steam pipes on a Steam Pressure Gate; a vent puffs white steam every cycle.</summary>
+        private void BuildSteamGauge(Transform parent, Vector3 c, GateSpec gs, bool horiz, float gw, float gd, float thick, int gateIndex)
+        {
+            Int2 dd = Dirs.Of(gs.direction);
+            Vector3 outward = new Vector3(dd.x, 0f, dd.y);
+            Vector3 along = horiz ? new Vector3(1f, 0f, 0f) : new Vector3(0f, 0f, 1f);
+            float len = horiz ? gw : gd;
+            Vector3 pp = c + outward * (thick * 0.5f + 0.2f);
+            pp.y = TrayTop + 0.2f;
+            Prims.Make("Pipe", parent, Prims.Cylinder, GameMaterials.Copper, pp, new Vector3(0.09f, 0.2f, 0.09f));
+            Prims.Make("Elbow", parent, Prims.Sphere, GameMaterials.Brass, new Vector3(pp.x, TrayTop + 0.42f, pp.z), Vector3.one * 0.14f);
+            GameObject g = new GameObject("SteamGauge");
+            g.transform.SetParent(parent, false);
+            g.transform.position = new Vector3(pp.x, TrayTop + 0.52f, pp.z);
+            Prims.Make("Ring", g.transform, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(0.44f, 0.07f, 0.44f));
+            Prims.Make("Face", g.transform, Prims.Cylinder, GameMaterials.Cream, new Vector3(0f, 0.04f, 0f), new Vector3(0.36f, 0.02f, 0.36f));
+            GameObject needle = new GameObject("Needle");
+            needle.transform.SetParent(g.transform, false);
+            needle.transform.localPosition = new Vector3(0f, 0.07f, 0f);
+            Prims.Make("Hand", needle.transform, Prims.Cube, GameMaterials.TntRed, new Vector3(0f, 0f, 0.08f), new Vector3(0.03f, 0.012f, 0.17f));
+            SteamGate sg = new SteamGate();
+            sg.index = gateIndex;
+            sg.vent = new Vector3(c.x, TrayTop + 0.75f, c.z) + outward * (thick * 0.5f + 0.2f) + along * 0.45f;
+            sg.needle = needle.transform;
+            sg.outward = outward;
+            steamGates.Add(sg);
+        }
+
+        /// <summary>Electromagnetic floor pads: recessed copper-wound tiles with glowing chevrons showing the pull direction.</summary>
+        private void BuildMagnets()
+        {
+            for (int k = 0; k < def.magnets.Count; k++)
+            {
+                MagnetSpec ms = def.magnets[k];
+                Vector3 c = CellWorld(ms.cell);
+                Int2 pd = Dirs.Of(ms.pull);
+                Vector3 d = new Vector3(pd.x, 0f, pd.y);
+                GameObject mg = new GameObject("MagnetPad_" + k);
+                mg.transform.SetParent(root, false);
+                mg.transform.position = new Vector3(c.x, TrayTop + 0.004f, c.z);
+                Prims.Make("Bed", mg.transform, Prims.Cylinder, GameMaterials.Copper, Vector3.zero, new Vector3(cs * 0.84f, 0.012f, cs * 0.84f));
+                for (int r = 0; r < 3; r++)
+                    Prims.Make("Coil" + r, mg.transform, Prims.Cylinder, r % 2 == 0 ? GameMaterials.Brass : GameMaterials.Copper, new Vector3(0f, 0.012f + r * 0.004f, 0f), new Vector3(cs * (0.74f - r * 0.2f), 0.01f, cs * (0.74f - r * 0.2f)));
+                MeshBuilder mb = new MeshBuilder();
+                for (int ch = -1; ch <= 1; ch += 2)
+                {
+                    Vector3 mid = d * (ch * cs * 0.12f);
+                    Vector3 p = new Vector3(-d.z, 0f, d.x);
+                    Vector3 tip = mid + d * (cs * 0.16f), e1 = mid - d * (cs * 0.1f) + p * (cs * 0.24f), e2 = mid - d * (cs * 0.1f) - p * (cs * 0.24f);
+                    float th = cs * 0.08f;
+                    mb.AddQuad(tip, e1, e1 - d * th, tip - d * th, Vector3.up);
+                    mb.AddQuad(tip, e2, e2 - d * th, tip - d * th, Vector3.up);
+                }
+                GameObject chev = new GameObject("Chevrons");
+                chev.transform.SetParent(mg.transform, false);
+                chev.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+                chev.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("MagnetChevrons");
+                chev.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Neon(BlockColor.Blue);
+            }
+        }
+
+        /// <summary>Heavy riveted steel bridge bar with a glowing weld seam between the two halves of a welded pair.</summary>
+        private void BuildLinks()
+        {
+            for (int i = 0; i < board.Blocks.Length; i++)
+            {
+                int j = board.Blocks[i].partner;
+                if (j < 0 || j < i || !board.Linked[i]) continue;
+                LinkVisual lv = new LinkVisual();
+                lv.a = i; lv.b = j;
+                GameObject bar = new GameObject("WeldBar_" + i + "_" + j);
+                bar.transform.SetParent(root, false);
+                Prims.Make("Steel", bar.transform, Prims.Cube, GameMaterials.Steel, Vector3.zero, new Vector3(1f, 0.15f, 0.2f));
+                GameObject seam = Prims.Make("Seam", bar.transform, Prims.Cube, GameMaterials.Neon(BlockColor.Yellow), new Vector3(0f, 0.085f, 0f), new Vector3(0.12f, 0.03f, 0.22f));
+                lv.seam = seam.GetComponent<Renderer>();
+                for (int s = -1; s <= 1; s += 2)
+                    Prims.Make("Rivet" + s, bar.transform, Prims.Sphere, GameMaterials.Brass, new Vector3(0.38f * s, 0.09f, 0f), Vector3.one * 0.09f);
+                lv.bar = bar.transform;
+                links.Add(lv);
+            }
+            UpdateLinks();
+        }
+
+        private void UpdateLinks()
+        {
+            for (int k = links.Count - 1; k >= 0; k--)
+            {
+                LinkVisual lv = links[k];
+                if (lv.bar == null) { links.RemoveAt(k); continue; }
+                if (!board.Linked[lv.a] || views[lv.a] == null || views[lv.b] == null) continue;
+                Vector3 a = views[lv.a].CentroidWorld, b = views[lv.b].CentroidWorld;
+                Vector3 mid = (a + b) * 0.5f;
+                mid.y = TrayTop + cs * 0.42f + 0.1f;
+                Vector3 delta = b - a;
+                delta.y = 0f;
+                float len = Mathf.Max(0.2f, delta.magnitude);
+                lv.bar.position = mid;
+                if (delta.sqrMagnitude > 0.0001f) lv.bar.rotation = Quaternion.LookRotation(Vector3.Cross(delta.normalized, Vector3.up), Vector3.up);
+                lv.bar.localScale = new Vector3(1f, 1f, 1f);
+                lv.bar.GetChild(0).localScale = new Vector3(len, 0.15f, 0.2f);
+                lv.bar.GetChild(0).localRotation = Quaternion.identity;
+            }
+        }
+
+        /// <summary>The bridge bar snaps apart: spark burst, metallic weld-break sound, bar falls away.</summary>
+        private void BreakLink(int exitedBlock, int partnerBlock, Vector3 at)
+        {
+            for (int k = 0; k < links.Count; k++)
+            {
+                LinkVisual lv = links[k];
+                if (lv.bar == null || !(lv.a == exitedBlock || lv.b == exitedBlock)) continue;
+                Vector3 p = lv.bar.position;
+                for (int c = lv.bar.childCount - 1; c >= 0; c--)
+                {
+                    Transform ch = lv.bar.GetChild(c);
+                    Rigidbody rb = ch.gameObject.AddComponent<Rigidbody>();
+                    rb.mass = 0.1f;
+                    ch.gameObject.AddComponent<BoxCollider>();
+                    rb.AddForce(new Vector3(UnityEngine.Random.Range(-1.5f, 1.5f), 3f, UnityEngine.Random.Range(-1f, 1f)), ForceMode.Impulse);
+                }
+                lv.bar.DetachChildren();
+                Destroy(lv.bar.gameObject);
+                lv.bar = null;
+                if (FXManager.Instance != null) { FXManager.Instance.Sparks(p, 22); FXManager.Instance.GoldSparks(p, 10); FXManager.Instance.Shake(0.1f, 0.15f); }
+                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.WeldBreak);
+            }
+            if (Message != null) Message("Weld snapped!");
+        }
+
+        /// <summary>Prism blocks show the active colour (and the next one on the pip); flashes on a shift.</summary>
+        private void RefreshPrisms(bool flash)
+        {
+            bool any = false;
+            for (int i = 0; i < board.Blocks.Length; i++)
+            {
+                if (!board.Blocks[i].IsPrism || board.Exited[i] || views == null || views[i] == null) continue;
+                views[i].SetPrism(board.ColorOf(i), board.ColorAfter(i, 1), flash);
+                any = true;
+            }
+            if (flash && any && SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PrismChime, UnityEngine.Random.Range(0.95f, 1.08f), 0.8f);
+        }
+
+        private void SyncLinked(int i)
+        {
+            int j = board.Blocks[i].partner;
+            if (j < 0 || !board.Linked[i] || views[j] == null) return;
+            views[j].SetTarget(CellWorld(board.Pos[j]));
+        }
+
+        /// <summary>Steam cycle: every steamInterval moves the pressure flips; vents puff and the gauge needle swings.</summary>
+        private void AnimateSteam()
+        {
+            if (steamGates.Count == 0) return;
+            for (int k = 0; k < steamGates.Count; k++)
+            {
+                SteamGate sg = steamGates[k];
+                GateSpec gs = def.gates[sg.index];
+                bool pressurized = board.SteamPressurized(gs);
+                if (sg.needle != null)
+                {
+                    float target = pressurized ? 70f : -55f;
+                    Vector3 e = sg.needle.localEulerAngles;
+                    float cur = Mathf.DeltaAngle(0f, e.y);
+                    sg.needle.localRotation = Quaternion.Euler(0f, Mathf.Lerp(cur, target, Time.deltaTime * 6f), 0f);
+                }
+                if (FXManager.Instance != null && Time.time > nextPuff)
+                {
+                    int phase = board.Moves / gs.steamInterval;
+                    if (pressurized) FXManager.Instance.Burst(FxKind.Smoke, sg.vent, 2, new Color(1f, 1f, 1f, 0.7f), 1.4f, 1.1f);
+                    if (phase != lastSteamPhase)
+                    {
+                        lastSteamPhase = phase;
+                        FXManager.Instance.Burst(FxKind.Smoke, sg.vent, 10, new Color(1f, 1f, 1f, 0.85f), 2.4f, 1.4f);
+                        if (SoundSynth.Instance != null && Time.time > 1f) SoundSynth.Instance.Play(Sfx.SteamHiss, 1f, pressurized ? 0.7f : 0.35f);
+                    }
+                }
+            }
+            if (Time.time > nextPuff) nextPuff = Time.time + 0.45f;
         }
 
         /// <summary>U-shaped metallic bracket (back wall + two end walls, open towards the tray) with four corner bolts.</summary>
@@ -549,6 +745,8 @@ namespace ColorGateBlast
             }
 
             AnimateExtras();
+            UpdateLinks();
+            AnimateSteam();
 
             if (!InputEnabled)
             {
@@ -651,14 +849,14 @@ namespace ColorGateBlast
                         cur = landing;
                         board.Commit(dragging, cur);
                         if (warped) WarpEffect(dragging, before + dir, cur);
-                        else views[dragging].SetTarget(CellWorld(cur));
+                        else { views[dragging].SetTarget(CellWorld(cur)); SyncLinked(dragging); }
                         stepped = true;
                         if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.BlockSnap, UnityEngine.Random.Range(0.95f, 1.1f), 0.5f);
                         if (FXManager.Instance != null) FXManager.Instance.Haptic();
                     }
                     else if (r == StepResult.Exit)
                     {
-                        if (CanExit == null || CanExit(board.Blocks[dragging].color))
+                        if (CanExit == null || CanExit(board.ColorOf(dragging)))
                         {
                             DoExit(dragging, dir);
                             return;
@@ -694,7 +892,7 @@ namespace ColorGateBlast
                 if (r == StepResult.Blocked) break;
                 if (r == StepResult.Exit)
                 {
-                    if (!m.exit || (CanExit != null && !CanExit(board.Blocks[i].color))) { dragging = -1; HidePreview(); return false; }
+                    if (!m.exit || (CanExit != null && !CanExit(board.ColorOf(i)))) { dragging = -1; HidePreview(); return false; }
                     DoExit(i, dir);
                     return true;
                 }
@@ -704,7 +902,7 @@ namespace ColorGateBlast
                 cur = landing;
                 board.Commit(i, cur);
                 if (warped) WarpEffect(i, before + dir, cur);
-                else views[i].SetTarget(CellWorld(cur));
+                else { views[i].SetTarget(CellWorld(cur)); SyncLinked(i); }
             }
             bool reached = board.Pos[i] == m.to;
             EndDrag();
@@ -718,11 +916,19 @@ namespace ColorGateBlast
             GateDirection gd = Dirs.From(dir);
 
             ExitEffects fx = new ExitEffects();
+            LastExitColor = board.ColorOf(i);
             board.ExitBlock(i, fx, gd, startPos, board.Pos[i]);
+            LastExitBonus = fx.bonusAmmo;
             views[i] = null;
             dragging = -1;
             dragExited = true;
             HidePreview();
+            if (fx.linkBroken >= 0)
+            {
+                int pj = fx.linkBroken;
+                BreakLink(i, pj, center);
+                if (views[pj] != null) views[pj].SetTarget(CellWorld(board.Pos[pj]));
+            }
 
             view.SetLifted(false);
             float travel = (Mathf.Max(board.Blocks[i].ExtentX(), board.Blocks[i].ExtentY()) + 1.4f) * cs;
@@ -744,6 +950,8 @@ namespace ColorGateBlast
             if (fx.shutterToggled) UpdateShutters(true);
 
             if (fx.unlockedLock >= 0) UnlockPadlocks(fx.unlockedLock, center);
+            board.CountMove();
+            RefreshPrisms(true);
             if (BlockExited != null) BlockExited(i, center, gd, fx.piercing);
             if (MoveCommitted != null) MoveCommitted();
         }
@@ -756,9 +964,11 @@ namespace ColorGateBlast
             if (view == null || board.Exited[idx]) return;
             Vector3 center = view.CentroidWorld;
             ExitEffects fx = new ExitEffects();
-            board.ExitBlock(idx, fx, GateDirection.Up, board.Pos[idx], board.Pos[idx]);
+            board.RemoveByTool(idx, fx);
             views[idx] = null;
             Destroy(view.gameObject);
+            if (fx.linkBroken >= 0) BreakLink(idx, fx.linkBroken, center);
+            RefreshPrisms(true);
             if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PadlockSnap);
             if (FXManager.Instance != null)
             {
@@ -783,7 +993,16 @@ namespace ColorGateBlast
             HidePreview();
             if (idx < 0 || views == null || views[idx] == null) return;
             views[idx].SetLifted(false);
-            if (!dragExited && board.Pos[idx] != startPos && MoveCommitted != null) MoveCommitted();
+            if (dragExited || board.Pos[idx] == startPos) return;
+            Int2 pulled;
+            while (board.PullOnce(idx, out pulled))
+            {
+                views[idx].SetTarget(CellWorld(pulled));
+                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.MagnetClunk, UnityEngine.Random.Range(0.95f, 1.05f), 0.8f);
+                if (FXManager.Instance != null) { FXManager.Instance.Sparks(CellWorld(pulled) + new Vector3(0f, 0.3f, 0f), 8); FXManager.Instance.Haptic(); }
+            }
+            board.CountMove();
+            if (MoveCommitted != null) MoveCommitted();
         }
 
         // ------------------------------------------------------------------ portals, padlocks (visual hooks)
@@ -878,11 +1097,11 @@ namespace ColorGateBlast
                 LineRenderer lr = preview[d];
                 if (steps == 0) { lr.enabled = false; continue; }
                 Vector3 end = start + new Vector3(dir.x, 0f, dir.y) * (steps * cs);
-                if (exit && !arrowShown) { ShowDragArrow(start, dir, b.color, ((dir.x != 0 ? b.ExtentX() : b.ExtentY()) * 0.5f + Mathf.Min(0.8f, steps * 0.5f)) * cs); arrowShown = true; }
+                if (exit && !arrowShown) { ShowDragArrow(start, dir, board.ColorOf(dragging), ((dir.x != 0 ? b.ExtentX() : b.ExtentY()) * 0.5f + Mathf.Min(0.8f, steps * 0.5f)) * cs); arrowShown = true; }
                 lr.enabled = true;
                 lr.SetPosition(0, start);
                 lr.SetPosition(1, end);
-                Color c = exit ? GameMaterials.ColorOf(b.color) : new Color(0.8f, 0.85f, 0.95f);
+                Color c = exit ? GameMaterials.ColorOf(board.ColorOf(dragging)) : new Color(0.8f, 0.85f, 0.95f);
                 lr.sharedMaterial = GameMaterials.UnlitGlow(c, exit ? 2.2f : 0.7f);
                 lr.startWidth = cs * (exit ? 0.16f : 0.07f);
                 lr.endWidth = lr.startWidth;

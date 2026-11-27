@@ -78,6 +78,7 @@
         document.querySelector("#unity-progress-bar-full").style.width = (100 * progress) + "%";
       }).then(function (unityInstance) {
         document.querySelector("#unity-loading-bar").style.display = "none";
+        window.unityInstance = unityInstance;
         document.querySelector("#unity-fullscreen").onclick = function () { unityInstance.SetFullscreen(1); };
       }).catch(function (message) { alert(message); });
     };

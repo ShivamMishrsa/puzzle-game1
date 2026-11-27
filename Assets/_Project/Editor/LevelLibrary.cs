@@ -28,6 +28,6 @@ namespace ColorGateBlast.EditorTools
             return l;
         }
 
-        public static List<LevelDefinition> All() { return Range(1, 99); }
+        public static List<LevelDefinition> All() { return Range(1, 150); }
     }
 }

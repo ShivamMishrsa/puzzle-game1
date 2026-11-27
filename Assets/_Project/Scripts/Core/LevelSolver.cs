@@ -225,15 +225,33 @@ namespace ColorGateBlast
                     me.color = all[i].color; me.shape = BlockShape.Rect; me.width = 1; me.height = 1;
                 }
                 me.x = 0; me.y = 0;
-                solo.placements.Add(me);
+                me.linkGroup = 0;
+                BlockColor[] cyc = me.cycle;
+                me.cycle = null;
+                // a prism block may leave in any colour of its cycle: the table keeps the best of them
+                int variants = (cyc != null && cyc.Length > 1) ? cyc.Length : 1;
+                for (int vv = 0; vv < variants; vv++)
+                {
+                    LevelDefinition one = new LevelDefinition();
+                    one.gridSize = solo.gridSize;
+                    one.gates = solo.gates;
+                    one.portals = solo.portals;
+                    one.placements = new List<Placement>(solo.placements);
+                    Placement mv = me;
+                    if (variants > 1) mv.color = cyc[vv];
+                    one.placements.Add(mv);
 
-                BoardModel board = new BoardModel(solo);
-                int blk = solo.placements.Count - 1;
-                Int2[] cells = board.Blocks[blk].cells;
-                for (int sy = 0; sy < hgt; sy++)
-                    for (int sx = 0; sx < w; sx++)
-                        if (FitsAlone(board, blk, cells, new Int2(sx, sy)))
-                            table[i][sx + sy * w] = AloneDistance(board, blk, new Int2(sx, sy), w, hgt);
+                    BoardModel board = new BoardModel(one);
+                    int blk = one.placements.Count - 1;
+                    Int2[] cells = board.Blocks[blk].cells;
+                    for (int sy = 0; sy < hgt; sy++)
+                        for (int sx = 0; sx < w; sx++)
+                            if (FitsAlone(board, blk, cells, new Int2(sx, sy)))
+                            {
+                                int dd = AloneDistance(board, blk, new Int2(sx, sy), w, hgt);
+                                if (dd < table[i][sx + sy * w]) table[i][sx + sy * w] = dd;
+                            }
+                }
             }
             return table;
         }

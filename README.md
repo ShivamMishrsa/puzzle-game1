@@ -10,7 +10,7 @@ physically falls apart. Same-colour turrets merge into a laser Mega-Turret.
       merging, solver (BFS + weighted best-first) - `Assets/_Project/Scripts/Core`
 - [x] Levels, one class per level in `Assets/_Project/Editor/Levels`, every one proven winnable within its move limit
 - [x] Unity runtime v1: 3D tray + conveyor + turrets, alarm clock and cassette player monuments, physics debris, TNT, procedural sound/FX, HUD, AdMob (test ids) + simulator, solver-based hints, `Tools > Color Gate Blast > Setup Phase 1`
-- [x] Levels 1-40 (4 chapters), solver-verified, one commit per level
+- [x] Levels 1-60 (6 chapters), solver-verified, one commit per level
 - [ ] Authentication / security / database (after game + levels)
 
 See `docs/PLAYTEST.md` for the in-Unity checklist (what the solver cannot prove: look, sound, feel).
@@ -37,6 +37,8 @@ One look for every `LevelData` (1-40 today, 41-150 automatically): `Assets/_Proj
 | 2 | 11-20 | Retro Cassette Player | ice, peeled (dual-layer) blocks, shutter gates |
 | 4 | 31-40 | Antique Pocket Watch | teleporter portal pads, clockwork piercing gates |
 | 3 | 21-30 | Vintage Rotary Phone | Green, brass screw-bolts, key blocks + padlocked gates, rail blocks, Overdrive |
+| 5 | 41-50 | Vintage Brass & Copper Espresso Machine | welded twin-linked blocks (steel bridge bar), steam pressure gates (+2 bonus ammo while pressurized) |
+| 6 | 51-60 | Vintage Twin-Lens Reflex Camera | colour-shifting prism blocks (advance on every exit), electromagnetic pull-pads (free 1-tile pull) |
 
 ## Play in the browser
 See `docs/WEBGL.md` (GitHub Actions auto-build, or a local one-click build into `docs/play`). Link after publishing: https://shivammishrsa.github.io/puzzle-game1/

@@ -69,3 +69,11 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] Gates are U-shaped brackets with neon chevrons and a coloured glow on the wood.
 - [ ] Pliers medallion: rewarded-ad simulator -> medallion glows gold -> tap any tray piece -> it is snipped off (no turret, no move cost).
 - [ ] Merged Mega-Turret: twin barrels, white-hot laser core with coloured glow, sparks at the target.
+
+## Batches 5 and 6 (levels 41-60)
+- [ ] **Welded pairs (41-50):** dragging either half moves both; the steel bridge bar with the glowing seam follows. Pushing the half whose colour matches the gate out snaps the bar (sparks + metallic snap), the other half steps forward and is free. A frozen half (44) locks the whole pair.
+- [ ] **Steam gates (42, 46, 49, 50, 60):** the brass gauge needle swings to the red zone every 2 moves and the vent puffs steam; leaving while pressurized shows "PRESSURIZED! +2 ammo". L42 cannot be won without it.
+- [ ] **Prism blocks (51-60):** the glass gem shows the active colour, the corner pip the next one; every block exit flashes + chimes and advances every prism. A prism only exits through a gate of its CURRENT colour.
+- [ ] **Magnet pads (52, 56, 59):** a block that comes to rest right behind a pad is pulled onto it with a clunk, free of charge (no move used).
+- [ ] **Monuments:** espresso machine (copper boiler dome + eagle finial, gauge, lever pinned by a rear screw, chrome group head, glass sight tube, drip grid, coils, valves, dynamite bundle) and TLR camera (leatherette plates, hood, two lenses that shatter, spinning iris blades, film crank, spinning spools, shutter gears, dynamite). Rotate 360 degrees on L50 / L60 for the rear screws.
+- [ ] Chapter bosses (50, 60) show the "Chapter N Complete" banner and add a trophy to the shelf counter.

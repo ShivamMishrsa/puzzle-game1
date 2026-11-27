@@ -73,7 +73,23 @@ namespace ColorGateBlast
         Coil,
         // ---- Chapter 4: Antique Pocket Watch ----
         BalanceWheel,
-        Ruby
+        Ruby,
+        // ---- Chapter 5: Vintage Espresso Machine ----
+        Boiler,
+        Gauge,
+        Lever,
+        GroupHead,
+        SightTube,
+        DripGrid,
+        Valve,
+        // ---- Chapter 6: Twin-Lens Reflex Camera ----
+        Body,
+        Hood,
+        Lens,
+        Iris,
+        Crank,
+        Spool,
+        ShutterGear
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -82,7 +98,9 @@ namespace ColorGateBlast
         AlarmClock = 0,
         CassettePlayer = 1,
         RotaryPhone = 2,
-        PocketWatch = 3
+        PocketWatch = 3,
+        EspressoMachine = 4,
+        TlrCamera = 5
     }
 
     public enum LevelTier

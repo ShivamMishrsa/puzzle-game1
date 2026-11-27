@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -36,9 +37,13 @@ namespace ColorGateBlast.EditorTools
         {
             EditorSetupColorGateBlast.SetupPhase1Silent();
 
-            // GitHub Pages cannot send the Content-Encoding headers Unity's gzip/brotli builds need, so build uncompressed.
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
-            PlayerSettings.WebGL.decompressionFallback = false;
+            // Compact build: Brotli + JS decompression fallback (GitHub Pages cannot send Content-Encoding headers, so the
+            // loader decompresses in the page), high managed stripping and IL2CPP size optimisation.
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.High);
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.WebGL, Il2CppCodeGeneration.OptimizeSize);
+            PlayerSettings.stripEngineCode = true;
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.None;
             PlayerSettings.WebGL.dataCaching = true;
             PlayerSettings.WebGL.template = "PROJECT:ColorGateBlast";

@@ -58,14 +58,26 @@ namespace ColorGateBlast
         public void SetCamera(Camera c) { cam = c; }
 
         /// <summary>Highest point of the freshly built monument (used so the camera rig keeps its top inside the HUD-safe area).</summary>
+        /// <summary>Top of the visible silhouette (centre of the turntable, highest point): used to keep the belt behind it clear.</summary>
+        public Vector3 SilhouetteTop()
+        {
+            Vector3 t = TopWorldPoint();
+            return new Vector3(anchor.x, t.y, anchor.z + 0.3f);
+        }
+
         public Vector3 TopWorldPoint()
         {
             Vector3 p = anchor;
             if (pivot == null) return p;
             Renderer[] rs = pivot.GetComponentsInChildren<Renderer>();
-            float maxY = 0f;
-            for (int i = 0; i < rs.Length; i++) maxY = Mathf.Max(maxY, rs[i].bounds.max.y);
+            float maxY = 0f, maxZ = anchor.z;
+            for (int i = 0; i < rs.Length; i++)
+            {
+                maxY = Mathf.Max(maxY, rs[i].bounds.max.y);
+                maxZ = Mathf.Max(maxZ, rs[i].bounds.max.z);
+            }
             p.y = maxY;
+            p.z = maxZ;
             return p;
         }
 
@@ -177,6 +189,8 @@ namespace ColorGateBlast
                 case MonumentKind.AlarmClock: BuildClockPart(i, spec, lx, ly); break;
                 case MonumentKind.CassettePlayer: BuildCassettePart(i, spec, lx, ly); break;
                 case MonumentKind.RotaryPhone: BuildPhonePart(i, spec, lx, ly); break;
+                case MonumentKind.EspressoMachine: BuildEspressoPart(i, spec, lx, ly); break;
+                case MonumentKind.TlrCamera: BuildCameraPart(i, spec, lx, ly); break;
                 default: BuildWatchPart(i, spec, lx, ly); break;
             }
             if (views[i].go != null && spec.hasScrew) AddScrew(i, spec);
@@ -311,10 +325,304 @@ namespace ColorGateBlast
             {
                 BuildWatchDecor();
             }
+            else if (Kind == MonumentKind.EspressoMachine)
+            {
+                BuildEspressoDecor();
+            }
+            else if (Kind == MonumentKind.TlrCamera)
+            {
+                BuildCameraDecor();
+            }
             else
             {
                 Prims.Make("DeckBack", pivot, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 1.3f, 0.5f), new Vector3(3.5f, 1.9f, 0.08f));
                 Prims.Make("SpeakerGrille", pivot, Prims.Cube, GameMaterials.Rubber, new Vector3(1.43f, 1.2f, -0.62f), new Vector3(0.6f, 0.9f, 0.02f));
+            }
+        }
+
+        // ------------------------------------------------------------------ chapter 5: vintage espresso machine
+
+        private void BuildEspressoDecor()
+        {
+            Prims.Make("BaseTray", pivot, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0.12f, -0.2f), new Vector3(3.3f, 0.24f, 1.7f));
+            Prims.Make("BaseRim", pivot, Prims.Cube, GameMaterials.Steel, new Vector3(0f, 0.26f, -1.02f), new Vector3(3.3f, 0.08f, 0.1f));
+            Prims.Make("BoilerBody", pivot, Prims.Cylinder, GameMaterials.Copper, new Vector3(0f, 1.15f, 0.1f), new Vector3(1.7f, 0.85f, 1.7f));
+            Prims.Make("BoilerBand", pivot, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 1.1f, 0.1f), new Vector3(1.78f, 0.06f, 1.78f));
+            Prims.Make("Pipe", pivot, Prims.Cylinder, GameMaterials.Copper, new Vector3(0.95f, 0.9f, 0.3f), new Vector3(0.14f, 0.55f, 0.14f));
+            Prims.Make("PipeElbow", pivot, Prims.Sphere, GameMaterials.Brass, new Vector3(0.95f, 1.5f, 0.3f), Vector3.one * 0.22f);
+            for (int k = 0; k < 2; k++)
+                Prims.Make("Foot" + k, pivot, Prims.Sphere, GameMaterials.Brass, new Vector3(k == 0 ? -1.4f : 1.4f, 0.12f, -0.9f), Vector3.one * 0.3f);
+        }
+
+        private void BuildEspressoPart(int i, PartSpec spec, float lx, float ly)
+        {
+            Material mat = GameMaterials.ForBlock(spec.color);
+            switch (spec.type)
+            {
+                case PartType.Boiler:
+                {
+                    bool dome = spec.slot == 0;
+                    PartView pv = NewPart(i, dome ? "CopperBoilerDome" : "BrassEagleFinial", new Vector3(lx, ly, 0.1f));
+                    Transform t = pv.go.transform;
+                    if (dome)
+                    {
+                        Prims.Make("Dome", t, Prims.Sphere, GameMaterials.Copper, Vector3.zero, new Vector3(1.85f, 1.15f, 1.85f));
+                        Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0f, 0.05f, -0.86f), new Vector3(0.45f, 0.45f, 0.08f));
+                        for (int k = 0; k < 8; k++)
+                        {
+                            float a = k * 45f * Mathf.Deg2Rad;
+                            Prims.Make("Rivet" + k, t, Prims.Sphere, GameMaterials.Brass, new Vector3(Mathf.Sin(a) * 0.9f, -0.18f, Mathf.Cos(a) * 0.9f), Vector3.one * 0.09f);
+                        }
+                        Marker(pv, spec.color, new Vector3(0.55f, 0.55f, -0.7f));
+                        Sphere(pv.go, Vector3.zero, 0.95f);
+                        pv.aim = new Vector3(0f, 0f, -0.4f);
+                    }
+                    else
+                    {
+                        Prims.Make("Stem", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, -0.2f, 0f), new Vector3(0.12f, 0.2f, 0.12f));
+                        Prims.Make("Body", t, Prims.Sphere, GameMaterials.Brass, new Vector3(0f, 0.08f, 0f), new Vector3(0.34f, 0.46f, 0.3f));
+                        Prims.Make("WingL", t, Prims.Cube, GameMaterials.Brass, new Vector3(-0.3f, 0.12f, 0f), new Vector3(0.45f, 0.1f, 0.06f), new Vector3(0f, 0f, 25f));
+                        Prims.Make("WingR", t, Prims.Cube, GameMaterials.Brass, new Vector3(0.3f, 0.12f, 0f), new Vector3(0.45f, 0.1f, 0.06f), new Vector3(0f, 0f, -25f));
+                        Prims.Make("Head", t, Prims.Sphere, mat, new Vector3(0f, 0.38f, -0.02f), Vector3.one * 0.18f);
+                        Marker(pv, spec.color, new Vector3(0.5f, 0.35f, -0.1f));
+                        Sphere(pv.go, Vector3.zero, 0.4f);
+                    }
+                    break;
+                }
+                case PartType.Gauge:
+                {
+                    PartView pv = NewPart(i, "BrassPressureGauge", new Vector3(lx, ly, -0.85f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Ring", t, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(0.62f, 0.09f, 0.62f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Face", t, Prims.Cylinder, GameMaterials.Cream, new Vector3(0f, 0f, -0.05f), new Vector3(0.5f, 0.02f, 0.5f), new Vector3(90f, 0f, 0f));
+                    GameObject needle = Prims.Make("Needle", t, Prims.Cube, GameMaterials.TntRed, new Vector3(0.05f, 0.08f, -0.08f), new Vector3(0.03f, 0.22f, 0.01f), new Vector3(0f, 0f, -30f));
+                    pv.hand = needle.transform;
+                    Marker(pv, spec.color, new Vector3(0f, 0.45f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.34f);
+                    break;
+                }
+                case PartType.Lever:
+                {
+                    PartView pv = NewPart(i, "SpringLever", new Vector3(lx, ly, 0.05f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Pivot", t, Prims.Sphere, GameMaterials.Brass, Vector3.zero, Vector3.one * 0.3f);
+                    Prims.Make("Arm", t, Prims.Cube, GameMaterials.Steel, new Vector3(0.38f, 0.32f, 0f), new Vector3(0.12f, 0.95f, 0.1f), new Vector3(0f, 0f, -32f));
+                    Prims.Make("Grip", t, Prims.Sphere, GameMaterials.Bakelite, new Vector3(0.7f, 0.74f, 0f), new Vector3(0.28f, 0.28f, 0.28f));
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0.7f, 0.74f, -0.14f), Vector3.one * 0.1f);
+                    Marker(pv, spec.color, new Vector3(0.35f, 1.1f, -0.1f));
+                    Sphere(pv.go, new Vector3(0.3f, 0.35f, 0f), 0.5f);
+                    pv.aim = new Vector3(0.3f, 0.3f, -0.2f);
+                    break;
+                }
+                case PartType.GroupHead:
+                {
+                    PartView pv = NewPart(i, "ChromeGroupHead", new Vector3(lx, ly, -0.8f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Head", t, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(1.0f, 0.34f, 1.0f));
+                    Prims.Make("Collar", t, Prims.Cylinder, GameMaterials.Steel, new Vector3(0f, -0.38f, 0f), new Vector3(0.78f, 0.08f, 0.78f));
+                    Prims.Make("Portafilter", t, Prims.Cylinder, GameMaterials.Bakelite, new Vector3(0f, -0.5f, -0.45f), new Vector3(0.14f, 0.55f, 0.14f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Tint", t, Prims.Cylinder, GameMaterials.Glow(spec.color), new Vector3(0f, 0.36f, 0f), new Vector3(0.5f, 0.02f, 0.5f));
+                    Marker(pv, spec.color, new Vector3(0.65f, 0.4f, -0.2f));
+                    Box(pv.go, Vector3.zero, new Vector3(1.0f, 0.8f, 1.0f));
+                    pv.aim = new Vector3(0f, 0f, -0.45f);
+                    break;
+                }
+                case PartType.SightTube:
+                {
+                    PartView pv = NewPart(i, "GlassSightTube", new Vector3(lx, ly, -0.3f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Glass", t, Prims.Cylinder, GameMaterials.Acrylic(spec.color), Vector3.zero, new Vector3(0.28f, 0.7f, 0.28f));
+                    Prims.Make("Water", t, Prims.Cylinder, GameMaterials.Glow(BlockColor.Blue), new Vector3(0f, -0.2f, 0f), new Vector3(0.16f, 0.4f, 0.16f));
+                    Prims.Make("CapTop", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0.72f, 0f), new Vector3(0.38f, 0.07f, 0.38f));
+                    Prims.Make("CapBot", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, -0.72f, 0f), new Vector3(0.38f, 0.07f, 0.38f));
+                    Marker(pv, spec.color, new Vector3(0.45f, 0.4f, -0.1f));
+                    Box(pv.go, Vector3.zero, new Vector3(0.4f, 1.5f, 0.4f));
+                    break;
+                }
+                case PartType.DripGrid:
+                {
+                    PartView pv = NewPart(i, "StainlessDripGrid", new Vector3(lx, ly, -0.85f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Plate", t, Prims.Cube, GameMaterials.Steel, Vector3.zero, new Vector3(1.9f, 0.08f, 0.8f));
+                    for (int k = 0; k < 9; k++)
+                        Prims.Make("Slot" + k, t, Prims.Cube, GameMaterials.Rubber, new Vector3(-0.8f + k * 0.2f, 0.05f, 0f), new Vector3(0.07f, 0.02f, 0.6f));
+                    Prims.Make("Tint", t, Prims.Cube, GameMaterials.Glow(spec.color), new Vector3(0f, 0.01f, -0.42f), new Vector3(1.9f, 0.05f, 0.04f));
+                    Marker(pv, spec.color, new Vector3(0f, 0.4f, -0.2f));
+                    Box(pv.go, Vector3.zero, new Vector3(1.9f, 0.3f, 0.8f));
+                    break;
+                }
+                case PartType.Coil:
+                {
+                    PartView pv = NewPart(i, "CopperHeatingCoil", new Vector3(lx, ly, -0.1f));
+                    Transform t = pv.go.transform;
+                    for (int k = 0; k < 4; k++)
+                        Prims.Make("Ring" + k, t, Prims.Cylinder, GameMaterials.Copper, new Vector3(0f, -0.35f + k * 0.24f, 0f), new Vector3(1.0f - k * 0.06f, 0.045f, 1.0f - k * 0.06f));
+                    Prims.Make("Glow", t, Prims.Cylinder, GameMaterials.Glow(BlockColor.Yellow), new Vector3(0f, 0.1f, 0f), new Vector3(0.4f, 0.5f, 0.4f));
+                    Marker(pv, spec.color, new Vector3(0.7f, 0.5f, -0.3f));
+                    Sphere(pv.go, Vector3.zero, 0.6f);
+                    break;
+                }
+                case PartType.Valve:
+                {
+                    PartView pv = NewPart(i, "BrassGearValve" + spec.slot, new Vector3(lx, ly, -0.3f));
+                    BuildGear(pv, spec.color, 0.62f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.36f);
+                    break;
+                }
+                case PartType.Tnt:
+                    BuildDynamiteBundle(i, spec, lx, ly, -0.55f);
+                    break;
+                default:
+                {
+                    PartView pv = NewPart(i, "Part" + i, new Vector3(lx, ly, 0f));
+                    Prims.Make("Block", pv.go.transform, Prims.Cube, mat, Vector3.zero, Vector3.one * 0.5f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, 0f));
+                    Box(pv.go, Vector3.zero, Vector3.one * 0.5f);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>A strapped bundle of three dynamite sticks (used by the chapter 5 / 6 monuments).</summary>
+        private void BuildDynamiteBundle(int i, PartSpec spec, float lx, float ly, float z)
+        {
+            PartView pv = NewPart(i, "DynamiteBundle" + spec.slot, new Vector3(lx, ly, z));
+            Transform t = pv.go.transform;
+            for (int k = 0; k < 3; k++)
+                Prims.Make("Stick" + k, t, Prims.Cylinder, GameMaterials.TntRed, new Vector3((k - 1) * 0.22f, k == 1 ? 0.06f : 0f, 0f), new Vector3(0.2f, 0.34f, 0.2f));
+            Prims.Make("StrapA", t, Prims.Cylinder, GameMaterials.Charcoal, new Vector3(0f, -0.14f, 0f), new Vector3(0.7f, 0.04f, 0.4f));
+            Prims.Make("StrapB", t, Prims.Cylinder, GameMaterials.Charcoal, new Vector3(0f, 0.18f, 0f), new Vector3(0.7f, 0.04f, 0.4f));
+            Prims.Make("Fuse", t, Prims.Cylinder, GameMaterials.Rubber, new Vector3(0.05f, 0.5f, 0f), new Vector3(0.04f, 0.16f, 0.04f), new Vector3(0f, 0f, 18f));
+            Prims.Make("Spark", t, Prims.Sphere, GameMaterials.Glow(BlockColor.Yellow), new Vector3(0.1f, 0.68f, 0f), Vector3.one * 0.1f);
+            Prims.Label(t, "TNT", 0.2f, Color.white, new Vector3(0f, 0f, -0.25f));
+            Marker(pv, spec.color, new Vector3(0f, 0.85f, -0.2f));
+            Box(pv.go, Vector3.zero, new Vector3(0.8f, 0.7f, 0.5f));
+        }
+
+        // ------------------------------------------------------------------ chapter 6: twin-lens reflex camera
+
+        private void BuildCameraDecor()
+        {
+            Prims.Make("DarkroomCore", pivot, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 1.45f, 0.18f), new Vector3(1.8f, 2.0f, 0.7f));
+            Prims.Make("ChromeTop", pivot, Prims.Cube, GameMaterials.Silver, new Vector3(0f, 2.58f, 0.15f), new Vector3(2.05f, 0.1f, 1.25f));
+            Prims.Make("ChromeBottom", pivot, Prims.Cube, GameMaterials.Silver, new Vector3(0f, 0.3f, 0.15f), new Vector3(2.05f, 0.14f, 1.25f));
+            Prims.Make("LugL", pivot, Prims.Cylinder, GameMaterials.Steel, new Vector3(-1.08f, 2.3f, 0.15f), new Vector3(0.2f, 0.06f, 0.2f), new Vector3(0f, 0f, 90f));
+            Prims.Make("LugR", pivot, Prims.Cylinder, GameMaterials.Steel, new Vector3(1.08f, 2.3f, 0.15f), new Vector3(0.2f, 0.06f, 0.2f), new Vector3(0f, 0f, 90f));
+            Prims.Make("Plaque", pivot, Prims.Cube, GameMaterials.Gold, new Vector3(0f, 0.55f, -0.64f), new Vector3(0.9f, 0.14f, 0.03f));
+        }
+
+        private void BuildCameraPart(int i, PartSpec spec, float lx, float ly)
+        {
+            Material mat = GameMaterials.ForBlock(spec.color);
+            switch (spec.type)
+            {
+                case PartType.Body:
+                {
+                    bool front = spec.slot == 0;
+                    PartView pv = NewPart(i, front ? "LeatherFrontPlate" : "LeatherBackDoor", new Vector3(lx, ly, front ? -0.5f : 0.78f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Leather", t, Prims.Cube, GameMaterials.Bakelite, Vector3.zero, new Vector3(2.0f, 2.1f, 0.12f));
+                    Prims.Make("Frame", t, Prims.Cube, GameMaterials.Steel, new Vector3(0f, 1.0f, front ? -0.03f : 0.03f), new Vector3(2.04f, 0.08f, 0.14f));
+                    Prims.Make("FrameB", t, Prims.Cube, GameMaterials.Steel, new Vector3(0f, -1.0f, front ? -0.03f : 0.03f), new Vector3(2.04f, 0.08f, 0.14f));
+                    Prims.Make("Tint", t, Prims.Cube, GameMaterials.Glow(spec.color), new Vector3(0.8f, -0.75f, front ? -0.07f : 0.07f), new Vector3(0.3f, 0.12f, 0.02f));
+                    Marker(pv, spec.color, new Vector3(-0.7f, -0.8f, front ? -0.2f : 0.2f));
+                    Box(pv.go, Vector3.zero, new Vector3(2.0f, 2.1f, 0.2f));
+                    pv.aim = new Vector3(0f, front ? 0.7f : 0.4f, front ? -0.2f : 0.2f);
+                    break;
+                }
+                case PartType.Hood:
+                {
+                    PartView pv = NewPart(i, "ViewfinderHood", new Vector3(lx, ly, 0.0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Lid", t, Prims.Cube, GameMaterials.Gunmetal, new Vector3(0f, 0.28f, 0f), new Vector3(1.7f, 0.07f, 1.1f));
+                    Prims.Make("Front", t, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 0.0f, -0.52f), new Vector3(1.7f, 0.5f, 0.05f), new Vector3(-12f, 0f, 0f));
+                    Prims.Make("SideL", t, Prims.Cube, GameMaterials.Charcoal, new Vector3(-0.82f, 0.0f, 0f), new Vector3(0.05f, 0.5f, 1.05f));
+                    Prims.Make("SideR", t, Prims.Cube, GameMaterials.Charcoal, new Vector3(0.82f, 0.0f, 0f), new Vector3(0.05f, 0.5f, 1.05f));
+                    Prims.Make("Tint", t, Prims.Cube, GameMaterials.Glow(spec.color), new Vector3(0f, 0.33f, -0.3f), new Vector3(0.5f, 0.03f, 0.18f));
+                    Marker(pv, spec.color, new Vector3(0.6f, 0.65f, -0.3f));
+                    Box(pv.go, Vector3.zero, new Vector3(1.7f, 0.6f, 1.1f));
+                    break;
+                }
+                case PartType.Lens:
+                {
+                    PartView pv = NewPart(i, spec.slot == 0 ? "ViewingLens" : "TakingLens", new Vector3(lx, ly, -0.62f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Ring", t, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(1.0f, 0.16f, 1.0f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Barrel", t, Prims.Cylinder, GameMaterials.Charcoal, new Vector3(0f, 0f, -0.05f), new Vector3(0.78f, 0.12f, 0.78f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Glass", t, Prims.Sphere, GameMaterials.Acrylic(spec.color), new Vector3(0f, 0f, -0.12f), new Vector3(0.66f, 0.66f, 0.18f));
+                    Prims.Make("Coating", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0.12f, 0.12f, -0.2f), new Vector3(0.12f, 0.12f, 0.02f));
+                    Marker(pv, spec.color, new Vector3(0.62f, 0.55f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.55f);
+                    pv.aim = new Vector3(0f, 0f, -0.3f);
+                    break;
+                }
+                case PartType.Iris:
+                {
+                    PartView pv = NewPart(i, "IrisShutter", new Vector3(lx, ly, -0.4f));
+                    Transform t = pv.go.transform;
+                    GameObject spin = new GameObject("BladeSpin");
+                    spin.transform.SetParent(t, false);
+                    for (int k = 0; k < 8; k++)
+                    {
+                        float a = k * 45f;
+                        Prims.Make("Blade" + k, spin.transform, Prims.Cube, GameMaterials.Steel, new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * 0.3f, Mathf.Sin(a * Mathf.Deg2Rad) * 0.3f, 0f), new Vector3(0.42f, 0.16f, 0.02f), new Vector3(0f, 0f, a + 25f));
+                    }
+                    Prims.Make("Rim", t, Prims.Cylinder, GameMaterials.Gunmetal, new Vector3(0f, 0f, 0.02f), new Vector3(1.05f, 0.04f, 1.05f), new Vector3(90f, 0f, 0f));
+                    pv.spin = spin.transform;
+                    pv.spinSpeed = 25f;
+                    Marker(pv, spec.color, new Vector3(0.6f, 0.55f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.55f);
+                    break;
+                }
+                case PartType.Crank:
+                {
+                    PartView pv = NewPart(i, "FilmAdvanceCrank", new Vector3(lx, ly, 0.0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Boss", t, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(0.36f, 0.12f, 0.36f), new Vector3(0f, 0f, 90f));
+                    Prims.Make("Arm", t, Prims.Cube, GameMaterials.Steel, new Vector3(0.32f, 0.2f, 0f), new Vector3(0.12f, 0.5f, 0.08f), new Vector3(0f, 0f, -35f));
+                    Prims.Make("Knob", t, Prims.Sphere, GameMaterials.Bakelite, new Vector3(0.52f, 0.42f, 0f), Vector3.one * 0.2f);
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0.52f, 0.42f, -0.1f), Vector3.one * 0.07f);
+                    Marker(pv, spec.color, new Vector3(0.45f, 0.8f, -0.1f));
+                    Sphere(pv.go, new Vector3(0.25f, 0.2f, 0f), 0.45f);
+                    break;
+                }
+                case PartType.Spool:
+                {
+                    PartView pv = NewPart(i, "FilmSpool" + spec.slot, new Vector3(lx, ly, -0.1f));
+                    Transform t = pv.go.transform;
+                    GameObject spin = new GameObject("SpoolSpin");
+                    spin.transform.SetParent(t, false);
+                    Prims.Make("FlangeA", spin.transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0f, -0.14f), new Vector3(0.8f, 0.03f, 0.8f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("FlangeB", spin.transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0f, 0.14f), new Vector3(0.8f, 0.03f, 0.8f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Film", spin.transform, Prims.Cylinder, GameMaterials.Rubber, Vector3.zero, new Vector3(0.6f, 0.13f, 0.6f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Core", spin.transform, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(0.22f, 0.16f, 0.22f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Strip", t, Prims.Cube, GameMaterials.TapeBrown, new Vector3(spec.slot == 0 ? 0.55f : -0.55f, -0.45f, 0f), new Vector3(0.7f, 0.04f, 0.3f), new Vector3(0f, 0f, spec.slot == 0 ? -12f : 12f));
+                    pv.spin = spin.transform;
+                    pv.spinSpeed = 55f;
+                    Marker(pv, spec.color, new Vector3(0f, 0.62f, -0.2f));
+                    Sphere(pv.go, Vector3.zero, 0.45f);
+                    break;
+                }
+                case PartType.ShutterGear:
+                {
+                    PartView pv = NewPart(i, "ShutterGear" + spec.slot, new Vector3(lx, ly, -0.1f));
+                    BuildGear(pv, spec.color, 0.7f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.55f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.4f);
+                    break;
+                }
+                case PartType.Tnt:
+                    BuildDynamiteBundle(i, spec, lx, ly, -0.2f);
+                    break;
+                default:
+                {
+                    PartView pv = NewPart(i, "Part" + i, new Vector3(lx, ly, 0f));
+                    Prims.Make("Block", pv.go.transform, Prims.Cube, mat, Vector3.zero, Vector3.one * 0.5f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, 0f));
+                    Box(pv.go, Vector3.zero, Vector3.one * 0.5f);
+                    break;
+                }
             }
         }
 
@@ -333,10 +641,10 @@ namespace ColorGateBlast
                     if (silver)
                     {
                         // brushed-silver frame around the open cassette window
-                        Prims.Make("Top", t, Prims.Cube, GameMaterials.Steel, new Vector3(0f, 2.0f, 0f), new Vector3(3.6f, 0.4f, 1.2f));
-                        Prims.Make("Bottom", t, Prims.Cube, GameMaterials.Steel, new Vector3(0f, 0.62f, 0f), new Vector3(3.6f, 0.24f, 1.2f));
-                        Prims.Make("Left", t, Prims.Cube, GameMaterials.Steel, new Vector3(-1.425f, 1.2f, 0f), new Vector3(0.75f, 1.4f, 1.2f));
-                        Prims.Make("Right", t, Prims.Cube, GameMaterials.Steel, new Vector3(1.425f, 1.2f, 0f), new Vector3(0.75f, 1.4f, 1.2f));
+                        Prims.Make("Top", t, Prims.Cube, GameMaterials.Silver, new Vector3(0f, 2.0f, 0f), new Vector3(3.6f, 0.4f, 1.2f));
+                        Prims.Make("Bottom", t, Prims.Cube, GameMaterials.Silver, new Vector3(0f, 0.62f, 0f), new Vector3(3.6f, 0.24f, 1.2f));
+                        Prims.Make("Left", t, Prims.Cube, GameMaterials.Silver, new Vector3(-1.425f, 1.2f, 0f), new Vector3(0.75f, 1.4f, 1.2f));
+                        Prims.Make("Right", t, Prims.Cube, GameMaterials.Silver, new Vector3(1.425f, 1.2f, 0f), new Vector3(0.75f, 1.4f, 1.2f));
                         Marker(pv, spec.color, new Vector3(-1.4f, 1.95f, -0.75f));
                         pv.aim = new Vector3(0f, 1.3f, -0.4f);
                         Box(pv.go, new Vector3(0f, 1.3f, 0f), new Vector3(3.6f, 1.8f, 1.2f));
@@ -765,7 +1073,9 @@ namespace ColorGateBlast
         private void AddScrew(int i, PartSpec spec)
         {
             PartView pv = views[i];
-            bool rear = spec.type == PartType.Casing && (Kind == MonumentKind.RotaryPhone || (Kind == MonumentKind.PocketWatch && spec.slot == 1));
+            bool rear = (spec.type == PartType.Casing && (Kind == MonumentKind.RotaryPhone || (Kind == MonumentKind.PocketWatch && spec.slot == 1)))
+                || (Kind == MonumentKind.EspressoMachine && spec.type == PartType.Lever)
+                || (Kind == MonumentKind.TlrCamera && spec.type == PartType.Body && spec.slot == 1);
             GameObject sc = new GameObject("BrassScrew");
             sc.transform.SetParent(pv.go.transform, false);
             sc.transform.localPosition = pv.aim + (rear ? new Vector3(0.9f, 0.5f, 0.75f) : new Vector3(0.55f, 0.45f, -0.35f));
@@ -897,7 +1207,7 @@ namespace ColorGateBlast
 
             FXManager fx = FXManager.Instance;
             SoundSynth snd = SoundSynth.Instance;
-            bool glass = spec.type == PartType.Glass || spec.type == PartType.Door;
+            bool glass = spec.type == PartType.Glass || spec.type == PartType.Door || spec.type == PartType.Lens || spec.type == PartType.SightTube;
             if (fx != null)
             {
                 if (glass) fx.GlassBreak(pos);

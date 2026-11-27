@@ -22,3 +22,7 @@
 *.unitypackage
 sysinfo.txt
 crashlytics-build.properties
+
+# stray JDK folder (not part of the game)
+Assets/_Project/Editor/oracleJdk-27/
+Assets/_Project/Editor/oracleJdk-27.meta

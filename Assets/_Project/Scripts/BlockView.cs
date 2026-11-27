@@ -67,14 +67,58 @@ namespace ColorGateBlast
             bodyFilter = gameObject.AddComponent<MeshFilter>();
             body = gameObject.AddComponent<MeshRenderer>();
             bodyFilter.sharedMesh = Poly(info.cells, cs, 0.9f, height, 0f, 3).ToMesh("Block", 0.6f);
-            body.sharedMaterial = GameMaterials.ForBlock(info.color);
+            body.sharedMaterial = info.IsPrism ? GameMaterials.Brass : GameMaterials.ForBlock(info.color);
 
-            if (!info.hasInner && info.axis == MoveAxis.Free) BuildPanels();
+            if (info.IsPrism) BuildPrism();
+            else if (!info.hasInner && info.axis == MoveAxis.Free) BuildPanels();
             BuildRivets();
             if (info.hasInner) BuildStripe();
             if (info.axis != MoveAxis.Free) BuildArrows();
             if (info.hasKey) BuildKey();
             if (info.iceLayer > 0) SetIce(info.iceLayer, false);
+        }
+
+        private Renderer prismCore, prismNext;
+        private float prismFlash;
+
+        /// <summary>Colour-shifting prism: brushed brass frame around a faceted glass core that glows with the active colour; a corner pip shows the next colour.</summary>
+        private void BuildPrism()
+        {
+            Vector3 c = new Vector3(centroidLocal.x, height + 0.07f * cs, centroidLocal.z);
+            GameObject core = new GameObject("PrismCore");
+            core.transform.SetParent(transform, false);
+            core.transform.localPosition = c;
+            Prims.Make("GemA", core.transform, Prims.Cube, GameMaterials.Glow(info.color), Vector3.zero, Vector3.one * (0.36f * cs), new Vector3(45f, 0f, 45f));
+            GameObject b = Prims.Make("GemB", core.transform, Prims.Cube, GameMaterials.Glow(info.color), Vector3.zero, Vector3.one * (0.36f * cs), new Vector3(0f, 45f, 0f));
+            prismCore = core.transform.GetChild(0).GetComponent<Renderer>();
+            Renderer r2 = b.GetComponent<Renderer>();
+            core.AddComponent<KeySpin>();
+            GameObject pip = Prims.Make("NextPip", transform, Prims.Sphere, GameMaterials.Glow(info.color), new Vector3(centroidLocal.x + 0.3f * cs, height + 0.04f * cs, centroidLocal.z + 0.3f * cs), Vector3.one * (0.11f * cs));
+            prismNext = pip.GetComponent<Renderer>();
+            prismExtra = r2;
+        }
+
+        private Renderer prismExtra;
+
+        /// <summary>Show the active colour in the glass and the next colour on the corner pip.</summary>
+        public void SetPrism(BlockColor current, BlockColor next, bool flash)
+        {
+            if (prismCore == null) return;
+            Material m = GameMaterials.Glow(current);
+            prismCore.sharedMaterial = m;
+            if (prismExtra != null) prismExtra.sharedMaterial = m;
+            if (prismNext != null) prismNext.sharedMaterial = GameMaterials.Glow(next);
+            if (flash) prismFlash = 0.35f;
+        }
+
+        private void LateUpdate()
+        {
+            if (prismFlash > 0f && prismCore != null)
+            {
+                prismFlash -= Time.deltaTime;
+                float k = 1f + Mathf.Sin(Mathf.Clamp01(prismFlash / 0.35f) * Mathf.PI) * 0.45f;
+                prismCore.transform.parent.localScale = Vector3.one * k;
+            }
         }
 
         /// <summary>Square top panel pressed into each cell (darker, bevelled) so every piece reads as machined metal.</summary>
