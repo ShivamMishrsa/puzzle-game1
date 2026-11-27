@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(43, "Bridge and Portal", 7, 7, 16, 5, LevelTier.Normal, "Snap the weld first - then the freed 1x1 can use the portal pad.");
+            LevelDefinition d = Make(43, "Bridge and Portal", 7, 7, 14, 5, LevelTier.Normal, "Snap the weld first - then the freed 1x1 can use the portal pad.");
             d.placements.Add(Scrap(1, 7, 3, 0));
             d.placements.Add(Link(Rect(R, 1, 1, 1, 3), 1));
             d.placements.Add(Link(Rect(Y, 1, 1, 2, 3), 1));
