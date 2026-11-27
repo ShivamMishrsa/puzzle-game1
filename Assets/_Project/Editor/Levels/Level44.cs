@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(44, "Frozen Weld", 7, 7, 14, 5, LevelTier.Normal, "A frozen half locks the whole welded pair. Send the neighbour out to thaw it!");
+            LevelDefinition d = Make(44, "Frozen Weld", 7, 7, 13, 5, LevelTier.Normal, "A frozen half locks the whole welded pair. Send the neighbour out to thaw it!");
             d.placements.Add(Scrap(2, 1, 5, 5));
             d.placements.Add(Link(Ice(Rect(B, 1, 1, 3, 3), 1), 1));
             d.placements.Add(Link(Rect(Y, 1, 1, 4, 3), 1));
