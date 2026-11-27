@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(4, "TNT Discovery", 5, 5, 8, 5, LevelTier.Normal, "The sparking TNT box is red - a single red shot sets it off!");
+            LevelDefinition d = Make(4, "TNT Discovery", 5, 5, 7, 5, LevelTier.Normal, "The sparking TNT box is red - a single red shot sets it off!");
             d.placements.Add(Rect(B, 2, 2, 0, 3));
             d.placements.Add(Rect(Y, 1, 2, 4, 3));
             d.placements.Add(Rect(R, 1, 1, 2, 1));
