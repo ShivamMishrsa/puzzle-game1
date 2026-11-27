@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(49, "Barista Gridlock", 7, 7, 17, 4, LevelTier.Normal, "Ice, welds, shutters and steam - read the board before you move!");
+            LevelDefinition d = Make(49, "Barista Gridlock", 7, 7, 15, 4, LevelTier.Normal, "Ice, welds, shutters and steam - read the board before you move!");
             d.placements.Add(Scrap(2, 2, 2, 2));
             d.placements.Add(Scrap(1, 1, 5, 5));
             d.placements.Add(Rect(G, 2, 2, 0, 5));
