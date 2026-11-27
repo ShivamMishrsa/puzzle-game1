@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(33, "Unblock the Exit Pad", 7, 7, 18, 5, LevelTier.Normal, "The exit pad is blocked by ice. Free the red block below it to thaw the ice!");
+            LevelDefinition d = Make(33, "Unblock the Exit Pad", 7, 7, 12, 5, LevelTier.Normal, "The exit pad is blocked by ice. Free the red block below it to thaw the ice!");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Key(Rect(Y, 1, 1, 0, 1), 0));
             d.placements.Add(Ice(Rect(B, 1, 1, 5, 5), 1));
