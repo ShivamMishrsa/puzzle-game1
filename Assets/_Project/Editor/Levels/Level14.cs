@@ -7,14 +7,18 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(14, "Thick Frost", 6, 6, 18, 5, LevelTier.Normal, "Two layers of ice: free blocks on two different sides to thaw it!");
-            d.placements.Add(Ice(Rect(Y, 2, 2, 2, 2), 2));
+            LevelDefinition d = Make(14, "Thick Frost", 7, 7, 21, 5, LevelTier.Normal, "Two layers of ice: free blocks on two different sides to thaw it!");
             d.placements.Add(Scrap(1, 2, 1, 2));
             d.placements.Add(Scrap(1, 2, 4, 2));
-            d.placements.Add(Rect(R, 2, 1, 2, 4));
-            d.placements.Add(Rect(B, 2, 1, 2, 1));
-            d.placements.Add(Rect(B, 1, 1, 1, 5));
-            d.placements.Add(Rect(R, 1, 1, 3, 5));
+            d.placements.Add(Rect(B, 2, 2, 2, 4));
+            d.placements.Add(Ice(Rect(Y, 2, 2, 5, 1), 2));
+            d.placements.Add(Rect(B, 1, 2, 5, 5));
+            d.placements.Add(Rect(Y, 2, 1, 2, 6));
+            d.placements.Add(Rect(R, 2, 1, 0, 4));
+            d.placements.Add(Rect(B, 2, 1, 3, 1));
+            d.placements.Add(Rect(R, 1, 1, 4, 5));
+            d.placements.Add(Rect(R, 1, 1, 5, 4));
+            d.placements.Add(Rect(B, 1, 1, 1, 1));
             d.gates.Add(Gate(Left, 4, 1, R));
             d.gates.Add(Gate(Right, 1, 1, B));
             d.gates.Add(Gate(Up, 2, 2, Y));
