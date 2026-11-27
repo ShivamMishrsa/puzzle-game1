@@ -97,6 +97,25 @@ namespace ColorGateBlast.EditorTools
         /// <summary>Colour-shifting prism block: starts as cycle[0] and advances one step on every block exit.</summary>
         protected static Placement Prism(Placement p, params BlockColor[] cycle) { p.cycle = cycle; p.color = cycle[0]; return p; }
 
+        /// <summary>Pins a part with up to three coupled brass screws (colours in order); all must be unscrewed before the plate can be hurt.</summary>
+        protected static PartSpec Screws(PartSpec p, params BlockColor[] colors)
+        {
+            p.hasScrew = true;
+            p.screwCount = colors.Length;
+            p.screwColor = colors[0];
+            if (colors.Length > 1) p.screw2 = colors[1];
+            if (colors.Length > 2) p.screw3 = colors[2];
+            return p;
+        }
+
+        /// <summary>Polarity flipper coil at (x, y): PULL (startsPull) or PUSH before the first exit, flips on every gate exit.</summary>
+        protected static PolaritySpec Polarity(int x, int y, bool startsPull)
+        {
+            PolaritySpec q = new PolaritySpec();
+            q.cell = new Int2(x, y); q.startsPull = startsPull;
+            return q;
+        }
+
         /// <summary>Repulsor coil at (x, y): shoves a block that rests on / beside it one tile away.</summary>
         protected static RepulsorSpec Repulsor(int x, int y)
         {
@@ -155,7 +174,7 @@ namespace ColorGateBlast.EditorTools
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
             d.megaPierces = id >= 81;
-            d.monument = id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
+            d.monument = id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -200,6 +219,23 @@ namespace ColorGateBlast.EditorTools
                         {
                             mask = MaskOf(d, PartType.GroupHead);
                             if (mask == 0) mask = MaskOf(d, PartType.Boiler);
+                        }
+                        break;
+                    case MonumentKind.Tourbillon:
+                        // 3-layer: bezel + crystal -> skeleton bridges + tourbillon cage -> barrels + rotor -> dynamite behind the cage
+                        if (p.type == PartType.Bridge || p.type == PartType.TourbillonCage)
+                        {
+                            mask = MaskOf(d, PartType.Bezel) | MaskOf(d, PartType.Crystal);
+                        }
+                        else if (p.type == PartType.MainBarrel || p.type == PartType.Rotor)
+                        {
+                            mask = MaskOf(d, PartType.Bridge);
+                            if (mask == 0) mask = MaskOf(d, PartType.Bezel) | MaskOf(d, PartType.Crystal);
+                        }
+                        else if (p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.TourbillonCage);
+                            if (mask == 0) mask = MaskOf(d, PartType.Bridge);
                         }
                         break;
                     case MonumentKind.Orrery:

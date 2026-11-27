@@ -10,7 +10,7 @@ physically falls apart. Same-colour turrets merge into a laser Mega-Turret.
       merging, solver (BFS + weighted best-first) - `Assets/_Project/Scripts/Core`
 - [x] Levels, one class per level in `Assets/_Project/Editor/Levels`, every one proven winnable within its move limit
 - [x] Unity runtime v1: 3D tray + conveyor + turrets, alarm clock and cassette player monuments, physics debris, TNT, procedural sound/FX, HUD, AdMob (test ids) + simulator, solver-based hints, `Tools > Color Gate Blast > Setup Phase 1`
-- [x] Levels 1-90 (9 chapters), solver-verified, one commit per level
+- [x] Levels 1-100 (10 chapters), solver-verified, one commit per level
 - [ ] Authentication / security / database (after game + levels)
 
 See `docs/PLAYTEST.md` for the in-Unity checklist (what the solver cannot prove: look, sound, feel).
@@ -42,6 +42,7 @@ One look for every `LevelData` (1-40 today, 41-150 automatically): `Assets/_Proj
 | 7 | 61-70 | Vintage Mechanical Typewriter | 5th colour Purple, carriage-shift rows (blocks slide 1 tile after every exit), crated mystery blocks |
 | 8 | 71-80 | Vintage Brass & Mahogany Gramophone | 2-layer nested armour (inner cores shielded), one-way ratchet turnstiles, 8x8 trays, exact optimal move limits |
 | 9 | 81-90 | Celestial Brass Orrery | 7 colours (+ Orange, Cyan), repulsor coils, 3-layer vault armour (Mega-Turrets pierce a layer), 9x9 trays |
+| 10 | 91-100 | Swiss Skeleton Tourbillon | 9x9, all 7 colours, Magnetic Polarity Flipper Coils (PULL/PUSH flip on every exit), coupled multi-screw plates, 4 track slots (3 in the L95 mini-boss and L100 Centennial boss), exact moves |
 
 ## Front end
 Splash screen, then a scrolling story map with all 150 level nodes (stars, padlocks, a bobbing buddy on the current level, a world banner per chapter). `MAP` button in game and on the win / lose panels. Gear button: sound on/off and an "unlock all levels (testing)" switch. Code: `Visuals/MapScreen.cs`.

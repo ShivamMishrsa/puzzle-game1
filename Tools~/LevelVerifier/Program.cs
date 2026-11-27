@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using ColorGateBlast;
@@ -35,7 +35,7 @@ class Program
     {
         LevelDefinition d = new LevelDefinition();
         d.levelID = t.levelID; d.gridSize = t.gridSize; d.moveLimit = t.moveLimit; d.maxTrackSlots = t.maxTrackSlots;
-        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.carriages = t.carriages; d.turnstiles = t.turnstiles; d.repulsors = t.repulsors; d.megaPierces = t.megaPierces; d.timeLimit = t.timeLimit; d.targetHpScale = t.targetHpScale;
+        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.carriages = t.carriages; d.turnstiles = t.turnstiles; d.repulsors = t.repulsors; d.polarities = t.polarities; d.megaPierces = t.megaPierces; d.timeLimit = t.timeLimit; d.targetHpScale = t.targetHpScale;
         return d;
     }
 
@@ -374,6 +374,37 @@ class Program
         Check(pushed && rpb.Pos[0].x == 4, "repulsor: block resting ON the coil continues one tile in its move direction");
         rpb.Commit(0, new Int2(5, 1));
         Check(!rpb.RepelAfterSlide(0, new Int2(1, 0)), "repulsor: far away block is not touched");
+
+        // polarity coils: coil at (3,1) starts PULL, flips to PUSH after an exit
+        LevelDefinition pld = Tiny(7, 4);
+        pld.placements.Add(Blk(BlockColor.Red, 1, 1));
+        pld.placements.Add(Blk(BlockColor.Blue, 6, 3));
+        pld.gates.Add(Gt(GateDirection.Up, 6, 1, BlockColor.Blue));
+        pld.polarities.Add(new PolaritySpec { cell = new Int2(3, 1), startsPull = true });
+        BoardModel plb = new BoardModel(pld);
+        plb.Commit(0, new Int2(2, 1));
+        bool moved = plb.PolarityAfterSlide(0, new Int2(1, 0));
+        Check(moved && plb.Pos[0].x == 3 - 0 + 0 && plb.Pos[0].x == 3, "polarity PULL: block beside the coil is pulled onto it (x=" + plb.Pos[0].x + ")");
+        plb.ExitBlock(1, null, GateDirection.Up, plb.Pos[1], plb.Pos[1]);
+        Check(plb.PolarityPushing(0), "polarity: coil flipped to PUSH after an exit");
+        plb.Commit(0, new Int2(2, 1));
+        moved = plb.PolarityAfterSlide(0, new Int2(1, 0));
+        Check(moved && plb.Pos[0].x == 1, "polarity PUSH: block beside the coil is shoved away (x=" + plb.Pos[0].x + ")");
+
+        // coupled screws: plate pinned by two screws (Blue, Green); Red shots only hit the plate once both are gone
+        LevelDefinition scd = Tiny(4, 3);
+        PartSpec sp = new PartSpec(); sp.type = PartType.Casing; sp.color = BlockColor.Red; sp.hp = 2; sp.hasScrew = true; sp.screwCount = 2; sp.screwColor = BlockColor.Blue; sp.screw2 = BlockColor.Green;
+        scd.parts.Clear(); scd.parts.Add(sp);
+        MonumentModel mm = new MonumentModel(scd);
+        Check(mm.FindTarget((int)BlockColor.Red) < 0, "coupled screws: a pinned Red plate cannot be targeted");
+        int bt = mm.FindTarget((int)BlockColor.Blue);
+        Check(bt >= MonumentModel.ScrewBase && MonumentModel.ScrewIndexOf(bt) == 0, "coupled screws: Blue turret unscrews screw 0");
+        mm.HitTarget(bt, null, null, null);
+        Check(mm.Screw[0] && mm.FindTarget((int)BlockColor.Red) < 0, "coupled screws: plate still pinned by the second screw");
+        int gt = mm.FindTarget((int)BlockColor.Green);
+        Check(MonumentModel.ScrewIndexOf(gt) == 1, "coupled screws: Green turret unscrews screw 1");
+        mm.HitTarget(gt, null, null, null);
+        Check(!mm.Screw[0] && mm.FindTarget((int)BlockColor.Red) == 0, "coupled screws: both gone - the plate is open to Red shots");
 
         Console.WriteLine(selfFail == 0 ? "SELFTEST ALL PASS" : ("SELFTEST FAILURES: " + selfFail));
     }

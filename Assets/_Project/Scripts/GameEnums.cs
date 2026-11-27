@@ -113,7 +113,15 @@ namespace ColorGateBlast
         // ---- Chapter 9: Celestial Brass Orrery ----
         Ring,
         Planet,
-        Cage
+        Cage,
+        // ---- Chapter 10: Swiss Skeleton Tourbillon ----
+        Bezel,
+        Crystal,
+        Pusher,
+        Bridge,
+        TourbillonCage,
+        MainBarrel,
+        Rotor
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -127,7 +135,8 @@ namespace ColorGateBlast
         TlrCamera = 5,
         Typewriter = 6,
         Gramophone = 7,
-        Orrery = 8
+        Orrery = 8,
+        Tourbillon = 9
     }
 
     /// <summary>Difficulty class of a level: sets the countdown clock and whether the move limit is exact.</summary>

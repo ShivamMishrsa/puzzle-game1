@@ -240,6 +240,22 @@ namespace ColorGateBlast
         /// <summary>Pinned down by a slotted brass screw: shots at the plate are deflected until a turret of <see cref="screwColor"/> unscrews it.</summary>
         public bool hasScrew;
         public BlockColor screwColor;
+        /// <summary>Chain-linked plates: total number of coupled screws (1..3). Every one must be unscrewed by a turret of its own colour before the plate can be hurt.</summary>
+        public int screwCount;
+        public BlockColor screw2;
+        public BlockColor screw3;
+
+        public int ScrewTotal { get { return hasScrew ? (screwCount < 1 ? 1 : (screwCount > 3 ? 3 : screwCount)) : 0; } }
+        public BlockColor ScrewColorAt(int k) { return k == 0 ? screwColor : (k == 1 ? screw2 : screw3); }
+    }
+
+    /// <summary>Magnetic polarity flipper coil: pulls neighbouring blocks in while PULL, shoves them away while PUSH, and flips polarity on every gate exit.</summary>
+    [Serializable]
+    public struct PolaritySpec
+    {
+        public Int2 cell;
+        /// <summary>True: PULL before the first exit.</summary>
+        public bool startsPull;
     }
 
     /// <summary>Where each monument part sits (monument-local x/y, used for the TNT blast radius).</summary>
@@ -302,6 +318,23 @@ namespace ColorGateBlast
                         if (slot == 0) { x = 0.0f; y = 1.5f; } else { x = 0.8f; y = 1.9f; }
                         return;
                     default: x = 0.0f; y = 1.5f; return;
+                }
+            }
+            if (kind == MonumentKind.Tourbillon)
+            {
+                switch (type)
+                {
+                    case PartType.Bezel: x = 0.0f; y = 2.3f - 0.1f * slot; return;
+                    case PartType.Crystal: x = 0.0f; y = 2.3f; return;
+                    case PartType.Pusher: x = slot == 0 ? 1.25f : 1.25f; y = slot == 0 ? 2.5f : 1.9f; return;
+                    case PartType.Bridge: x = slot == 0 ? -0.5f : (slot == 1 ? 0.55f : 0.0f); y = slot == 2 ? 2.8f : 2.0f; return;
+                    case PartType.TourbillonCage: x = 0.0f; y = 2.1f; return;
+                    case PartType.MainBarrel: x = slot == 0 ? -0.65f : 0.65f; y = 1.5f; return;
+                    case PartType.Rotor: x = 0.0f; y = 1.2f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 2.05f; } else { x = 0.4f; y = 1.75f; }
+                        return;
+                    default: x = 0.0f; y = 2.0f; return;
                 }
             }
             if (kind == MonumentKind.Orrery)
@@ -447,6 +480,7 @@ namespace ColorGateBlast
         public List<CarriageSpec> carriages = new List<CarriageSpec>();
         public List<TurnstileSpec> turnstiles = new List<TurnstileSpec>();
         public List<RepulsorSpec> repulsors = new List<RepulsorSpec>();
+        public List<PolaritySpec> polarities = new List<PolaritySpec>();
         /// <summary>Merged (Mega) turrets punch through the layer behind their target, like a clockwork piercing gate (levels 81+).</summary>
         public bool megaPierces;
         /// <summary>Countdown in seconds (0 = untimed).</summary>
@@ -605,6 +639,8 @@ namespace ColorGateBlast
                 for (int j = 0; j < placements.Count; j++) if (placements[j].linkGroup == placements[i].linkGroup) n++;
                 if (n != 2) return "link group " + placements[i].linkGroup + " must have exactly two blocks";
             }
+            for (int qi = 0; qi < polarities.Count; qi++)
+                if (polarities[qi].cell.x < 0 || polarities[qi].cell.y < 0 || polarities[qi].cell.x >= w || polarities[qi].cell.y >= h) return "polarity coil " + qi + " out of grid";
             for (int ri = 0; ri < repulsors.Count; ri++)
                 if (repulsors[ri].cell.x < 0 || repulsors[ri].cell.y < 0 || repulsors[ri].cell.x >= w || repulsors[ri].cell.y >= h) return "repulsor " + ri + " out of grid";
             for (int ti = 0; ti < turnstiles.Count; ti++)

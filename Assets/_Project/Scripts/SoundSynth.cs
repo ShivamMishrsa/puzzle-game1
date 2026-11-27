@@ -16,7 +16,9 @@ namespace ColorGateBlast
         // batch 8
         RatchetClack,
         // batch 9
-        RepulsorThump
+        RepulsorThump,
+        // batch 10
+        PolarityZap
     }
 
     /// <summary>
@@ -283,6 +285,7 @@ namespace ColorGateBlast
             Add(Sfx.CarriageSlide, Clip("slide", Mix(Sweep(420f, 230f, 0.2f, 0.18f, 0.7f, 0.8f), Noise(0.2f, 0.12f, 8f, 0.6f, 0.9f), Delay(Ring(1900f, 0.05f, 0.25f, 70f, 1.7f), 0.18f))));
             Add(Sfx.RatchetClack, Clip("ratchet2", Mix(Ring(1400f, 0.04f, 0.45f, 90f, 1.8f), Noise(0.015f, 0.4f, 160f, 0.6f, 0.9f), Delay(Ring(1050f, 0.05f, 0.4f, 80f, 2.0f), 0.07f), Delay(Noise(0.015f, 0.35f, 160f, 0.6f, 0.9f), 0.07f))));
             Add(Sfx.RepulsorThump, Clip("thump", Mix(Sweep(160f, 55f, 0.22f, 0.7f, 0f, 1.2f), Ring(95f, 0.3f, 0.45f, 12f, 2.0f), Noise(0.05f, 0.35f, 70f, 0.4f, 0.8f), Delay(Sweep(2600f, 900f, 0.07f, 0.2f, 0.4f, 1.5f), 0.01f))));
+            Add(Sfx.PolarityZap, Clip("polzap", Mix(Sweep(3200f, 400f, 0.14f, 0.35f, 0.5f, 1.4f), Noise(0.1f, 0.4f, 35f, 0.7f, 1f), Delay(Sweep(500f, 2400f, 0.1f, 0.25f, 0.3f, 1.2f), 0.06f), Ring(180f, 0.2f, 0.3f, 14f, 2.2f))));
             Add(Sfx.Unlock, Clip("unlock", Mix(Marimba(BaseFreq * 2f, 0.4f, 0.4f), Delay(Marimba(BaseFreq * 3f, 0.5f, 0.4f), 0.08f))));
         }
     }

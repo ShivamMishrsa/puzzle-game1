@@ -226,7 +226,10 @@ namespace ColorGateBlast
         {
             losePanel.SetActive(false);
             winPanel.SetActive(true);
-            winTitle.text = "LEVEL CLEAR!";
+            bool centennial = !string.IsNullOrEmpty(reward) && reward.StartsWith("CENTENNIAL");
+            winTitle.text = centennial ? "CENTENNIAL MILESTONE!" : "LEVEL CLEAR!";
+            winTitle.fontSize = centennial ? 62 : 78;
+            winTitle.color = centennial ? new Color(1f, 0.85f, 0.3f) : Color.white;
             string extra = string.IsNullOrEmpty(reward) ? "" : "\n\n" + reward;
             winDetail.text = "Stars: " + stars + " / 3\nMoves used: " + movesUsed + "   Par: " + par + extra;
             nextButton.gameObject.SetActive(hasNext);

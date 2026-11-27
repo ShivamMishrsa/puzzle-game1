@@ -137,6 +137,7 @@ namespace ColorGateBlast
             BuildCarriages();
             BuildTurnstiles();
             BuildRepulsors();
+            BuildPolarities();
             BuildRails();
             BuildBlocks();
             BuildLinks();
@@ -332,6 +333,54 @@ namespace ColorGateBlast
                 ch.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("RepulsorChevrons");
                 ch.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Neon(BlockColor.Red);
             }
+        }
+
+        private Renderer[] polarityRing = new Renderer[0];
+        private TextMesh[] polarityLabel = new TextMesh[0];
+        private bool[] polarityPush = new bool[0];
+
+        /// <summary>Polarity flipper coils: copper-and-neon induction coils that glow cyan (PULL) or crimson-orange (PUSH) and flip on every exit.</summary>
+        private void BuildPolarities()
+        {
+            int n = def.polarities.Count;
+            polarityRing = new Renderer[n];
+            polarityLabel = new TextMesh[n];
+            polarityPush = new bool[n];
+            for (int k = 0; k < n; k++)
+            {
+                Vector3 c = CellWorld(def.polarities[k].cell);
+                GameObject pg = new GameObject("Polarity_" + k);
+                pg.transform.SetParent(root, false);
+                pg.transform.position = new Vector3(c.x, TrayTop + 0.004f, c.z);
+                Prims.Make("Bed", pg.transform, Prims.Cylinder, GameMaterials.Gunmetal, Vector3.zero, new Vector3(cs * 0.9f, 0.012f, cs * 0.9f));
+                Prims.Make("CopperCoil", pg.transform, Prims.Cylinder, GameMaterials.Copper, new Vector3(0f, 0.014f, 0f), new Vector3(cs * 0.76f, 0.012f, cs * 0.76f));
+                GameObject ring = Prims.Make("NeonRing", pg.transform, Prims.Cylinder, GameMaterials.Neon(BlockColor.Cyan), new Vector3(0f, 0.024f, 0f), new Vector3(cs * 0.58f, 0.012f, cs * 0.58f));
+                Prims.Make("Hub", pg.transform, Prims.Cylinder, GameMaterials.Gunmetal, new Vector3(0f, 0.032f, 0f), new Vector3(cs * 0.34f, 0.012f, cs * 0.34f));
+                TextMesh tm = Prims.Label(pg.transform, "PULL", cs * 0.17f, Color.white, new Vector3(0f, 0.05f, 0f));
+                tm.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                polarityRing[k] = ring.GetComponent<Renderer>();
+                polarityLabel[k] = tm;
+                polarityPush[k] = !board.PolarityPushing(k);
+            }
+            RefreshPolarities(false);
+        }
+
+        private void RefreshPolarities(bool flash)
+        {
+            bool any = false;
+            for (int k = 0; k < polarityRing.Length; k++)
+            {
+                bool push = board.PolarityPushing(k);
+                if (push == polarityPush[k]) continue;
+                polarityPush[k] = push;
+                polarityRing[k].sharedMaterial = GameMaterials.Neon(push ? BlockColor.Orange : BlockColor.Cyan);
+                polarityLabel[k].text = push ? "PUSH" : "PULL";
+                polarityLabel[k].color = push ? new Color(1f, 0.75f, 0.45f) : new Color(0.7f, 1f, 1f);
+                any = true;
+                if (flash && FXManager.Instance != null)
+                    FXManager.Instance.Burst(FxKind.Spark, CellWorld(def.polarities[k].cell) + new Vector3(0f, 0.15f, 0f), 12, push ? new Color(1f, 0.55f, 0.2f) : new Color(0.4f, 0.95f, 1f), 3f, 0.8f);
+            }
+            if (flash && any && SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PolarityZap);
         }
 
         private float nextArc;
@@ -1142,6 +1191,7 @@ namespace ColorGateBlast
             if (fx.unlockedLock >= 0) UnlockPadlocks(fx.unlockedLock, center);
             board.CountMove();
             ApplyBoardEffects(fx);
+            RefreshPolarities(true);
             RefreshPrisms(true);
             if (BlockExited != null) BlockExited(i, center, gd, fx.piercing);
             if (MoveCommitted != null) MoveCommitted();
@@ -1192,6 +1242,13 @@ namespace ColorGateBlast
                 views[idx].SetTarget(CellWorld(pulled));
                 if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.MagnetClunk, UnityEngine.Random.Range(0.95f, 1.05f), 0.8f);
                 if (FXManager.Instance != null) { FXManager.Instance.Sparks(CellWorld(pulled) + new Vector3(0f, 0.3f, 0f), 8); FXManager.Instance.Haptic(); }
+            }
+            if (board.PolarityAfterSlide(idx, lastDragDir))
+            {
+                views[idx].SetTarget(CellWorld(board.Pos[idx]));
+                SyncLinked(idx);
+                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PolarityZap, 1.1f, 0.7f);
+                if (FXManager.Instance != null) { FXManager.Instance.Sparks(views[idx].CentroidWorld + new Vector3(0f, 0.3f, 0f), 12); FXManager.Instance.Haptic(); }
             }
             if (board.RepelAfterSlide(idx, lastDragDir))
             {

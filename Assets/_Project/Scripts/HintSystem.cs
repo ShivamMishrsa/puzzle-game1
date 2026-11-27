@@ -145,7 +145,7 @@ namespace ColorGateBlast
         {
             MonumentModel mm = monument.Model;
             for (int j = 0; j < mm.Parts.Length; j++)
-                if (mm.IsScrewTargetable(j) && mm.Parts[j].screwColor == c) return true;
+                if (mm.IsScrewTargetable(j) && mm.HasScrewOfColor(j, (int)c)) return true;
             return false;
         }
 

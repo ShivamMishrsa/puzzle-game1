@@ -40,6 +40,9 @@ namespace ColorGateBlast.EditorTools
         [MenuItem("Tools/Color Gate Blast/Generate Levels 81-90", false, 18)]
         public static void Generate81To90() { GenerateRange(81, 90); }
 
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 91-100", false, 19)]
+        public static void Generate91To100() { GenerateRange(91, 100); }
+
         [MenuItem("Tools/Color Gate Blast/Verify All Levels (solver)", false, 30)]
         public static void VerifyAll()
         {

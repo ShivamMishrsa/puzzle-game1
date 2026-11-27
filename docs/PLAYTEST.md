@@ -95,3 +95,11 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **Repulsor coils (81, 83, 85-90):** a block that stops on or next to a coil is shoved one tile away with a thump + sparks (a welded pair moves together).
 - [ ] **Orange / Cyan (81+),** hammered copper and satin teal; amber lamp rim light + floating dust motes on every level.
 - [ ] **Gramophone / Orrery monuments:** spinning record, governor weights, flared horn; orbiting planets on brass gear arms inside tilted hoops.
+
+## Batch 10 (levels 91-100, Swiss Skeleton Tourbillon)
+
+- [ ] **Polarity coils (91, 93, 95-100):** a copper coil with a neon ring - cyan **PULL** drags a resting neighbour block one tile in, crimson-orange **PUSH** shoves it one tile away. Every coil flips on every block exit (arc spark + zap sound); the label under the ring shows the current mode.
+- [ ] **Coupled screws (92, 95, 98-100):** a plate can carry 2-3 brass screws with different colour rings; each needs its own matching-colour turret and the plate cannot be damaged until all are out.
+- [ ] **Tourbillon monument:** rose-gold bezel, sapphire crystal (glass break), chronograph pushers, skeleton bridges, spinning tourbillon cage with ruby jewel, twin barrels, micro-rotor, dynamite behind the cage.
+- [ ] **Slots:** 4 track slots, 3 in Level 95 (mini-boss) and Level 100 (boss). Levels use exact optimal move limits (best found by deep search).
+- [ ] **Level 100:** golden "CENTENNIAL MILESTONE" win banner and the chapter-10 trophy.

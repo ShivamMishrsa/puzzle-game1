@@ -135,6 +135,11 @@ namespace ColorGateBlast
             return Emissive("Neon_" + c, col * 0.5f, col, 2.6f);
         }
 
+        /// <summary>Brushed rose gold (tourbillon bezel).</summary>
+        public static Material RoseGold { get { Ensure(); return Plain("RoseGold", new Color(0.93f, 0.6f, 0.5f), 0.92f, 0.62f); } }
+        /// <summary>Polished rhodium (skeleton bridges).</summary>
+        public static Material Rhodium { get { Ensure(); return Plain("Rhodium", new Color(0.82f, 0.84f, 0.88f), 0.95f, 0.78f); } }
+
         /// <summary>Carved mahogany (gramophone cabinet).</summary>
         public static Material Mahogany { get { Ensure(); return Named("Mahogany", new Color(0.78f, 0.36f, 0.26f), 0.02f, 0.55f, TexKind.Wood); } }
 

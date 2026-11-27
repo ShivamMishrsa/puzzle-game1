@@ -22,6 +22,8 @@ namespace ColorGateBlast
         public readonly int[] MaxHp;
         public readonly int[] Hp;
         public readonly bool[] Screw;
+        /// <summary>Remaining screws per part: bit k set = screw k (colour <see cref="PartSpec.ScrewColorAt"/>) still attached.</summary>
+        public readonly int[] ScrewMask;
         public int AliveCount;
 
         private readonly float[] px;
@@ -34,6 +36,7 @@ namespace ColorGateBlast
             MaxHp = new int[n];
             Hp = new int[n];
             Screw = new bool[n];
+            ScrewMask = new int[n];
             px = new float[n];
             py = new float[n];
             for (int i = 0; i < n; i++)
@@ -41,6 +44,7 @@ namespace ColorGateBlast
                 MaxHp[i] = def.PartHp(i);
                 Hp[i] = MaxHp[i];
                 Screw[i] = Parts[i].hasScrew;
+                ScrewMask[i] = Parts[i].ScrewTotal == 0 ? 0 : ((1 << Parts[i].ScrewTotal) - 1);
                 MonumentLayout.Position(def.monument, Parts[i].type, Parts[i].slot, out px[i], out py[i]);
             }
             AliveCount = n;
@@ -54,6 +58,7 @@ namespace ColorGateBlast
             py = o.py;
             Hp = (int[])o.Hp.Clone();
             Screw = (bool[])o.Screw.Clone();
+            ScrewMask = (int[])o.ScrewMask.Clone();
             AliveCount = o.AliveCount;
         }
 
@@ -62,7 +67,16 @@ namespace ColorGateBlast
         public bool IsAlive(int i) { return Hp[i] > 0; }
 
         public static bool IsScrewCode(int code) { return code >= ScrewBase; }
-        public static int PartOf(int code) { return code >= ScrewBase ? code - ScrewBase : code; }
+        public static int PartOf(int code) { return code >= ScrewBase ? (code - ScrewBase) % 128 : code; }
+        /// <summary>Which of a part's coupled screws a screw code points at (0..2).</summary>
+        public static int ScrewIndexOf(int code) { return code >= ScrewBase ? (code - ScrewBase) / 128 : 0; }
+
+        /// <summary>True while the part still has an attached screw of this colour.</summary>
+        public bool HasScrewOfColor(int i, int color)
+        {
+            for (int k = 0; k < 3; k++) if (((ScrewMask[i] >> k) & 1) != 0 && (int)Parts[i].ScrewColorAt(k) == color) return true;
+            return false;
+        }
 
         /// <summary>True while another still-alive part covers this one (gears inside a casing, the cassette behind its door...).</summary>
         public bool IsHidden(int i)
@@ -92,10 +106,15 @@ namespace ColorGateBlast
             {
                 if (Hp[i] <= 0 || IsHidden(i)) continue;
                 int layer = Parts[i].layer;
-                if (Screw[i] && (int)Parts[i].screwColor == color && layer < bestScrewLayer)
+                if (Screw[i] && layer < bestScrewLayer)
                 {
-                    bestScrew = i;
-                    bestScrewLayer = layer;
+                    for (int k = 0; k < 3; k++)
+                        if (((ScrewMask[i] >> k) & 1) != 0 && (int)Parts[i].ScrewColorAt(k) == color)
+                        {
+                            bestScrew = i + 128 * k;
+                            bestScrewLayer = layer;
+                            break;
+                        }
                 }
                 if (!Screw[i] && (int)Parts[i].color == color && layer < bestPlateLayer)
                 {
@@ -115,7 +134,7 @@ namespace ColorGateBlast
             {
                 if (Hp[i] <= 0) continue;
                 if ((int)Parts[i].color == color) n++;
-                if (Screw[i] && (int)Parts[i].screwColor == color) n++;
+                for (int k = 0; k < 3; k++) if (((ScrewMask[i] >> k) & 1) != 0 && (int)Parts[i].ScrewColorAt(k) == color) n++;
             }
             return n;
         }
@@ -134,10 +153,12 @@ namespace ColorGateBlast
             int part = PartOf(code);
             if (IsScrewCode(code))
             {
-                if (Screw[part])
+                int k = ScrewIndexOf(code);
+                if (Screw[part] && ((ScrewMask[part] >> k) & 1) != 0)
                 {
-                    Screw[part] = false;
-                    if (unscrewed != null) unscrewed.Add(part);
+                    ScrewMask[part] &= ~(1 << k);
+                    Screw[part] = ScrewMask[part] != 0;
+                    if (unscrewed != null) unscrewed.Add(part + 128 * k);
                 }
                 return;
             }
@@ -191,7 +212,7 @@ namespace ColorGateBlast
 
         public void AppendKey(List<char> key)
         {
-            for (int i = 0; i < Hp.Length; i++) key.Add((char)(Hp[i] + 1 + (Screw[i] ? 64 : 0)));
+            for (int i = 0; i < Hp.Length; i++) key.Add((char)(Hp[i] + 1 + ScrewMask[i] * 32));
         }
     }
 }

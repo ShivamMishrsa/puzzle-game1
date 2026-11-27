@@ -620,6 +620,52 @@ namespace ColorGateBlast
             return true;
         }
 
+        /// <summary>True when polarity coil k is currently PUSHING (repelling); otherwise it PULLS.</summary>
+        public bool PolarityPushing(int k)
+        {
+            bool odd = (Toggles & 1) == 1;
+            return Def.polarities[k].startsPull ? odd : !odd;
+        }
+
+        /// <summary>
+        /// Polarity flipper coils: after a slide a block resting on or next to a coil is pulled one tile towards it (PULL) or shoved one
+        /// tile away (PUSH); every gate exit flips all coils. A welded pair moves together. Returns true when the block moved.
+        /// </summary>
+        public bool PolarityAfterSlide(int i, Int2 moveDir)
+        {
+            if (Def.polarities.Count == 0) return false;
+            BlockInfo b = Blocks[i];
+            if (Exited[i] || Dormant[i] || b.IsObstacle || Ice[i] > 0) return false;
+            Int2 push = new Int2(0, 0);
+            bool found = false;
+            for (int r = 0; r < Def.polarities.Count && !found; r++)
+            {
+                Int2 rc = Def.polarities[r].cell;
+                bool pushing = PolarityPushing(r);
+                for (int c = 0; c < b.cells.Length && !found; c++)
+                {
+                    Int2 p = Pos[i] + b.cells[c];
+                    if (p == rc) { if (pushing) { push = moveDir; found = true; } }
+                    else
+                    {
+                        int dx = p.x - rc.x, dy = p.y - rc.y;
+                        if (Math.Abs(dx) + Math.Abs(dy) == 1) { push = pushing ? new Int2(dx, dy) : new Int2(-dx, -dy); found = true; }
+                    }
+                }
+            }
+            if (!found || (push.x == 0 && push.y == 0)) return false;
+            if (push.x != 0 && b.axis == MoveAxis.Vertical) return false;
+            if (push.y != 0 && b.axis == MoveAxis.Horizontal) return false;
+            int j = Linked[i] ? b.partner : -1;
+            Int2 target = Pos[i] + push;
+            int oc;
+            if (!CheckPlacement(i, target, j, out oc) || oc != 0) return false;
+            if (j >= 0 && (!CheckPlacement(j, Pos[j] + push, i, out oc) || oc != 0)) return false;
+            if (b.cells.Length == 1 && IsPortal(target)) return false;
+            Commit(i, target);
+            return true;
+        }
+
         /// <summary>
         /// Electromagnet pull: if a cell of block i sits directly behind a pad (relative to the pad's pull direction) the block
         /// is pulled one tile onto it - free of charge. Returns true when the block moved (and updates <paramref name="newOrigin"/>).
@@ -717,6 +763,7 @@ namespace ColorGateBlast
             }
             if (hasShutter) key.Add((char)((Toggles & 1) + 1));
             if (steamPeriod > 0) key.Add((char)((Moves % steamPeriod) + 1));
+            if (Def.polarities.Count > 0) key.Add((char)((Toggles & 1) + 1));
             for (int i = 0; i < Pos.Length; i++) if (Blocks[i].crate) key.Add(Crated[i] ? (char)2 : (char)1);
             for (int k = 0; k < CarriageDir.Length; k++) key.Add(CarriageDir[k] > 0 ? (char)2 : (char)1);
             for (int i = 0; i < Pos.Length; i++) if (Blocks[i].partner > i && !Linked[i]) key.Add((char)(i + 1)); // pair already broken

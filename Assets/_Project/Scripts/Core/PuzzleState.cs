@@ -90,6 +90,7 @@ namespace ColorGateBlast
                 Board.Commit(m.block, m.to);
                 Board.PullAll(m.block);
                 Board.RepelAfterSlide(m.block, Dirs.Of(m.dir));
+                Board.PolarityAfterSlide(m.block, Dirs.Of(m.dir));
                 Board.CountMove();
                 return;
             }
