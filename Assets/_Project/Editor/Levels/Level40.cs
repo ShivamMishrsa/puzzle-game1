@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(40, "Pocket Watch Finale", 7, 7, 24, 4, LevelTier.ChapterBoss, "Rotate the watch for the rear screws. Warp the key out, unlock the piercing gate, blow the mainspring!");
+            LevelDefinition d = Make(40, "Pocket Watch Finale", 7, 7, 19, 4, LevelTier.ChapterBoss, "Rotate the watch for the rear screws. Warp the key out, unlock the piercing gate, blow the mainspring!");
             d.reward = "Chapter 4 Complete: Antique Pocket Watch Dismantled! Pocket Watch trophy unlocked.";
             d.showRotateHint = true;
             d.placements.Add(Scrap(1, 2, 2, 5));
