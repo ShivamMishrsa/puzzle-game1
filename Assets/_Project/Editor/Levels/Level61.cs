@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(61, "Carriage Shift", 7, 7, 18, 5, LevelTier.Normal, "Brass carriage rows slide their blocks one tile after EVERY exit. Time it so the Purple block lines up with its gate!");
+            LevelDefinition d = Make(61, "Carriage Shift", 7, 7, 17, 5, LevelTier.Normal, "Brass carriage rows slide their blocks one tile after EVERY exit. Time it so the Purple block lines up with its gate!");
             d.carriages.Add(Carriage(0, 1));
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 5, 5));
