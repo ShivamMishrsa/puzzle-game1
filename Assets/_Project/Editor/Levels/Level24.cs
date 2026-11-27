@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(24, "Overdrive Surge", 6, 6, 17, 5, LevelTier.Normal, "Exit three blue blocks in a row for an OVERDRIVE SURGE - free rapid fire unscrews both bolts!");
+            LevelDefinition d = Make(24, "Overdrive Surge", 6, 6, 11, 5, LevelTier.Normal, "Exit three blue blocks in a row for an OVERDRIVE SURGE - free rapid fire unscrews both bolts!");
             d.placements.Add(Scrap(1, 1, 2, 3));
             d.placements.Add(Peeled(Rect(B, 2, 1, 2, 2), R));
             d.placements.Add(Rect(G, 2, 1, 4, 1));
