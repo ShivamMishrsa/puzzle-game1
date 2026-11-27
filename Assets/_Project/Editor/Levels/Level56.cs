@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(56, "Magnetic Conveyor", 7, 7, 11, 5, LevelTier.Normal, "Rail blocks plus magnet pads: two moves can send three blocks out!");
+            LevelDefinition d = Make(56, "Magnetic Conveyor", 7, 7, 9, 5, LevelTier.Normal, "Rail blocks plus magnet pads: two moves can send three blocks out!");
             d.placements.Add(Rect(Y, 1, 2, 4, 5));
             d.placements.Add(Rect(G, 2, 1, 5, 6));
             d.placements.Add(Rect(G, 1, 2, 2, 0));
