@@ -85,6 +85,23 @@ namespace ColorGateBlast.EditorTools
         /// <summary>Clockwork piercing gate: its turrets pierce the outer shell and the layer behind it.</summary>
         protected static GateSpec Piercing(GateSpec g) { g.isPiercingGate = true; return g; }
 
+        /// <summary>Steam Pressure Gate: every <paramref name="interval"/> player moves it flips between Normal and Pressurized (+2 bonus ammo).</summary>
+        protected static GateSpec Steam(GateSpec g, int interval) { g.steamInterval = interval; return g; }
+
+        /// <summary>Welded twin-linked pair: give exactly two blocks the same group id (1..9).</summary>
+        protected static Placement Link(Placement p, int group) { p.linkGroup = group; return p; }
+
+        /// <summary>Colour-shifting prism block: starts as cycle[0] and advances one step on every block exit.</summary>
+        protected static Placement Prism(Placement p, params BlockColor[] cycle) { p.cycle = cycle; p.color = cycle[0]; return p; }
+
+        /// <summary>Electromagnet pad at (x, y) that pulls a resting neighbour one tile in direction <paramref name="pull"/>.</summary>
+        protected static MagnetSpec Magnet(int x, int y, GateDirection pull)
+        {
+            MagnetSpec m = new MagnetSpec();
+            m.cell = new Int2(x, y); m.pull = pull;
+            return m;
+        }
+
         protected static PortalSpec Pad(int pair, int ax, int ay, int bx, int by)
         {
             PortalSpec p = new PortalSpec();
@@ -107,7 +124,7 @@ namespace ColorGateBlast.EditorTools
             LevelDefinition d = new LevelDefinition();
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
-            d.monument = id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock));
+            d.monument = id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -143,6 +160,24 @@ namespace ColorGateBlast.EditorTools
                         {
                             mask = MaskOf(d, PartType.Dial);
                             if (mask == 0) mask = MaskOf(d, PartType.Handset);
+                        }
+                        break;
+                    case MonumentKind.EspressoMachine:
+                        // stage 2 (group head, sight tube, drip grid) sits behind the boiler shell; stage 3 (coils, valves, TNT) behind the group head
+                        if (p.type == PartType.GroupHead || p.type == PartType.SightTube || p.type == PartType.DripGrid) mask = MaskOf(d, PartType.Boiler);
+                        else if (p.type == PartType.Coil || p.type == PartType.Valve || p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.GroupHead);
+                            if (mask == 0) mask = MaskOf(d, PartType.Boiler);
+                        }
+                        break;
+                    case MonumentKind.TlrCamera:
+                        // stage 2 (iris blades, film crank) sits behind the lenses; stage 3 (spools, shutter gears, TNT) behind the iris
+                        if (p.type == PartType.Iris || p.type == PartType.Crank) mask = MaskOf(d, PartType.Lens);
+                        else if (p.type == PartType.Spool || p.type == PartType.ShutterGear || p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Iris);
+                            if (mask == 0) mask = MaskOf(d, PartType.Lens);
                         }
                         break;
                     case MonumentKind.PocketWatch:
