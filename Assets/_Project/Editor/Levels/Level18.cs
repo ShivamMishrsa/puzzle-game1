@@ -7,17 +7,20 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(18, "Exposed Copper Gears", 7, 7, 20, 5, LevelTier.Normal, "The shell is gone! Reels, gears and TNT are all exposed.");
+            LevelDefinition d = Make(18, "Exposed Copper Gears", 7, 7, 22, 5, LevelTier.Normal, "The shell is gone! Reels, gears and TNT are all exposed.");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 5, 1));
-            d.placements.Add(Rect(B, 2, 2, 0, 2));
-            d.placements.Add(Ell(R, 0, 0, 4));
-            d.placements.Add(Ell(Y, 2, 1, 4));
-            d.placements.Add(Rect(R, 1, 2, 2, 1));
-            d.placements.Add(Rect(B, 1, 2, 5, 2));
-            d.placements.Add(Ice(Rect(B, 2, 1, 3, 2), 1));
-            d.placements.Add(Rect(Y, 2, 1, 2, 6));
-            d.placements.Add(Rect(B, 1, 1, 2, 3));
+            d.placements.Add(Rect(B, 2, 2, 5, 3));
+            d.placements.Add(Ell(R, 1, 0, 1));
+            d.placements.Add(Ell(Y, 2, 0, 4));
+            d.placements.Add(Ell(R, 0, 4, 5));
+            d.placements.Add(Rect(B, 2, 1, 2, 1));
+            d.placements.Add(Rect(Y, 1, 2, 2, 2));
+            d.placements.Add(Rect(Y, 2, 1, 4, 0));
+            d.placements.Add(Rect(B, 1, 2, 4, 3));
+            d.placements.Add(Rect(R, 1, 2, 0, 2));
+            d.placements.Add(Ice(Rect(B, 2, 1, 5, 2), 1));
+            d.placements.Add(Rect(B, 1, 1, 2, 5));
             d.gates.Add(Gate(Down, 0, 2, B));
             d.gates.Add(Gate(Left, 4, 2, B));
             d.gates.Add(Gate(Right, 2, 2, B));
