@@ -7,13 +7,16 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(11, "Ice Awakening", 6, 6, 14, 5, LevelTier.Normal, "Frozen blocks cannot move. Send the red block next to the ice out - the shell cracks!");
-            d.placements.Add(Ice(Rect(B, 1, 2, 2, 2), 1));
-            d.placements.Add(Rect(R, 1, 1, 3, 2));
+            LevelDefinition d = Make(11, "Ice Awakening", 7, 7, 17, 5, LevelTier.Normal, "Frozen blocks cannot move. Send the red block next to the ice out - the shell cracks!");
+            d.placements.Add(Ell(B, 3, 4, 4));
+            d.placements.Add(Rect(R, 2, 1, 5, 6));
+            d.placements.Add(Rect(B, 2, 1, 0, 4));
+            d.placements.Add(Rect(R, 1, 2, 1, 1));
             d.placements.Add(Rect(B, 2, 1, 2, 5));
-            d.placements.Add(Rect(R, 1, 2, 0, 4));
-            d.placements.Add(Rect(R, 2, 1, 1, 4));
-            d.placements.Add(Rect(B, 1, 1, 4, 0));
+            d.placements.Add(Ice(Rect(B, 1, 2, 4, 0), 1));
+            d.placements.Add(Rect(R, 1, 2, 5, 2));
+            d.placements.Add(Rect(B, 1, 1, 2, 2));
+            d.placements.Add(Rect(R, 1, 1, 1, 3));
             d.gates.Add(Gate(Right, 2, 1, R));
             d.gates.Add(Gate(Up, 3, 2, R));
             d.gates.Add(Gate(Left, 0, 2, R));
