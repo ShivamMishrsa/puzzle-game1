@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(36, "Warp Cascade", 7, 7, 8, 5, LevelTier.Normal, "Slide the centre block onto the cyan pad: it warps straight out of the left gate and thaws everything around it!");
+            LevelDefinition d = Make(36, "Warp Cascade", 7, 7, 6, 5, LevelTier.Normal, "Slide the centre block onto the cyan pad: it warps straight out of the left gate and thaws everything around it!");
             d.placements.Add(Scrap(1, 1, 1, 1));
             d.placements.Add(Scrap(1, 1, 5, 1));
             d.placements.Add(Scrap(1, 1, 1, 5));
