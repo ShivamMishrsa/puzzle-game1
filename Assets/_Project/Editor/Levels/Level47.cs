@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(47, "Peeled and Linked", 7, 7, 14, 5, LevelTier.Normal, "Peel the block, snap the weld, grab the key!");
+            LevelDefinition d = Make(47, "Peeled and Linked", 7, 7, 13, 5, LevelTier.Normal, "Peel the block, snap the weld, grab the key!");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 2, 5, 4));
             d.placements.Add(Key(Rect(B, 1, 1, 0, 6), 0));
