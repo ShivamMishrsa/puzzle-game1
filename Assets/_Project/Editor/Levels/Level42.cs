@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(42, "Steam Boost", 6, 6, 10, 5, LevelTier.Normal, "The brass gauge shows the pressure. Leave the steam gate while it is Pressurized for +2 ammo!");
+            LevelDefinition d = Make(42, "Steam Boost", 6, 6, 8, 5, LevelTier.Normal, "The brass gauge shows the pressure. Leave the steam gate while it is Pressurized for +2 ammo!");
             d.placements.Add(Scrap(1, 2, 3, 3));
             d.placements.Add(Scrap(1, 1, 1, 1));
             d.placements.Add(Rect(Y, 2, 2, 4, 4));
