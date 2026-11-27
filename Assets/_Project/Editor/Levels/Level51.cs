@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(51, "Prism Shift", 6, 6, 12, 5, LevelTier.Normal, "The glass prism changes colour every time ANY block leaves. Wait for the right colour!");
+            LevelDefinition d = Make(51, "Prism Shift", 6, 6, 10, 5, LevelTier.Normal, "The glass prism changes colour every time ANY block leaves. Wait for the right colour!");
             d.placements.Add(Prism(Rect(B, 1, 1, 2, 1), B, R));
             d.placements.Add(Rect(R, 2, 2, 1, 3));
             d.placements.Add(Rect(B, 1, 2, 4, 1));
