@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(48, "Exposed Coils", 7, 7, 17, 5, LevelTier.Normal, "The boiler is already gone - blast the coils and valves. Twin TNT inside!");
+            LevelDefinition d = Make(48, "Exposed Coils", 7, 7, 15, 5, LevelTier.Normal, "The boiler is already gone - blast the coils and valves. Twin TNT inside!");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 1, 5));
             d.placements.Add(Rect(G, 2, 2, 4, 2));
