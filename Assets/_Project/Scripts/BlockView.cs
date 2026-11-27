@@ -72,6 +72,7 @@ namespace ColorGateBlast
             BuildRivets();
             if (info.hasInner) BuildStripe();
             if (info.axis != MoveAxis.Free) BuildArrows();
+            if (info.hasKey) BuildKey();
             if (info.iceLayer > 0) SetIce(info.iceLayer, false);
         }
 
@@ -101,6 +102,21 @@ namespace ColorGateBlast
             inner.transform.SetParent(transform, false);
             inner.AddComponent<MeshFilter>().sharedMesh = Poly(info.cells, cs, 0.4f, 0.014f, height + 0.004f, 2).ToMesh("InnerColor");
             inner.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Glow(info.innerColor);
+        }
+
+        /// <summary>A gleaming 3D brass key lying on top of the block.</summary>
+        private void BuildKey()
+        {
+            GameObject key = new GameObject("BrassKey");
+            key.transform.SetParent(transform, false);
+            key.transform.localPosition = new Vector3(centroidLocal.x, height + 0.08f, centroidLocal.z);
+            Material brass = GameMaterials.Brass;
+            Prims.Make("Bow", key.transform, Prims.Sphere, brass, new Vector3(-0.22f * cs, 0f, 0f), new Vector3(0.26f * cs, 0.07f * cs, 0.26f * cs));
+            Prims.Make("Hole", key.transform, Prims.Sphere, GameMaterials.Rubber, new Vector3(-0.22f * cs, 0.03f * cs, 0f), new Vector3(0.12f * cs, 0.05f * cs, 0.12f * cs));
+            Prims.Make("Shaft", key.transform, Prims.Cube, brass, new Vector3(0.1f * cs, 0f, 0f), new Vector3(0.5f * cs, 0.06f * cs, 0.07f * cs));
+            Prims.Make("ToothA", key.transform, Prims.Cube, brass, new Vector3(0.3f * cs, 0f, 0.07f * cs), new Vector3(0.07f * cs, 0.06f * cs, 0.12f * cs));
+            Prims.Make("ToothB", key.transform, Prims.Cube, brass, new Vector3(0.2f * cs, 0f, 0.06f * cs), new Vector3(0.07f * cs, 0.06f * cs, 0.1f * cs));
+            key.AddComponent<KeySpin>();
         }
 
         private void BuildArrows()
@@ -290,6 +306,23 @@ namespace ColorGateBlast
                 body.SetPropertyBlock(mpb);
                 GameMaterials.HintOutline.SetColor("_BaseColor", new Color(2.2f, 1.6f, 0.25f) * (0.6f + p * 0.8f));
             }
+        }
+    }
+}
+
+namespace ColorGateBlast
+{
+    /// <summary>Gentle bob + spin so a brass key reads as an interactive pickup.</summary>
+    public sealed class KeySpin : MonoBehaviour
+    {
+        private float y0;
+        private void Start() { y0 = transform.localPosition.y; }
+        private void Update()
+        {
+            transform.Rotate(0f, 60f * Time.deltaTime, 0f, Space.Self);
+            Vector3 p = transform.localPosition;
+            p.y = y0 + Mathf.Sin(Time.time * 3f) * 0.03f;
+            transform.localPosition = p;
         }
     }
 }

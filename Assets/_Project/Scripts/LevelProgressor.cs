@@ -161,7 +161,7 @@ namespace ColorGateBlast
             ui.SetTargets(monument.AliveCount);
             RefreshTrackUi();
             ui.SetHintAvailable(true);
-            ui.SetRotateHint(def.levelID == 21 || def.levelID == 31);
+            ui.SetRotateHint(def.showRotateHint);
             if (!string.IsNullOrEmpty(def.hint)) ui.ShowToast(def.hint);
 
             grid.InputEnabled = true;

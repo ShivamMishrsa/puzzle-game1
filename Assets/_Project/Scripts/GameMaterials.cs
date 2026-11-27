@@ -21,6 +21,8 @@ namespace ColorGateBlast
         // ---------------------------------------------------------------- named materials from the spec
         public static Material MetalRed { get { Ensure(); return Named("MetalRed", ColorOf(BlockColor.Red), 0.8f, 0.65f, TexKind.Scratch); } }
         public static Material MetalBlue { get { Ensure(); return Named("MetalBlue", ColorOf(BlockColor.Blue), 0.8f, 0.65f, TexKind.Scratch); } }
+        /// <summary>Emerald Enamel Green #10B981: baked-enamel metal (metallic 0.75, smoothness 0.68).</summary>
+        public static Material EmeraldEnamel { get { Ensure(); return Named("EmeraldEnamel", ColorOf(BlockColor.Green), 0.75f, 0.68f, TexKind.Scratch); } }
         public static Material PlasticYellow { get { Ensure(); return Named("PlasticYellow", ColorOf(BlockColor.Yellow), 0.08f, 0.55f, TexKind.Noise); } }
         public static Material ScrapIron { get { Ensure(); return Named("ScrapIron", Color.white, 0.9f, 0.2f, TexKind.Rust); } }
         public static Material WorkshopWood { get { Ensure(); return Named("WorkshopWood", Color.white, 0.02f, 0.18f, TexKind.Wood); } }
@@ -51,6 +53,14 @@ namespace ColorGateBlast
                 return m;
             }
         }
+        // ---- chapters 3 / 4 ----
+        public static Material Bakelite { get { Ensure(); return Plain("Bakelite", new Color(0.09f, 0.05f, 0.05f), 0.15f, 0.82f); } }
+        public static Material Gold { get { Ensure(); return Plain("Gold", new Color(1.0f, 0.78f, 0.28f), 0.95f, 0.7f); } }
+        public static Material Porcelain { get { Ensure(); return Plain("Porcelain", new Color(0.97f, 0.97f, 0.95f), 0.0f, 0.9f); } }
+        public static Material RubyJewel { get { Ensure(); return Emissive("RubyJewel", new Color(0.55f, 0.02f, 0.08f), new Color(1f, 0.1f, 0.2f), 1.2f); } }
+        public static Material PortalCyan { get { Ensure(); return Emissive("PortalCyan", new Color(0.05f, 0.4f, 0.5f), new Color(0.2f, 0.95f, 1f), 2.4f); } }
+        public static Material PortalViolet { get { Ensure(); return Emissive("PortalViolet", new Color(0.3f, 0.1f, 0.5f), new Color(0.75f, 0.35f, 1f), 2.4f); } }
+        public static Material PortalAmber { get { Ensure(); return Emissive("PortalAmber", new Color(0.5f, 0.28f, 0.02f), new Color(1f, 0.6f, 0.05f), 2.4f); } }
         public static Material LedGreen { get { Ensure(); return Emissive("LedGreen", new Color(0.05f, 0.4f, 0.1f), new Color(0.2f, 1f, 0.3f), 2.2f); } }
         public static Material LedAmber { get { Ensure(); return Emissive("LedAmber", new Color(0.5f, 0.28f, 0.02f), new Color(1f, 0.6f, 0.05f), 2.2f); } }
 
@@ -62,6 +72,7 @@ namespace ColorGateBlast
                 case BlockColor.Red: return MetalRed;
                 case BlockColor.Blue: return MetalBlue;
                 case BlockColor.Yellow: return PlasticYellow;
+                case BlockColor.Green: return EmeraldEnamel;
                 default: return ScrapIron;
             }
         }
@@ -73,6 +84,7 @@ namespace ColorGateBlast
                 case BlockColor.Red: return new Color(0.86f, 0.14f, 0.16f);
                 case BlockColor.Blue: return new Color(0.15f, 0.38f, 0.92f);
                 case BlockColor.Yellow: return new Color(0.98f, 0.8f, 0.12f);
+                case BlockColor.Green: return new Color(0.063f, 0.725f, 0.506f);
                 default: return new Color(0.35f, 0.36f, 0.4f);
             }
         }

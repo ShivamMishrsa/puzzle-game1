@@ -143,6 +143,8 @@ namespace UnityEngine
         public Transform parent;
         public int childCount { get { return 0; } }
         public Vector3 forward { get { return Vector3.zero; } }
+        public Vector3 up { get { return Vector3.zero; } }
+        public void DetachChildren() { }
         public void SetParent(Transform p) { }
         public void SetParent(Transform p, bool worldPositionStays) { }
         public Transform GetChild(int i) { return null; }
@@ -150,6 +152,7 @@ namespace UnityEngine
         public void Rotate(float x, float y, float z, Space s) { }
         public void Rotate(float x, float y, float z) { }
         public void LookAt(Vector3 t, Vector3 up) { }
+        public void LookAt(Vector3 t) { }
         public Vector3 TransformPoint(Vector3 p) { return p; }
         public IEnumerator GetEnumerator() { return null; }
     }
@@ -294,7 +297,7 @@ namespace UnityEngine
         public bool orthographic; public float fieldOfView, nearClipPlane, farClipPlane; public CameraClearFlags clearFlags; public Color backgroundColor;
         public Ray ScreenPointToRay(Vector3 p) { return new Ray(); }
     }
-    public class Light : Behaviour { public LightType type; public float range, intensity; public Color color; public LightShadows shadows; }
+    public class Light : Behaviour { public float shadowStrength; public LightType type; public float range, intensity; public Color color; public LightShadows shadows; }
     public class Rigidbody : Component
     {
         public bool isKinematic; public float mass;
@@ -374,4 +377,6 @@ namespace UnityEngine
         public class Outline : Behaviour { public Color effectColor; public Vector2 effectDistance; }
     }
 }
+
+
 

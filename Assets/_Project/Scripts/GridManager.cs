@@ -27,6 +27,16 @@ namespace ColorGateBlast
         public Func<BlockColor, bool> CanExit;
         public bool InputEnabled;
 
+        private sealed class PortalView
+        {
+            public Int2 cell;
+            public Int2 partner;
+            public Renderer ring;
+            public Transform[] orbiters;
+            public bool cyan;
+            public Vector3 center;
+        }
+
         private sealed class GateView
         {
             public int index;
@@ -54,6 +64,9 @@ namespace ColorGateBlast
         private bool dragExited;
         private readonly LineRenderer[] preview = new LineRenderer[4];
         private float gatePulse;
+        private readonly List<PortalView> portalViews = new List<PortalView>();
+        private readonly List<Transform> spinners = new List<Transform>();
+        private float nextNudge;
 
         public BoardModel Board { get { return board; } }
         public LevelDefinition Level { get { return def; } }
@@ -77,6 +90,8 @@ namespace ColorGateBlast
             views = null;
             board = null;
             gateViews.Clear();
+            portalViews.Clear();
+            spinners.Clear();
         }
 
         public void Build(LevelDefinition level, Vector3 centerWorld, float cellSize)
@@ -92,6 +107,8 @@ namespace ColorGateBlast
 
             BuildTray(centerWorld);
             BuildGates();
+            BuildPortals();
+            BuildRails();
             BuildBlocks();
             BuildPreviewLines();
             UpdateShutters(false);
@@ -205,7 +222,148 @@ namespace ColorGateBlast
                     led.AddComponent<MeshFilter>().sharedMesh = Prims.Sphere;
                     gv.led = led.AddComponent<MeshRenderer>();
                 }
+                if (gs.isPadlocked) gv.lockVisual = BuildPadlock(go.transform, c, horiz, gw, gd);
+                if (gs.isPiercingGate) BuildPiercingGears(go.transform, c, horiz, gw, gd);
                 gateViews.Add(gv);
+            }
+        }
+
+        /// <summary>Heavy iron chains and a brass padlock sealing a gate until its key has left.</summary>
+        private GameObject BuildPadlock(Transform parent, Vector3 c, bool horiz, float gw, float gd)
+        {
+            GameObject root = new GameObject("Padlock");
+            root.transform.SetParent(parent, false);
+            float y = TrayTop + 0.45f;
+            // chains: three iron bars across the gate
+            for (int k = 0; k < 3; k++)
+            {
+                float f = (k - 1) * 0.3f;
+                Vector3 pos = horiz ? new Vector3(c.x + f * gw, y, c.z) : new Vector3(c.x, y, c.z + f * gd);
+                Vector3 scale = horiz ? new Vector3(0.1f, 0.1f, gd * 1.2f) : new Vector3(gw * 1.2f, 0.1f, 0.1f);
+                Prims.Make("Chain" + k, root.transform, Prims.Cube, GameMaterials.Gunmetal, pos, scale);
+                Prims.Make("Link" + k, root.transform, Prims.Sphere, GameMaterials.Steel, pos + new Vector3(0f, 0.08f, 0f), Vector3.one * 0.14f);
+            }
+            // brass padlock body + shackle
+            Prims.Make("PadlockBody", root.transform, Prims.Cube, GameMaterials.Brass, new Vector3(c.x, y + 0.18f, c.z), new Vector3(0.5f, 0.4f, 0.28f));
+            Prims.Make("ShackleL", root.transform, Prims.Cylinder, GameMaterials.Steel, new Vector3(c.x - 0.14f, y + 0.5f, c.z), new Vector3(0.06f, 0.16f, 0.06f));
+            Prims.Make("ShackleR", root.transform, Prims.Cylinder, GameMaterials.Steel, new Vector3(c.x + 0.14f, y + 0.5f, c.z), new Vector3(0.06f, 0.16f, 0.06f));
+            Prims.Make("ShackleTop", root.transform, Prims.Cube, GameMaterials.Steel, new Vector3(c.x, y + 0.66f, c.z), new Vector3(0.34f, 0.06f, 0.06f));
+            return root;
+        }
+
+        /// <summary>Spinning brass watch gears framing a Clockwork Piercing Gate.</summary>
+        private void BuildPiercingGears(Transform parent, Vector3 c, bool horiz, float gw, float gd)
+        {
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 off = horiz ? new Vector3(side * (gw * 0.5f + 0.12f), 0f, 0f) : new Vector3(0f, 0f, side * (gd * 0.5f + 0.12f));
+                GameObject gear = new GameObject("PiercingGear");
+                gear.transform.SetParent(parent, false);
+                gear.transform.position = new Vector3(c.x, TrayTop + 0.35f, c.z) + off;
+                Prims.Make("Disc", gear.transform, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(0.5f, 0.05f, 0.5f));
+                for (int k = 0; k < 8; k++)
+                {
+                    float a = k * 45f * Mathf.Deg2Rad;
+                    Prims.Make("Tooth" + k, gear.transform, Prims.Cube, GameMaterials.Brass, new Vector3(Mathf.Cos(a) * 0.27f, 0f, Mathf.Sin(a) * 0.27f), new Vector3(0.1f, 0.06f, 0.1f), new Vector3(0f, -k * 45f, 0f));
+                }
+                spinners.Add(gear.transform);
+            }
+        }
+
+        // ------------------------------------------------------------------ portals + rails
+
+        private void BuildPortals()
+        {
+            for (int k = 0; k < def.portals.Count; k++)
+            {
+                PortalSpec ps = def.portals[k];
+                bool cyan = ps.pair == 0;
+                Int2[] ends = { ps.a, ps.b };
+                Int2[] others = { ps.b, ps.a };
+                for (int e = 0; e < 2; e++)
+                {
+                    Vector3 c = CellWorld(ends[e]);
+                    GameObject go = new GameObject("Portal" + k + (e == 0 ? "A" : "B"));
+                    go.transform.SetParent(root, false);
+                    go.transform.position = new Vector3(c.x, TrayTop + 0.02f, c.z);
+                    Prims.Make("Rim", go.transform, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(cs * 0.86f, 0.03f, cs * 0.86f));
+                    Prims.Make("Well", go.transform, Prims.Cylinder, GameMaterials.Rubber, new Vector3(0f, 0.02f, 0f), new Vector3(cs * 0.7f, 0.03f, cs * 0.7f));
+                    GameObject neon = Prims.Make("Neon", go.transform, Prims.Cylinder, cyan ? GameMaterials.PortalCyan : GameMaterials.PortalViolet, new Vector3(0f, 0.045f, 0f), new Vector3(cs * 0.6f, 0.012f, cs * 0.6f));
+                    PortalView pv = new PortalView();
+                    pv.cell = ends[e];
+                    pv.partner = others[e];
+                    pv.cyan = cyan;
+                    pv.center = c;
+                    pv.ring = neon.GetComponent<Renderer>();
+                    pv.orbiters = new Transform[3];
+                    for (int o = 0; o < 3; o++)
+                    {
+                        GameObject orb = Prims.Make("Swirl" + o, go.transform, Prims.Sphere, cyan ? GameMaterials.PortalCyan : GameMaterials.PortalViolet, Vector3.zero, Vector3.one * cs * 0.1f);
+                        pv.orbiters[o] = orb.transform;
+                    }
+                    portalViews.Add(pv);
+                }
+            }
+        }
+
+        /// <summary>Recessed steel guide rails on the tray floor under every direction-locked block.</summary>
+        private void BuildRails()
+        {
+            MeshBuilder rb = new MeshBuilder();
+            bool any = false;
+            for (int i = 0; i < board.BlockCount; i++)
+            {
+                BlockInfo b = board.Blocks[i];
+                if (b.axis == MoveAxis.Free || b.isCompanion) continue;
+                any = true;
+                List<int> lines = new List<int>();
+                for (int c = 0; c < b.cells.Length; c++)
+                {
+                    int ln = b.axis == MoveAxis.Horizontal ? b.origin.y + b.cells[c].y : b.origin.x + b.cells[c].x;
+                    if (!lines.Contains(ln)) lines.Add(ln);
+                }
+                for (int k = 0; k < lines.Count; k++)
+                {
+                    float len = (b.axis == MoveAxis.Horizontal ? def.GridWidth : def.GridHeight) * cs * 0.96f;
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        float off = side * cs * 0.3f;
+                        if (b.axis == MoveAxis.Horizontal)
+                        {
+                            Vector3 c0 = CellWorld(0, lines[k]);
+                            rb.AddSlab(originBL.x + def.GridWidth * cs * 0.5f, c0.z + off, len, cs * 0.07f, 0.02f, cs * 0.03f, cs * 0.01f, TrayTop - 0.005f, 1);
+                        }
+                        else
+                        {
+                            Vector3 c0 = CellWorld(lines[k], 0);
+                            rb.AddSlab(c0.x + off, originBL.z + def.GridHeight * cs * 0.5f, cs * 0.07f, len, 0.02f, cs * 0.03f, cs * 0.01f, TrayTop - 0.005f, 1);
+                        }
+                    }
+                }
+            }
+            if (!any) return;
+            GameObject go = new GameObject("GuideRails");
+            go.transform.SetParent(root, false);
+            go.AddComponent<MeshFilter>().sharedMesh = rb.ToMesh("GuideRails");
+            go.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Steel;
+        }
+
+        private void AnimateExtras()
+        {
+            for (int i = 0; i < spinners.Count; i++) if (spinners[i] != null) spinners[i].Rotate(0f, 70f * Time.deltaTime, 0f, Space.Self);
+            for (int i = 0; i < portalViews.Count; i++)
+            {
+                PortalView pv = portalViews[i];
+                bool blocked = board.At(pv.partner.x, pv.partner.y) >= 0;
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 6f);
+                if (pv.ring != null)
+                    pv.ring.sharedMaterial = blocked && pulse > 0.4f ? GameMaterials.PortalAmber : (pv.cyan ? GameMaterials.PortalCyan : GameMaterials.PortalViolet);
+                for (int o = 0; o < pv.orbiters.Length; o++)
+                {
+                    float a = Time.time * (blocked ? 1.2f : 4f) + o * 2.094f;
+                    float r = cs * (0.12f + 0.16f * (0.5f + 0.5f * Mathf.Sin(Time.time * 2f + o)));
+                    pv.orbiters[o].position = pv.center + new Vector3(Mathf.Cos(a) * r, 0.12f + 0.1f * Mathf.Sin(a * 1.5f), Mathf.Sin(a) * r);
+                }
             }
         }
 
@@ -301,6 +459,8 @@ namespace ColorGateBlast
                 GameMaterials.Glow(gateViews[i].spec.color).SetColor("_EmissionColor", gc * pulse);
             }
 
+            AnimateExtras();
+
             if (!InputEnabled)
             {
                 if (dragging >= 0) EndDrag();
@@ -363,6 +523,21 @@ namespace ColorGateBlast
             int tx = Mathf.RoundToInt(startPos.x + delta.x);
             int ty = Mathf.RoundToInt(startPos.y + delta.y);
             Int2 cur = board.Pos[dragging];
+
+            // rail blocks resist sideways drags with a tactile spring nudge
+            MoveAxis axis = board.Blocks[dragging].axis;
+            if (axis != MoveAxis.Free && Time.time > nextNudge)
+            {
+                float perp = axis == MoveAxis.Horizontal ? Mathf.Abs(delta.y) : Mathf.Abs(delta.x);
+                float along = axis == MoveAxis.Horizontal ? Mathf.Abs(delta.x) : Mathf.Abs(delta.y);
+                if (perp > 0.7f && perp > along)
+                {
+                    nextNudge = Time.time + 0.4f;
+                    views[dragging].Shake();
+                    if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.MetalPing, 0.7f, 0.35f);
+                    if (FXManager.Instance != null) FXManager.Instance.Haptic();
+                }
+            }
 
             for (int guard = 0; guard < 40; guard++)
             {

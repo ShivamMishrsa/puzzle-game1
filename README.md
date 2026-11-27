@@ -10,7 +10,10 @@ physically falls apart. Same-colour turrets merge into a laser Mega-Turret.
       merging, solver (BFS + weighted best-first) - `Assets/_Project/Scripts/Core`
 - [x] Levels, one class per level in `Assets/_Project/Editor/Levels`, every one proven winnable within its move limit
 - [x] Unity runtime v1: 3D tray + conveyor + turrets, alarm clock and cassette player monuments, physics debris, TNT, procedural sound/FX, HUD, AdMob (test ids) + simulator, solver-based hints, `Tools > Color Gate Blast > Setup Phase 1`
+- [x] Levels 1-40 (4 chapters), solver-verified, one commit per level
 - [ ] Authentication / security / database (after game + levels)
+
+See `docs/PLAYTEST.md` for the in-Unity checklist (what the solver cannot prove: look, sound, feel).
 
 ## Levels
 | Chapter | Levels | Monument | New mechanics |
@@ -26,6 +29,7 @@ See `Tools~/LevelVerifier/README.md`.
 ## In Unity
 `Tools > Color Gate Blast > Generate Levels 1-10` (and `11-20`) writes `Resources/Levels/Level_NNN.asset`, saving a
 level only if the solver proves it winnable in its move limit. `Verify All Levels (solver)` re-checks them.
+
 
 
 

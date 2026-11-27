@@ -156,8 +156,13 @@ namespace ColorGateBlast
             PartSpec spec = Model.Parts[i];
             float lx, ly;
             MonumentLayout.Position(Kind, spec.type, spec.slot, out lx, out ly);
-            if (Kind == MonumentKind.AlarmClock) BuildClockPart(i, spec, lx, ly);
-            else BuildCassettePart(i, spec, lx, ly);
+            switch (Kind)
+            {
+                case MonumentKind.AlarmClock: BuildClockPart(i, spec, lx, ly); break;
+                case MonumentKind.CassettePlayer: BuildCassettePart(i, spec, lx, ly); break;
+                case MonumentKind.RotaryPhone: BuildPhonePart(i, spec, lx, ly); break;
+                default: BuildWatchPart(i, spec, lx, ly); break;
+            }
             if (views[i].go != null && spec.hasScrew) AddScrew(i, spec);
             if (views[i].label != null) views[i].label.text = Model.Hp[i].ToString();
         }
@@ -281,6 +286,14 @@ namespace ColorGateBlast
                 Prims.Make("BackPlate", pivot, Prims.Cylinder, GameMaterials.Gunmetal, new Vector3(0f, 1.5f, 0.52f), new Vector3(2.5f, 0.04f, 2.5f), new Vector3(90f, 0f, 0f));
                 Prims.Make("HammerStem", pivot, Prims.Cylinder, GameMaterials.Steel, new Vector3(0f, 2.62f, 0f), new Vector3(0.05f, 0.35f, 0.05f));
                 Prims.Make("HammerBall", pivot, Prims.Sphere, GameMaterials.Steel, new Vector3(0f, 2.98f, 0f), Vector3.one * 0.16f);
+            }
+            else if (Kind == MonumentKind.RotaryPhone)
+            {
+                BuildPhoneDecor();
+            }
+            else if (Kind == MonumentKind.PocketWatch)
+            {
+                BuildWatchDecor();
             }
             else
             {
@@ -407,6 +420,266 @@ namespace ColorGateBlast
             }
         }
 
+        // ------------------------------------------------------------------ vintage rotary phone
+
+        private void BuildPhoneDecor()
+        {
+            // desk-phone body shell that stays when parts fall off, plus the coiled handset cord
+            Prims.Make("PhoneShell", pivot, Prims.Cube, GameMaterials.Bakelite, new Vector3(0f, 0.55f, 0.15f), new Vector3(3.3f, 1.0f, 2.3f));
+            Prims.Make("PhoneSlope", pivot, Prims.Cube, GameMaterials.Bakelite, new Vector3(0f, 1.2f, 0.35f), new Vector3(2.7f, 0.5f, 1.6f), new Vector3(-18f, 0f, 0f));
+            for (int k = 0; k < 9; k++)
+            {
+                float u = k / 8f;
+                Prims.Make("Cord" + k, pivot, Prims.Sphere, GameMaterials.Charcoal,
+                    new Vector3(-1.7f + 0.2f * k * 0.5f, 1.15f + Mathf.Sin(u * Mathf.PI * 3f) * 0.12f - u * 0.2f, -1.2f - Mathf.Sin(u * Mathf.PI) * 0.3f), Vector3.one * 0.17f);
+            }
+        }
+
+        private void BuildPhonePart(int i, PartSpec spec, float lx, float ly)
+        {
+            Material mat = GameMaterials.ForBlock(spec.color);
+            switch (spec.type)
+            {
+                case PartType.Handset:
+                {
+                    bool ear = spec.slot == 0;
+                    float dir = ear ? 1f : -1f;
+                    PartView pv = NewPart(i, ear ? "HandsetEarpiece" : "HandsetMouthpiece", new Vector3(lx, ly, 0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Cup", t, Prims.Sphere, mat, Vector3.zero, new Vector3(0.85f, 0.7f, 0.85f));
+                    Prims.Make("CupRim", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, -0.28f, 0f), new Vector3(0.78f, 0.04f, 0.78f));
+                    Prims.Make("Grip", t, Prims.Cylinder, GameMaterials.Bakelite, new Vector3(0.85f * dir, 0.02f, 0f), new Vector3(0.3f, 0.55f, 0.3f), new Vector3(0f, 0f, 90f));
+                    Marker(pv, spec.color, new Vector3(0f, 0.7f, -0.3f));
+                    Sphere(pv.go, Vector3.zero, 0.5f);
+                    break;
+                }
+                case PartType.Cradle:
+                {
+                    PartView pv = NewPart(i, "BrassCradle", new Vector3(lx, ly, 0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("HookL", t, Prims.Cube, GameMaterials.Brass, new Vector3(-0.75f, 0f, 0f), new Vector3(0.22f, 0.75f, 0.35f));
+                    Prims.Make("HookR", t, Prims.Cube, GameMaterials.Brass, new Vector3(0.75f, 0f, 0f), new Vector3(0.22f, 0.75f, 0.35f));
+                    Prims.Make("Bar", t, Prims.Cube, GameMaterials.Brass, new Vector3(0f, -0.3f, 0f), new Vector3(1.9f, 0.16f, 0.35f));
+                    Marker(pv, spec.color, new Vector3(0f, 0.65f, -0.3f));
+                    Box(pv.go, Vector3.zero, new Vector3(1.9f, 0.8f, 0.4f));
+                    break;
+                }
+                case PartType.Casing:
+                {
+                    PartView pv = NewPart(i, "PhoneCasing", new Vector3(lx, 0f, 0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Body", t, Prims.Cube, mat, new Vector3(0f, 0.9f, 0.45f), new Vector3(3.1f, 1.2f, 1.1f));
+                    Prims.Make("RearPlate", t, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0.9f, 1.02f), new Vector3(2.4f, 0.9f, 0.05f));
+                    pv.aim = new Vector3(0f, 0.9f, 0.45f);
+                    Marker(pv, spec.color, new Vector3(1.2f, 1.7f, 0.3f));
+                    Box(pv.go, new Vector3(0f, 0.9f, 0.45f), new Vector3(3.1f, 1.2f, 1.1f));
+                    break;
+                }
+                case PartType.Dial:
+                {
+                    PartView pv = NewPart(i, "RotaryDial", new Vector3(lx, ly, -0.95f));
+                    Transform t = pv.go.transform;
+                    GameObject wheel = new GameObject("FingerWheel");
+                    wheel.transform.SetParent(t, false);
+                    Prims.Make("Acrylic", wheel.transform, Prims.Cylinder, GameMaterials.Acrylic(spec.color), Vector3.zero, new Vector3(1.9f, 0.05f, 1.9f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("BrassRing", wheel.transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0f, 0.03f), new Vector3(1.98f, 0.03f, 1.98f), new Vector3(90f, 0f, 0f));
+                    for (int k = 0; k < 10; k++)
+                    {
+                        float a = (k * 30f + 40f) * Mathf.Deg2Rad;
+                        Prims.Make("Hole" + k, wheel.transform, Prims.Cylinder, GameMaterials.Rubber, new Vector3(Mathf.Cos(a) * 0.62f, Mathf.Sin(a) * 0.62f, -0.03f), new Vector3(0.26f, 0.02f, 0.26f), new Vector3(90f, 0f, 0f));
+                        Prims.Label(wheel.transform, ((k + 1) % 10).ToString(), 0.2f, Color.white, new Vector3(Mathf.Cos(a) * 0.62f, Mathf.Sin(a) * 0.62f, -0.06f));
+                    }
+                    Prims.Make("CenterCap", wheel.transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0f, -0.04f), new Vector3(0.5f, 0.04f, 0.5f), new Vector3(90f, 0f, 0f));
+                    pv.spin = wheel.transform;
+                    pv.spinSpeed = 0f; // only turns when hit
+                    Marker(pv, spec.color, new Vector3(0f, 1.2f, -0.2f));
+                    Sphere(pv.go, Vector3.zero, 1.0f);
+                    break;
+                }
+                case PartType.Ringer:
+                {
+                    PartView pv = NewPart(i, "RingerBell" + spec.slot, new Vector3(lx, ly, -0.15f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Dome", t, Prims.Sphere, GameMaterials.Brass, Vector3.zero, new Vector3(0.95f, 0.6f, 0.95f));
+                    Prims.Make("Post", t, Prims.Cylinder, GameMaterials.Steel, new Vector3(0f, -0.35f, 0f), new Vector3(0.07f, 0.18f, 0.07f));
+                    Prims.Make("Tint", t, Prims.Cylinder, GameMaterials.Glow(spec.color), new Vector3(0f, 0.05f, 0f), new Vector3(0.7f, 0.02f, 0.7f));
+                    Marker(pv, spec.color, new Vector3(0f, 0.75f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.5f);
+                    break;
+                }
+                case PartType.Coil:
+                {
+                    PartView pv = NewPart(i, "InductionCoil", new Vector3(lx, ly, -0.3f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Core", t, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(0.28f, 0.55f, 0.28f), new Vector3(0f, 0f, 90f));
+                    for (int k = 0; k < 9; k++)
+                        Prims.Make("Wind" + k, t, Prims.Cylinder, GameMaterials.Copper, new Vector3(-0.5f + k * 0.125f, 0f, 0f), new Vector3(0.62f, 0.03f, 0.62f), new Vector3(0f, 0f, 90f));
+                    Marker(pv, spec.color, new Vector3(0f, 0.65f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.55f);
+                    break;
+                }
+                case PartType.Tnt:
+                    // the first TNT is tucked behind the casing at the rear: spin the phone to find it
+                    BuildTnt(i, spec, lx, ly, spec.slot == 0 ? 0.75f : -0.45f);
+                    break;
+                default:
+                {
+                    PartView pv = NewPart(i, "Part" + i, new Vector3(lx, ly, 0f));
+                    BuildGear(pv, spec.color, 0.85f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.6f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.42f);
+                    break;
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ antique pocket watch
+
+        private void BuildWatchDecor()
+        {
+            // movement plate + case body that remain once the cover and dial fall away
+            Prims.Make("WatchBody", pivot, Prims.Cylinder, GameMaterials.Gold, new Vector3(0f, 1.5f, 0.25f), new Vector3(2.95f, 0.38f, 2.95f), new Vector3(90f, 0f, 0f));
+            Prims.Make("MovementPlate", pivot, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 1.5f, 0.02f), new Vector3(2.5f, 0.03f, 2.5f), new Vector3(90f, 0f, 0f));
+            Prims.Make("Stem", pivot, Prims.Cylinder, GameMaterials.Gold, new Vector3(0f, 3.05f, 0.25f), new Vector3(0.14f, 0.25f, 0.14f));
+        }
+
+        private void BuildWatchPart(int i, PartSpec spec, float lx, float ly)
+        {
+            Material mat = GameMaterials.ForBlock(spec.color);
+            switch (spec.type)
+            {
+                case PartType.Casing:
+                {
+                    bool front = spec.slot == 0;
+                    PartView pv = NewPart(i, front ? "HunterCover" : "CaseBack", new Vector3(lx, ly, front ? -0.62f : 0.62f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Plate", t, Prims.Cylinder, GameMaterials.Gold, Vector3.zero, new Vector3(2.8f, 0.07f, 2.8f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Tint", t, Prims.Cylinder, GameMaterials.Glow(spec.color), new Vector3(0f, 0f, front ? -0.045f : 0.045f), new Vector3(1.9f, 0.015f, 1.9f), new Vector3(90f, 0f, 0f));
+                    for (int k = 0; k < 12; k++)
+                    {
+                        float a = k * 30f * Mathf.Deg2Rad;
+                        Prims.Make("Petal" + k, t, Prims.Sphere, GameMaterials.Brass, new Vector3(Mathf.Sin(a) * 1.08f, Mathf.Cos(a) * 1.08f, front ? -0.05f : 0.05f), new Vector3(0.2f, 0.2f, 0.07f));
+                    }
+                    if (front) Prims.Make("Hinge", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(1.3f, -0.2f, 0f), new Vector3(0.1f, 0.35f, 0.1f));
+                    else Prims.Make("BowRing", t, Prims.Cylinder, GameMaterials.Gold, new Vector3(0f, 1.55f, 0f), new Vector3(0.55f, 0.06f, 0.55f), new Vector3(90f, 0f, 0f));
+                    Marker(pv, spec.color, new Vector3(front ? -0.9f : 0.9f, 1.1f, front ? -0.2f : 0.2f));
+                    Sphere(pv.go, Vector3.zero, 1.35f);
+                    break;
+                }
+                case PartType.Button:
+                {
+                    PartView pv = NewPart(i, "WindingCrown", new Vector3(lx, ly, 0.25f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Crown", t, Prims.Cylinder, mat, Vector3.zero, new Vector3(0.45f, 0.14f, 0.45f));
+                    Prims.Make("Knurl", t, Prims.Cylinder, GameMaterials.Gold, new Vector3(0f, 0.08f, 0f), new Vector3(0.5f, 0.03f, 0.5f));
+                    Marker(pv, spec.color, new Vector3(0.5f, 0.35f, 0f));
+                    Sphere(pv.go, Vector3.zero, 0.3f);
+                    break;
+                }
+                case PartType.Glass:
+                {
+                    PartView pv = NewPart(i, "CrystalDome", new Vector3(lx, ly, -0.58f));
+                    Prims.Make("Dome", pv.go.transform, Prims.Sphere, GameMaterials.Acrylic(spec.color), Vector3.zero, new Vector3(2.5f, 2.5f, 0.55f));
+                    Marker(pv, spec.color, new Vector3(1.0f, 1.0f, -0.3f));
+                    Sphere(pv.go, Vector3.zero, 1.15f);
+                    break;
+                }
+                case PartType.Dial:
+                {
+                    PartView pv = NewPart(i, "PorcelainDial", new Vector3(lx, ly, -0.2f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Face", t, Prims.Cylinder, GameMaterials.Porcelain, Vector3.zero, new Vector3(2.4f, 0.03f, 2.4f), new Vector3(90f, 0f, 0f));
+                    string[] roman = { "XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI" };
+                    for (int k = 0; k < 12; k++)
+                    {
+                        float a = k * 30f * Mathf.Deg2Rad;
+                        Prims.Label(t, roman[k], 0.22f, new Color(0.08f, 0.07f, 0.08f), new Vector3(Mathf.Sin(a) * 0.98f, Mathf.Cos(a) * 0.98f, -0.04f));
+                    }
+                    Marker(pv, spec.color, new Vector3(-1.0f, 1.0f, -0.2f));
+                    Sphere(pv.go, Vector3.zero, 1.15f);
+                    break;
+                }
+                case PartType.Hand:
+                {
+                    PartView pv = NewPart(i, "FiligreeHands", new Vector3(lx, ly, -0.3f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Hour", t, Prims.Cube, GameMaterials.Gold, new Vector3(0.14f, 0.18f, 0f), new Vector3(0.08f, 0.55f, 0.02f), new Vector3(0f, 0f, -55f));
+                    GameObject minute = Prims.Make("Minute", t, Prims.Cube, GameMaterials.Gold, new Vector3(0f, 0.42f, -0.02f), new Vector3(0.05f, 0.9f, 0.02f));
+                    Prims.Make("Hub", t, Prims.Sphere, mat, new Vector3(0f, 0f, -0.04f), Vector3.one * 0.14f);
+                    pv.hand = minute.transform;
+                    Marker(pv, spec.color, new Vector3(0f, -0.9f, -0.2f));
+                    Box(pv.go, new Vector3(0f, 0.3f, 0f), new Vector3(0.4f, 1.0f, 0.1f));
+                    break;
+                }
+                case PartType.BalanceWheel:
+                {
+                    PartView pv = NewPart(i, "BalanceWheel" + spec.slot, new Vector3(lx, ly, -0.1f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Rim", t, Prims.Cylinder, GameMaterials.Gold, Vector3.zero, new Vector3(1.4f, 0.025f, 1.4f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Inner", t, Prims.Cylinder, GameMaterials.Rubber, new Vector3(0f, 0f, 0.02f), new Vector3(1.2f, 0.02f, 1.2f), new Vector3(90f, 0f, 0f));
+                    for (int k = 0; k < 3; k++)
+                        Prims.Make("Spoke" + k, t, Prims.Cube, GameMaterials.Gold, Vector3.zero, new Vector3(1.3f, 0.06f, 0.03f), new Vector3(0f, 0f, k * 60f));
+                    Prims.Make("Hub", t, Prims.Sphere, mat, new Vector3(0f, 0f, -0.04f), Vector3.one * 0.22f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.95f, -0.2f));
+                    Sphere(pv.go, Vector3.zero, 0.75f);
+                    break;
+                }
+                case PartType.Gear:
+                {
+                    PartView pv = NewPart(i, "EscapementGear" + spec.slot, new Vector3(lx, ly, -0.05f));
+                    BuildGear(pv, spec.color, 0.6f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, -0.15f));
+                    Sphere(pv.go, Vector3.zero, 0.35f);
+                    break;
+                }
+                case PartType.Ruby:
+                {
+                    PartView pv = NewPart(i, "RubyBearing" + spec.slot, new Vector3(lx, ly, -0.08f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Setting", t, Prims.Cylinder, GameMaterials.Gold, Vector3.zero, new Vector3(0.36f, 0.03f, 0.36f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Jewel", t, Prims.Sphere, GameMaterials.RubyJewel, new Vector3(0f, 0f, -0.04f), Vector3.one * 0.22f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.4f, -0.1f));
+                    Sphere(pv.go, Vector3.zero, 0.25f);
+                    break;
+                }
+                case PartType.Tnt:
+                {
+                    // TNT mainspring core: a coiled red spring
+                    PartView pv = NewPart(i, "MainspringCore" + spec.slot, new Vector3(lx, ly, -0.18f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Barrel", t, Prims.Cylinder, GameMaterials.TntRed, Vector3.zero, new Vector3(0.7f, 0.07f, 0.7f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Coil", t, Prims.Cylinder, GameMaterials.Glow(BlockColor.Yellow), new Vector3(0f, 0f, -0.06f), new Vector3(0.38f, 0.03f, 0.38f), new Vector3(90f, 0f, 0f));
+                    Prims.Label(t, "TNT", 0.2f, Color.white, new Vector3(0f, -0.55f, -0.1f));
+                    Marker(pv, spec.color, new Vector3(0f, 0.6f, -0.1f));
+                    Sphere(pv.go, Vector3.zero, 0.4f);
+                    break;
+                }
+                default:
+                {
+                    PartView pv = NewPart(i, "Part" + i, new Vector3(lx, ly, 0f));
+                    Prims.Make("Block", pv.go.transform, Prims.Cube, mat, Vector3.zero, Vector3.one * 0.5f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, 0f));
+                    Box(pv.go, Vector3.zero, Vector3.one * 0.5f);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>Every projectile hit physically spins the rotary dial one step with an authentic click.</summary>
+        private IEnumerator SpinDialOnce(int part)
+        {
+            PartView pv = views[part];
+            if (pv.spin == null || pv.broken) yield break;
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.DialClick, UnityEngine.Random.Range(0.95f, 1.1f), 0.6f);
+            float t = 0f;
+            while (t < 0.16f && pv.spin != null)
+            {
+                t += Time.deltaTime;
+                pv.spin.Rotate(0f, 0f, 36f * Time.deltaTime / 0.16f, Space.Self);
+                yield return null;
+            }
+        }
+
         // ================================================================== combat
 
         /// <summary>
@@ -476,7 +749,7 @@ namespace ColorGateBlast
         private void AddScrew(int i, PartSpec spec)
         {
             PartView pv = views[i];
-            bool rear = (Kind == MonumentKind.RotaryPhone || Kind == MonumentKind.PocketWatch) && spec.type == PartType.Casing;
+            bool rear = spec.type == PartType.Casing && (Kind == MonumentKind.RotaryPhone || (Kind == MonumentKind.PocketWatch && spec.slot == 1));
             GameObject sc = new GameObject("BrassScrew");
             sc.transform.SetParent(pv.go.transform, false);
             sc.transform.localPosition = pv.aim + (rear ? new Vector3(0.9f, 0.5f, 0.75f) : new Vector3(0.55f, 0.45f, -0.35f));
@@ -560,6 +833,7 @@ namespace ColorGateBlast
                 if (pierced >= 0 && pierced < views.Length) RefreshLabel(pierced);
             }
             if (PartDamaged != null && Model != null && !MonumentModel.IsScrewCode(target)) PartDamaged(part, Model.Hp[part]);
+            if (views != null && part < views.Length && Model != null && Model.Parts[part].type == PartType.Dial && Kind == MonumentKind.RotaryPhone) StartCoroutine(SpinDialOnce(part));
 
             if (destroyed.Count > 0) yield return StartCoroutine(BreakSequence(destroyed, detonated, to));
             InFlight--;
@@ -731,6 +1005,11 @@ namespace ColorGateBlast
                 {
                     pv.hand.parent.localEulerAngles = new Vector3(0f, 0f, pv.hand.parent.localEulerAngles.z - 6f);
                     if (SoundSynth.Instance != null && i == 0) SoundSynth.Instance.Play(Sfx.TickTock, 1f, 0.18f);
+                    if (SoundSynth.Instance != null && i == 0 && Kind == MonumentKind.PocketWatch) SoundSynth.Instance.Play(Sfx.Tick, 1f, 0.25f);
+                }
+                if (Kind == MonumentKind.PocketWatch && !pv.broken && pv.go.name.StartsWith("BalanceWheel"))
+                {
+                    pv.go.transform.localEulerAngles = new Vector3(0f, 0f, 42f * Mathf.Sin(Time.time * 6.5f));
                 }
                 if (pv.spin != null && !pv.broken)
                 {

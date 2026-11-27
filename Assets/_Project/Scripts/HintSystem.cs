@@ -88,24 +88,64 @@ namespace ColorGateBlast
 
             BlockInfo info = grid.Board.Blocks[m.block];
             Vector3 start = v.CentroidWorld;
+            Vector3 offset = v.CentroidWorld - grid.CellWorld(grid.Board.Pos[m.block]);
             Vector3 end;
-            if (m.exit)
+            bool viaPortal;
+            Int2 pad = FindPadOnPath(m, out viaPortal);
+            if (viaPortal)
+            {
+                end = grid.CellWorld(pad) + offset; // the arrow points INTO the portal pad
+            }
+            else if (m.exit)
             {
                 int gi = FindGate(m);
                 end = gi >= 0 ? grid.GateCenterWorld(gi) : start + new Vector3(Dirs.Of(m.dir).x, 0f, Dirs.Of(m.dir).y) * 3f;
             }
             else
             {
-                Vector3 offset = v.CentroidWorld - grid.CellWorld(grid.Board.Pos[m.block]);
                 end = grid.CellWorld(m.to) + offset;
             }
             start.y = 0.65f;
             end.y = 0.65f;
             StartPath(start, end, GameMaterials.ColorOf(info.color));
 
-            if (Message != null)
-                Message(m.exit ? "Hint: slide the " + info.color + " block " + m.dir.ToString().ToLower() + " into its gate"
-                               : "Hint: slide the " + info.color + " block " + m.dir.ToString().ToLower());
+            string dirName = m.dir.ToString().ToLower();
+            string msg;
+            if (viaPortal) msg = "Hint: slide the " + info.color + " block " + dirName + " onto the portal pad - it warps!";
+            else if (m.exit) msg = "Hint: slide the " + info.color + " block " + dirName + " into its gate";
+            else msg = "Hint: slide the " + info.color + " block " + dirName;
+            if (m.exit && TurretWouldUnscrew(info.color)) msg += " (its turret unscrews a brass bolt)";
+            if (Message != null) Message(msg);
+        }
+
+        /// <summary>True when a block of this colour leaving will unscrew a visible brass screw (shown in the hint text).</summary>
+        private bool TurretWouldUnscrew(BlockColor c)
+        {
+            MonumentModel mm = monument.Model;
+            for (int j = 0; j < mm.Parts.Length; j++)
+                if (mm.IsScrewTargetable(j) && mm.Parts[j].screwColor == c) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Walks the move cell by cell; if a 1x1 block steps onto a portal pad on the way, returns that pad
+        /// (the hint arrow then points into the pad instead of past it).
+        /// </summary>
+        private Int2 FindPadOnPath(Move m, out bool found)
+        {
+            found = false;
+            BoardModel b = grid.Board;
+            if (b.Blocks[m.block].cells.Length != 1) return new Int2(0, 0);
+            Int2 dir = Dirs.Of(m.dir);
+            Int2 o = b.Pos[m.block];
+            for (int guard = 0; guard < 32; guard++)
+            {
+                Int2 next = o + dir;
+                if (b.IsPortal(next)) { found = true; return next; }
+                if (!b.InGrid(next) || next == m.to) break;
+                o = next;
+            }
+            return new Int2(0, 0);
         }
 
         private int FindGate(Move m)
