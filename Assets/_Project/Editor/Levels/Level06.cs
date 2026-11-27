@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(6, "Pathways", 6, 6, 10, 4, LevelTier.Normal, "L-shaped blocks need a gate as wide as their box.");
+            LevelDefinition d = Make(6, "Pathways", 6, 6, 9, 4, LevelTier.Normal, "L-shaped blocks need a gate as wide as their box.");
             d.placements.Add(Ell(R, 0, 0, 4));
             d.placements.Add(Rect(R, 1, 2, 5, 4));
             d.placements.Add(Ell(B, 1, 2, 2));
