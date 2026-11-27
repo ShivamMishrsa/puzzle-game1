@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(38, "Exposed Ruby Bearings", 7, 7, 20, 5, LevelTier.Normal, "The dial is gone! Free the TNT mainsprings, then smash the wheels.");
+            LevelDefinition d = Make(38, "Exposed Ruby Bearings", 7, 7, 13, 5, LevelTier.Normal, "The dial is gone! Free the TNT mainsprings, then smash the wheels.");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 5, 2));
             d.placements.Add(Rect(R, 2, 2, 0, 0));
