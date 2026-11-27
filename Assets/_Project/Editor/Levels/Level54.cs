@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(54, "Frozen Prism", 7, 7, 13, 5, LevelTier.Normal, "The frozen prism still shifts colour. Thaw it at the right moment!");
+            LevelDefinition d = Make(54, "Frozen Prism", 7, 7, 11, 5, LevelTier.Normal, "The frozen prism still shifts colour. Thaw it at the right moment!");
             d.placements.Add(Scrap(1, 2, 4, 2));
             d.placements.Add(Prism(Ice(Rect(B, 1, 1, 3, 4), 1), B, R, Y));
             d.placements.Add(Rect(Y, 1, 2, 3, 5));
