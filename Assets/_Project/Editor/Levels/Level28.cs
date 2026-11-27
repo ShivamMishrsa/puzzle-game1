@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(28, "Exposed Brass Bells", 7, 7, 20, 5, LevelTier.Normal, "The handset is gone! Unscrew the TNT bolts, then ring the bells.");
+            LevelDefinition d = Make(28, "Exposed Brass Bells", 7, 7, 15, 5, LevelTier.Normal, "The handset is gone! Unscrew the TNT bolts, then ring the bells.");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 5, 2));
             d.placements.Add(Rect(R, 2, 2, 0, 0));
