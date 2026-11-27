@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(27, "Frozen Key", 7, 7, 18, 5, LevelTier.Normal, "Peel the yellow block: its blue core is the key - and it thaws the ice beside it.");
+            LevelDefinition d = Make(27, "Frozen Key", 7, 7, 12, 5, LevelTier.Normal, "Peel the yellow block: its blue core is the key - and it thaws the ice beside it.");
             d.placements.Add(Scrap(1, 1, 3, 4));
             d.placements.Add(PeeledKey(Rect(Y, 2, 1, 1, 1), B, 0));
             d.placements.Add(Ice(Rect(B, 1, 2, 3, 1), 1));
