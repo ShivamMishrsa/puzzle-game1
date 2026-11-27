@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(45, "Boiler Trap", 7, 7, 15, 4, LevelTier.MiniBoss, "Two welds, a padlock and two brass bolts. Stuck? Use the hint or the pliers!");
+            LevelDefinition d = Make(45, "Boiler Trap", 7, 7, 13, 4, LevelTier.MiniBoss, "Two welds, a padlock and two brass bolts. Stuck? Use the hint or the pliers!");
             d.placements.Add(Scrap(1, 2, 3, 3));
             d.placements.Add(Scrap(2, 1, 5, 1));
             d.placements.Add(Rect(R, 2, 2, 0, 2));
