@@ -17,6 +17,8 @@ namespace ColorGateBlast
         public Int2 to;
         public bool exit;
         public GateDirection dir;
+        /// <summary>Exit moves only: the gate is a Clockwork Piercing Gate.</summary>
+        public bool piercing;
     }
 
     /// <summary>Side effects of a block leaving the tray (used to drive FX / audio / UI).</summary>
@@ -28,12 +30,20 @@ namespace ColorGateBlast
         public int spawned = -1;
         public Int2 spawnCell;
         public bool shutterToggled;
+        /// <summary>Lock id opened by a leaving brass key block, or -1.</summary>
+        public int unlockedLock = -1;
+        /// <summary>Index of the gate the block left through, or -1.</summary>
+        public int gateIndex = -1;
+        public bool piercing;
 
         public void Clear()
         {
             thawed.Clear();
             spawned = -1;
             shutterToggled = false;
+            unlockedLock = -1;
+            gateIndex = -1;
+            piercing = false;
         }
     }
 
@@ -42,11 +52,14 @@ namespace ColorGateBlast
     /// the tray edge. A block may leave only through an OPEN gate of its own colour whose span covers every column
     /// (Up/Down) or row (Left/Right) it occupies. Leaving is atomic: the whole path out must be free.
     ///
-    /// Batch 2 mechanics:
+    /// Mechanics:
     ///  * Ice: a block with iceLayer &gt; 0 is frozen. Whenever a block exits, every orthogonally adjacent iced block
     ///    loses one layer.
     ///  * Dual layer: a block with an inner colour leaves a dormant 1x1 "companion" that drops into the vacated slot.
     ///  * Shutter gates: every exit toggles all shutter gates (open &lt;-&gt; closed).
+    ///  * Brass key / padlock: a key block leaving opens every padlocked gate with its lockId.
+    ///  * Portals: a 1x1 block sliding onto a pad warps to the partner pad (if that tile is free) and keeps sliding.
+    ///  * Directional rails: blocks with an axis may only slide along it.
     /// Gray (and locked) blocks never move, never leave and do not need to be cleared.
     /// </summary>
     public sealed class BoardModel
@@ -62,16 +75,19 @@ namespace ColorGateBlast
         public int ExitedCount;
         /// <summary>Number of exits so far; its parity flips every shutter gate.</summary>
         public int Toggles;
+        /// <summary>Bit n set = the brass key for lock n has left the tray.</summary>
+        public int UnlockedMask;
 
         private readonly int[] occ;
         private readonly bool hasShutter;
+        private readonly Int2[] partner; // per cell: the partner pad cell, or (-1,-1)
 
         public BoardModel(LevelDefinition def)
         {
             Def = def;
-            for (int g = 0; g < def.gates.Count; g++) if (def.gates[g].isShutterGate) hasShutter = true;
             Width = def.GridWidth;
             Height = def.GridHeight;
+            for (int g = 0; g < def.gates.Count; g++) if (def.gates[g].isShutterGate) hasShutter = true;
             Blocks = def.BuildBlocks();
             int n = Blocks.Length;
             Pos = new Int2[n];
@@ -79,6 +95,7 @@ namespace ColorGateBlast
             Dormant = new bool[n];
             Ice = new int[n];
             occ = new int[Width * Height];
+            partner = BuildPartners(def);
             for (int i = 0; i < occ.Length; i++) occ[i] = -1;
             for (int i = 0; i < n; i++)
             {
@@ -102,7 +119,25 @@ namespace ColorGateBlast
             occ = (int[])o.occ.Clone();
             ExitedCount = o.ExitedCount;
             Toggles = o.Toggles;
+            UnlockedMask = o.UnlockedMask;
             hasShutter = o.hasShutter;
+            partner = o.partner;
+        }
+
+        private Int2[] BuildPartners(LevelDefinition def)
+        {
+            Int2[] p = new Int2[Width * Height];
+            for (int i = 0; i < p.Length; i++) p[i] = new Int2(-1, -1);
+            for (int k = 0; k < def.portals.Count; k++)
+            {
+                PortalSpec ps = def.portals[k];
+                if (ps.a.x >= 0 && ps.a.x < Width && ps.a.y >= 0 && ps.a.y < Height && ps.b.x >= 0 && ps.b.x < Width && ps.b.y >= 0 && ps.b.y < Height)
+                {
+                    p[ps.a.y * Width + ps.a.x] = ps.b;
+                    p[ps.b.y * Width + ps.b.x] = ps.a;
+                }
+            }
+            return p;
         }
 
         public BoardModel Clone() { return new BoardModel(this); }
@@ -131,10 +166,15 @@ namespace ColorGateBlast
             return occ[y * Width + x];
         }
 
+        public bool IsPortal(Int2 p) { return InGrid(p) && partner[p.y * Width + p.x].x >= 0; }
+
+        public Int2 PortalPartner(Int2 p) { return partner[p.y * Width + p.x]; }
+
         public bool IsGateOpen(GateSpec g)
         {
-            if (!g.isShutterGate) return true;
-            return g.startsOpen != ((Toggles & 1) == 1);
+            if (g.isShutterGate && g.startsOpen == ((Toggles & 1) == 1)) return false;
+            if (g.isPadlocked && ((UnlockedMask >> g.lockId) & 1) == 0) return false;
+            return true;
         }
 
         public bool IsGateOpen(int gateIndex) { return IsGateOpen(Def.gates[gateIndex]); }
@@ -149,8 +189,8 @@ namespace ColorGateBlast
             }
         }
 
-        /// <summary>Is the (out-of-grid) cell inside the lane of an OPEN gate with this colour?</summary>
-        private bool OutsideAllowed(Int2 p, BlockColor color)
+        /// <summary>Gate index whose lane contains this out-of-grid cell for a block of this colour (open or not), or -1.</summary>
+        private int GateOfOutsideCell(Int2 p, BlockColor color, bool onlyOpen)
         {
             GateDirection dir;
             int lane;
@@ -158,7 +198,7 @@ namespace ColorGateBlast
             {
                 if (p.y >= Height) dir = GateDirection.Up;
                 else if (p.y < 0) dir = GateDirection.Down;
-                else return false;
+                else return -1;
                 lane = p.x;
             }
             else if (p.y >= 0 && p.y < Height)
@@ -168,17 +208,17 @@ namespace ColorGateBlast
             }
             else
             {
-                return false;
+                return -1; // diagonal corner region is never reachable
             }
 
             List<GateSpec> gates = Def.gates;
             for (int g = 0; g < gates.Count; g++)
             {
                 GateSpec gt = gates[g];
-                if (gt.direction == dir && gt.color == color && lane >= gt.start && lane < gt.start + gt.length && IsGateOpen(gt))
-                    return true;
+                if (gt.direction == dir && gt.color == color && lane >= gt.start && lane < gt.start + gt.length && (!onlyOpen || IsGateOpen(gt)))
+                    return g;
             }
-            return false;
+            return -1;
         }
 
         private bool CheckPlacement(int i, Int2 origin, out int outsideCount)
@@ -196,11 +236,19 @@ namespace ColorGateBlast
                 }
                 else
                 {
-                    if (!OutsideAllowed(p, b.color)) return false;
+                    if (GateOfOutsideCell(p, b.color, true) < 0) return false;
                     outsideCount++;
                 }
             }
             return true;
+        }
+
+        /// <summary>Where a block ends up after stepping one cell from <paramref name="origin"/>: the next cell, or the partner pad for a 1x1 stepping onto a portal.</summary>
+        public Int2 Land(int i, Int2 origin, Int2 dir)
+        {
+            Int2 o = origin + dir;
+            if (Blocks[i].cells.Length == 1 && IsPortal(o)) return PortalPartner(o);
+            return o;
         }
 
         /// <summary>Result of pushing block <paramref name="i"/> one cell from the hypothetical origin.</summary>
@@ -214,7 +262,17 @@ namespace ColorGateBlast
             Int2 o = origin + dir;
             int outCount;
             if (!CheckPlacement(i, o, out outCount)) return StepResult.Blocked;
-            if (outCount == 0) return StepResult.Moved;
+            if (outCount == 0)
+            {
+                // a 1x1 block stepping onto a pad warps to the partner - only if the exit pad is free
+                if (b.cells.Length == 1 && IsPortal(o))
+                {
+                    Int2 q = PortalPartner(o);
+                    int v = occ[q.y * Width + q.x];
+                    if (v != -1 && v != i) return StepResult.Blocked;
+                }
+                return StepResult.Moved;
+            }
 
             // The block is entering a gate: it leaves only if the entire remaining path is clear.
             int tiles = b.cells.Length;
@@ -228,6 +286,27 @@ namespace ColorGateBlast
 
         public StepResult Probe(int i, Int2 dir) { return Probe(i, Pos[i], dir); }
 
+        /// <summary>Index of the gate block <paramref name="i"/> would leave through when pushed from <paramref name="origin"/> in <paramref name="dir"/> (call only when Probe says Exit).</summary>
+        public int ExitGateIndex(int i, Int2 origin, Int2 dir)
+        {
+            BlockInfo b = Blocks[i];
+            Int2 o = origin + dir;
+            for (int step = 0; step < 16; step++)
+            {
+                for (int c = 0; c < b.cells.Length; c++)
+                {
+                    Int2 p = o + b.cells[c];
+                    if (!InGrid(p))
+                    {
+                        int g = GateOfOutsideCell(p, b.color, true);
+                        if (g >= 0) return g;
+                    }
+                }
+                o = o + dir;
+            }
+            return -1;
+        }
+
         public void Commit(int i, Int2 newOrigin)
         {
             Stamp(i, Pos[i], -1);
@@ -235,18 +314,41 @@ namespace ColorGateBlast
             Stamp(i, newOrigin, i);
         }
 
-        /// <summary>Removes block <paramref name="i"/> from the tray and applies ice thaw, companion respawn and shutter toggle.</summary>
+        /// <summary>Removes block <paramref name="i"/> from the tray (exit direction unknown: it is searched from its current cell).</summary>
         public void ExitBlock(int i, ExitEffects fx)
+        {
+            GateDirection found = GateDirection.Up;
+            for (int d = 0; d < 4; d++)
+            {
+                if (Probe(i, Pos[i], Dirs.Of(Dirs.All[d])) == StepResult.Exit) { found = Dirs.All[d]; break; }
+            }
+            ExitBlock(i, fx, found, Pos[i], Pos[i]);
+        }
+
+        /// <summary>
+        /// Removes block <paramref name="i"/> from the tray and applies the side effects.
+        /// <paramref name="startOrigin"/> is where the block was RESTING when its exit move began: iced neighbours are
+        /// measured from there (so "a block beside the ice leaves" thaws it) and a dual-layer block's companion drops
+        /// into that slot. <paramref name="exitOrigin"/> is the last in-grid position before leaving (used to find the gate).
+        /// </summary>
+        public void ExitBlock(int i, ExitEffects fx, GateDirection exitDir, Int2 startOrigin, Int2 exitOrigin)
         {
             if (fx != null) fx.Clear();
             BlockInfo b = Blocks[i];
 
-            // orthogonal neighbours of the block at the moment it leaves
+            int exitGate = ExitGateIndex(i, exitOrigin, Dirs.Of(exitDir));
+            if (fx != null)
+            {
+                fx.gateIndex = exitGate;
+                fx.piercing = exitGate >= 0 && Def.gates[exitGate].isPiercingGate;
+            }
+
+            // orthogonal neighbours of the block at the slot it started from
             List<int> neighbours = new List<int>();
             Int2[] cells = b.cells;
             for (int c = 0; c < cells.Length; c++)
             {
-                Int2 p = Pos[i] + cells[c];
+                Int2 p = startOrigin + cells[c];
                 for (int d = 0; d < 4; d++)
                 {
                     Int2 q = p + Dirs.Of(Dirs.All[d]);
@@ -260,6 +362,12 @@ namespace ColorGateBlast
             ExitedCount++;
             Toggles++;
             if (fx != null) fx.shutterToggled = hasShutter;
+
+            if (b.hasKey)
+            {
+                UnlockedMask |= 1 << b.lockId;
+                if (fx != null) fx.unlockedLock = b.lockId;
+            }
 
             for (int k = 0; k < neighbours.Count; k++)
             {
@@ -275,7 +383,7 @@ namespace ColorGateBlast
             {
                 int c = b.companion;
                 Dormant[c] = false;
-                Pos[c] = Pos[i] + b.cells[0];
+                Pos[c] = startOrigin + b.cells[0];
                 Stamp(c, Pos[c], c);
                 if (fx != null) { fx.spawned = c; fx.spawnCell = Pos[c]; }
             }
@@ -294,7 +402,8 @@ namespace ColorGateBlast
                     GateDirection gd = Dirs.All[d];
                     Int2 dir = Dirs.Of(gd);
                     Int2 o = Pos[i];
-                    while (true)
+                    int guard = 0;
+                    while (guard++ < 64)
                     {
                         StepResult r = Probe(i, o, dir);
                         if (r == StepResult.Blocked) break;
@@ -307,11 +416,15 @@ namespace ColorGateBlast
                                 m.to = o;
                                 m.exit = true;
                                 m.dir = gd;
+                                int g = ExitGateIndex(i, o, dir);
+                                m.piercing = g >= 0 && Def.gates[g].isPiercingGate;
                                 moves.Add(m);
                             }
                             break;
                         }
-                        o = o + dir;
+                        Int2 next = Land(i, o, dir);
+                        if (next == Pos[i]) break; // a warp that lands on the block's own start cell: no new state
+                        o = next;
                         Move s = new Move();
                         s.block = i;
                         s.to = o;
@@ -332,6 +445,7 @@ namespace ColorGateBlast
                 if (Blocks[i].iceLayer > 0) key.Add((char)(Ice[i] + 1));
             }
             if (hasShutter) key.Add((char)((Toggles & 1) + 1));
+            if (UnlockedMask != 0) key.Add((char)(UnlockedMask + 1));
         }
     }
 }

@@ -169,12 +169,12 @@ namespace ColorGateBlast
             checkTimer = 0f;
         }
 
-        private void OnBlockExited(int blockIndex, Vector3 center, GateDirection dir)
+        private void OnBlockExited(int blockIndex, Vector3 center, GateDirection dir, bool piercing)
         {
             BlockInfo info = grid.Board.Blocks[blockIndex];
             Int2 d = Dirs.Of(dir);
             Vector3 gateWorld = center + new Vector3(d.x, 0f, d.y) * (grid.CellSize * 3f);
-            track.SpawnTurret(info.color, info.Tiles, center, gateWorld, false);
+            track.SpawnTurret(info.color, info.Tiles, center, gateWorld, piercing);
 
             // consecutive gate exits walk up the pentatonic scale C D E G A
             streak = (Time.time - lastExitTime < 3.2f) ? streak + 1 : 0;
@@ -248,7 +248,7 @@ namespace ColorGateBlast
 
         private bool HasAnyMove()
         {
-            bool[] allowed = new bool[8];
+            bool[] allowed = new bool[ColorCount.Total];
             for (int c = 0; c < allowed.Length; c++) allowed[c] = track.CanAccept((BlockColor)c);
             List<Move> moves = new List<Move>();
             grid.Board.GenerateMoves(moves, allowed);

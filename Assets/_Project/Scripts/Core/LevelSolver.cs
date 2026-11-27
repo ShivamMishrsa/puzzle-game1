@@ -206,8 +206,10 @@ namespace ColorGateBlast
                 {
                     GateSpec gs = def.gates[g];
                     gs.isShutterGate = false;
+                    gs.isPadlocked = false;
                     solo.gates.Add(gs);
                 }
+                solo.portals = def.portals;
                 for (int j = 0; j < def.placements.Count; j++)
                     if (def.placements[j].locked || def.placements[j].color == BlockColor.Gray) solo.placements.Add(def.placements[j]);
 
@@ -263,12 +265,13 @@ namespace ColorGateBlast
                 {
                     Int2 dir = Dirs.Of(Dirs.All[d]);
                     Int2 o = cur;
-                    while (true)
+                    int guard = 0;
+                    while (guard++ < 64)
                     {
                         StepResult r = board.Probe(blk, o, dir);
                         if (r == StepResult.Blocked) break;
                         if (r == StepResult.Exit) return cd + 1;
-                        o = o + dir;
+                        o = board.Land(blk, o, dir);
                         int key = o.x + o.y * w;
                         if (dist[key] < 0) { dist[key] = cd + 1; q.Enqueue(o); }
                     }

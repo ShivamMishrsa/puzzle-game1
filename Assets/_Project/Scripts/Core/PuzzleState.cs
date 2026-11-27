@@ -7,12 +7,14 @@ namespace ColorGateBlast
     {
         public int color;
         public int ammo;
+        /// <summary>Clockwork-overcharged: every shot also hits the part hidden behind its target.</summary>
+        public bool piercing;
     }
 
     /// <summary>
     /// Instantaneous abstraction of the whole game used by the level solver: tray + monument + the turrets still
     /// parked on the belt. A block leaving the tray spawns a turret with ammo = tile count that immediately shoots
-    /// everything it can; leftover ammo keeps it parked (occupying a slot). A turret of a colour that is already
+    /// everything it can; leftover ammo keeps the turret parked (occupying a slot). A turret of a colour that is already
     /// parked MERGES into it (one slot, combined ammo) - the Mega-Turret rule.
     /// </summary>
     public sealed class PuzzleState
@@ -37,13 +39,7 @@ namespace ColorGateBlast
             Board = board.Clone();
             Monument = monument.Clone();
             Parked = new List<TurretInfo>(parked.Count);
-            for (int i = 0; i < parked.Count; i++)
-            {
-                TurretInfo t = new TurretInfo();
-                t.color = parked[i].color;
-                t.ammo = parked[i].ammo;
-                Parked.Add(t);
-            }
+            for (int i = 0; i < parked.Count; i++) Parked.Add(CloneTurret(parked[i]));
         }
 
         private PuzzleState(PuzzleState o)
@@ -52,13 +48,16 @@ namespace ColorGateBlast
             Board = o.Board.Clone();
             Monument = o.Monument.Clone();
             Parked = new List<TurretInfo>(o.Parked.Count);
-            for (int i = 0; i < o.Parked.Count; i++)
-            {
-                TurretInfo t = new TurretInfo();
-                t.color = o.Parked[i].color;
-                t.ammo = o.Parked[i].ammo;
-                Parked.Add(t);
-            }
+            for (int i = 0; i < o.Parked.Count; i++) Parked.Add(CloneTurret(o.Parked[i]));
+        }
+
+        private static TurretInfo CloneTurret(TurretInfo s)
+        {
+            TurretInfo t = new TurretInfo();
+            t.color = s.color;
+            t.ammo = s.ammo;
+            t.piercing = s.piercing;
+            return t;
         }
 
         public PuzzleState Clone() { return new PuzzleState(this); }
@@ -79,8 +78,8 @@ namespace ColorGateBlast
 
         public void GenerateMoves(List<Move> moves)
         {
-            bool[] allowed = new bool[4];
-            for (int c = 0; c < 4; c++) allowed[c] = CanExit(c);
+            bool[] allowed = new bool[ColorCount.Total];
+            for (int c = 0; c < allowed.Length; c++) allowed[c] = CanExit(c);
             Board.GenerateMoves(moves, allowed);
         }
 
@@ -93,18 +92,25 @@ namespace ColorGateBlast
             }
 
             BlockInfo b = Board.Blocks[m.block];
-            Board.ExitBlock(m.block, null);
+            Board.ExitBlock(m.block, null, m.dir, Board.Pos[m.block], m.to);
             int color = (int)b.color;
             bool merged = false;
             for (int i = 0; i < Parked.Count; i++)
             {
-                if (Parked[i].color == color) { Parked[i].ammo += b.Tiles; merged = true; break; }
+                if (Parked[i].color == color)
+                {
+                    Parked[i].ammo += b.Tiles;
+                    Parked[i].piercing = Parked[i].piercing || m.piercing;
+                    merged = true;
+                    break;
+                }
             }
             if (!merged)
             {
                 TurretInfo t = new TurretInfo();
                 t.color = color;
                 t.ammo = b.Tiles;
+                t.piercing = m.piercing;
                 Parked.Add(t);
             }
             Resolve();
@@ -124,7 +130,8 @@ namespace ColorGateBlast
                     {
                         int target = Monument.FindTarget(t.color);
                         if (target < 0) break;
-                        Monument.Hit(target, null, null);
+                        Monument.HitTarget(target, null, null, null);
+                        if (t.piercing && !MonumentModel.IsScrewCode(target)) Monument.PierceBehind(MonumentModel.PartOf(target), null, null);
                         t.ammo--;
                         progress = true;
                     }
@@ -143,7 +150,7 @@ namespace ColorGateBlast
             Board.AppendKey(k);
             Monument.AppendKey(k);
             List<int> p = new List<int>(Parked.Count);
-            for (int i = 0; i < Parked.Count; i++) p.Add(Parked[i].color * 100 + Parked[i].ammo);
+            for (int i = 0; i < Parked.Count; i++) p.Add(Parked[i].color * 200 + Parked[i].ammo * 2 + (Parked[i].piercing ? 1 : 0));
             p.Sort();
             for (int i = 0; i < p.Count; i++) k.Add((char)(p[i] + 1));
             return new string(k.ToArray());

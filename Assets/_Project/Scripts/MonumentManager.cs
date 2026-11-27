@@ -24,6 +24,7 @@ namespace ColorGateBlast
             public float spinSpeed;
             public Transform hand;      // alarm-clock minute hand
             public Vector3 aim;         // local point turrets aim at (parts built around the monument origin)
+            public Transform screw;     // slotted brass screw pinning this part (null when none / removed)
         }
 
         public MonumentModel Model { get; private set; }
@@ -53,13 +54,17 @@ namespace ColorGateBlast
 
         public void SetCamera(Camera c) { cam = c; }
 
-        public Vector3 PartWorld(int i)
+        /// <summary>World position of a part, or of its screw when <paramref name="code"/> is a screw target.</summary>
+        public Vector3 PartWorld(int code)
         {
+            int i = MonumentModel.PartOf(code);
             if (views == null || i < 0 || i >= views.Length || views[i].go == null) return anchor;
+            if (MonumentModel.IsScrewCode(code) && views[i].screw != null) return views[i].screw.position;
             return views[i].go.transform.TransformPoint(views[i].aim);
         }
 
         public int FindTarget(int color) { return Model == null ? -1 : Model.FindTarget(color); }
+        public int FindDeflectedPlate(int color) { return Model == null ? -1 : Model.FindDeflectedPlate(color); }
         public int AliveOfColor(int color) { return Model == null ? 0 : Model.AliveOfColor(color); }
 
         public void Clear()
@@ -153,6 +158,7 @@ namespace ColorGateBlast
             MonumentLayout.Position(Kind, spec.type, spec.slot, out lx, out ly);
             if (Kind == MonumentKind.AlarmClock) BuildClockPart(i, spec, lx, ly);
             else BuildCassettePart(i, spec, lx, ly);
+            if (views[i].go != null && spec.hasScrew) AddScrew(i, spec);
             if (views[i].label != null) views[i].label.text = Model.Hp[i].ToString();
         }
 
@@ -407,34 +413,118 @@ namespace ColorGateBlast
         /// A turret fires at <paramref name="part"/>. The hit is applied to the model immediately (so every observer sees
         /// consistent HP); the pellet / laser animation and the physical break-off follow when it lands.
         /// </summary>
-        public bool Shoot(int part, Vector3 from, BlockColor color, bool mega, bool pierce)
+        public bool Shoot(int target, Vector3 from, BlockColor color, bool mega, bool pierce)
         {
-            if (Model == null || part < 0 || !Model.IsTargetable(part) || (int)Model.Parts[part].color != (int)color) return false;
+            if (Model == null || target < 0) return false;
+            int part = MonumentModel.PartOf(target);
+            bool screwShot = MonumentModel.IsScrewCode(target);
+            if (screwShot)
+            {
+                if (!Model.IsScrewTargetable(part) || (int)Model.Parts[part].screwColor != (int)color) return false;
+            }
+            else if (!Model.IsTargetable(part) || (int)Model.Parts[part].color != (int)color)
+            {
+                return false;
+            }
 
             List<int> destroyed = new List<int>();
             List<int> detonated = new List<int>();
-            Model.Hit(part, destroyed, detonated);
+            List<int> unscrewed = new List<int>();
+            Model.HitTarget(target, destroyed, detonated, unscrewed);
 
             // Clockwork piercing shot: also damages one part hidden directly behind the target.
             int pierced = -1;
-            if (pierce)
-            {
-                for (int j = 0; j < Model.Parts.Length; j++)
-                {
-                    if (Model.Hp[j] > 0 && ((Model.Parts[j].hiddenByMask >> part) & 1) != 0) { pierced = j; break; }
-                }
-                if (pierced >= 0) Model.Hit(pierced, destroyed, detonated);
-            }
+            if (pierce && !screwShot) pierced = Model.PierceBehind(part, destroyed, detonated);
 
             firingUntil = Time.time + 0.5f;
-            StartCoroutine(Pellet(from, part, pierced, color, mega, destroyed, detonated));
+            StartCoroutine(Pellet(from, target, pierced, color, mega, destroyed, detonated, unscrewed));
             return true;
         }
 
-        private IEnumerator Pellet(Vector3 from, int part, int pierced, BlockColor color, bool mega, List<int> destroyed, List<int> detonated)
+        /// <summary>Visual only: a shot at a screw-pinned plate of the turret's own colour glances off with a metallic ping.</summary>
+        public void Deflect(int part, Vector3 from, BlockColor color)
+        {
+            if (views == null || part < 0 || part >= views.Length || views[part].go == null) return;
+            StartCoroutine(DeflectRoutine(part, from, color));
+        }
+
+        private IEnumerator DeflectRoutine(int part, Vector3 from, BlockColor color)
+        {
+            Vector3 to = PartWorld(part);
+            GameObject shot = Prims.Make("Ping", root, Prims.Sphere, GameMaterials.UnlitGlow(GameMaterials.ColorOf(color), 3f), from, Vector3.one * 0.18f);
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.14f;
+                shot.transform.position = Vector3.Lerp(from, to, Mathf.Clamp01(t));
+                yield return null;
+            }
+            if (FXManager.Instance != null) FXManager.Instance.Sparks(to, 8);
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.MetalPing, UnityEngine.Random.Range(0.9f, 1.15f), 0.6f);
+            Vector3 away = to + (to - from).normalized * 1.6f + new Vector3(0f, 1.2f, 0f);
+            t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.25f;
+                shot.transform.position = Vector3.Lerp(to, away, Mathf.Clamp01(t));
+                yield return null;
+            }
+            Destroy(shot);
+        }
+
+        /// <summary>Slotted brass screw pinning a plate: it must be unscrewed by a turret of the screw colour first.</summary>
+        private void AddScrew(int i, PartSpec spec)
+        {
+            PartView pv = views[i];
+            bool rear = (Kind == MonumentKind.RotaryPhone || Kind == MonumentKind.PocketWatch) && spec.type == PartType.Casing;
+            GameObject sc = new GameObject("BrassScrew");
+            sc.transform.SetParent(pv.go.transform, false);
+            sc.transform.localPosition = pv.aim + (rear ? new Vector3(0.9f, 0.5f, 0.75f) : new Vector3(0.55f, 0.45f, -0.35f));
+            sc.transform.localEulerAngles = new Vector3(rear ? -90f : 90f, 0f, 0f);
+            Prims.Make("Head", sc.transform, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(0.28f, 0.035f, 0.28f));
+            Prims.Make("Slot", sc.transform, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 0.04f, 0f), new Vector3(0.22f, 0.02f, 0.045f));
+            Prims.Make("ColorRing", sc.transform, Prims.Cylinder, GameMaterials.Glow(spec.screwColor), new Vector3(0f, -0.02f, 0f), new Vector3(0.36f, 0.012f, 0.36f));
+            pv.screw = sc.transform;
+        }
+
+        private IEnumerator Unscrew(int part)
+        {
+            PartView pv = views[part];
+            if (pv.screw == null) yield break;
+            Transform sc = pv.screw;
+            pv.screw = null;
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.Ratchet);
+            if (FXManager.Instance != null) FXManager.Instance.Sparks(sc.position, 8);
+            float t = 0f;
+            Vector3 outward = sc.up;
+            while (t < 0.65f && sc != null)
+            {
+                t += Time.deltaTime;
+                sc.Rotate(0f, 900f * Time.deltaTime, 0f, Space.Self); // counter-clockwise unscrew
+                sc.position += outward * (0.55f * Time.deltaTime);
+                yield return null;
+            }
+            if (sc == null) yield break;
+            // pops out with physics
+            sc.SetParent(debrisRoot, true);
+            Rigidbody rb = sc.gameObject.AddComponent<Rigidbody>();
+            rb.mass = 0.05f;
+            BoxCollider bc = sc.gameObject.AddComponent<BoxCollider>();
+            bc.size = new Vector3(0.3f, 0.12f, 0.3f);
+            rb.AddForce((outward + Vector3.up * 1.2f + new Vector3(0f, 0f, -0.8f)) * 3.5f, ForceMode.VelocityChange);
+            rb.AddTorque(UnityEngine.Random.insideUnitSphere * 8f, ForceMode.VelocityChange);
+            if (FXManager.Instance != null) FXManager.Instance.GoldSparks(sc.position, 10);
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.DebrisClink, 1.3f, 0.5f);
+            debrisAlive++;
+            StartCoroutine(DebrisLife(sc.gameObject, 3.2f));
+            RefreshLabel(part);
+        }
+
+        private IEnumerator Pellet(Vector3 from, int target, int pierced, BlockColor color, bool mega, List<int> destroyed, List<int> detonated, List<int> unscrewed)
         {
             InFlight++;
-            Vector3 to = PartWorld(part);
+            int part = MonumentModel.PartOf(target);
+            Vector3 to = PartWorld(target);
             GameObject shot = null;
             if (!mega)
             {
@@ -455,20 +545,21 @@ namespace ColorGateBlast
                 yield return null;
             }
 
-            to = PartWorld(part);
+            to = PartWorld(target);
             if (FXManager.Instance != null)
             {
-                if (destroyed.Count == 0) FXManager.Instance.Sparks(to, 6);
+                if (destroyed.Count == 0 && unscrewed.Count == 0) FXManager.Instance.Sparks(to, 6);
                 FXManager.Instance.Shake(0.04f, 0.1f);
             }
-            if (SoundSynth.Instance != null && destroyed.Count == 0) SoundSynth.Instance.Play(Sfx.DebrisClink, UnityEngine.Random.Range(0.9f, 1.2f), 0.45f);
+            if (SoundSynth.Instance != null && destroyed.Count == 0 && unscrewed.Count == 0) SoundSynth.Instance.Play(Sfx.DebrisClink, UnityEngine.Random.Range(0.9f, 1.2f), 0.45f);
+            for (int u = 0; u < unscrewed.Count; u++) StartCoroutine(Unscrew(unscrewed[u]));
 
             if (views != null)
             {
                 if (part < views.Length) RefreshLabel(part);
                 if (pierced >= 0 && pierced < views.Length) RefreshLabel(pierced);
             }
-            if (PartDamaged != null && Model != null) PartDamaged(part, Model.Hp[part]);
+            if (PartDamaged != null && Model != null && !MonumentModel.IsScrewCode(target)) PartDamaged(part, Model.Hp[part]);
 
             if (destroyed.Count > 0) yield return StartCoroutine(BreakSequence(destroyed, detonated, to));
             InFlight--;
@@ -656,7 +747,7 @@ namespace ColorGateBlast
                 }
                 if (refreshLabels && pv.label != null && !pv.broken)
                 {
-                    bool visible = Model.IsTargetable(i);
+                    bool visible = Model.IsTargetable(i) || Model.IsScrewTargetable(i);
                     if (pv.label.gameObject.activeSelf != visible) pv.label.gameObject.SetActive(visible);
                     if (visible && cam != null) pv.label.transform.rotation = cam.transform.rotation;
                 }

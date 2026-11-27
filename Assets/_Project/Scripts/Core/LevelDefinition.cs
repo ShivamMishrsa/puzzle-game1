@@ -72,6 +72,11 @@ namespace ColorGateBlast
         /// <summary>Dual-layer "peeled" block: when it exits it respawns as a 1x1 block of <see cref="innerColor"/>.</summary>
         public bool hasInner;
         public BlockColor innerColor;
+        /// <summary>Carries a brass key: leaving through a gate unlocks every padlocked gate with the same lockId.</summary>
+        public bool hasBrassKey;
+        public int lockId;
+        /// <summary>The respawned inner core carries the brass key (opens lock <see cref="lockId"/>).</summary>
+        public bool innerHasKey;
 
         /// <summary>True while the placement still has to be given a position (x &lt; 0) - level authoring helper.</summary>
         public bool Unplaced { get { return x < 0 || y < 0; } }
@@ -114,6 +119,9 @@ namespace ColorGateBlast
         public int iceLayer;
         public bool hasInner;
         public BlockColor innerColor;
+        public bool hasKey;
+        public int lockId;
+        public bool innerKey;
         /// <summary>Index of the 1x1 block that respawns when this (dual-layer) block exits, or -1.</summary>
         public int companion = -1;
         /// <summary>True for the hidden 1x1 blocks created for dual-layer blocks (dormant until their parent exits).</summary>
@@ -151,6 +159,21 @@ namespace ColorGateBlast
         public bool isShutterGate;
         /// <summary>Initial shutter state (green LED = open, amber LED = closed).</summary>
         public bool startsOpen;
+        /// <summary>Sealed with chains and a brass padlock until the key block with the same lockId has left.</summary>
+        public bool isPadlocked;
+        public int lockId;
+        /// <summary>Clockwork piercing gate: turrets spawned here pierce the outer shell AND the layer behind it.</summary>
+        public bool isPiercingGate;
+    }
+
+    /// <summary>A pair of teleporter pads on the tray floor. Only 1x1 blocks warp; larger blocks roll over them.</summary>
+    [Serializable]
+    public struct PortalSpec
+    {
+        /// <summary>0 = Pair A (cyan), 1 = Pair B (violet).</summary>
+        public int pair;
+        public Int2 a;
+        public Int2 b;
     }
 
     /// <summary>One destructible piece of the alarm clock.</summary>
@@ -167,6 +190,9 @@ namespace ColorGateBlast
         public int layer;
         /// <summary>Bit i set = this part cannot be hit until the part at index i of the level's part list is destroyed.</summary>
         public int hiddenByMask;
+        /// <summary>Pinned down by a slotted brass screw: shots at the plate are deflected until a turret of <see cref="screwColor"/> unscrews it.</summary>
+        public bool hasScrew;
+        public BlockColor screwColor;
     }
 
     /// <summary>Where each monument part sits (monument-local x/y, used for the TNT blast radius).</summary>
@@ -191,6 +217,44 @@ namespace ColorGateBlast
                         if (slot == 0) { x = 0.0f; y = 1.0f; } else { x = 1.2f; y = 0.5f; }
                         return;
                     default: x = 0.0f; y = 1.05f; return; // Casing, Door, Cassette
+                }
+            }
+            if (kind == MonumentKind.RotaryPhone)
+            {
+                switch (type)
+                {
+                    case PartType.Handset: x = slot == 0 ? -1.3f : 1.3f; y = 2.4f; return;
+                    case PartType.Cradle: x = 0.0f; y = 2.1f; return;
+                    case PartType.Casing: x = 0.0f; y = 0.9f; return;
+                    case PartType.Dial: x = 0.0f; y = 1.5f; return;
+                    case PartType.Ringer: x = slot == 0 ? -0.7f : 0.7f; y = 1.35f; return;
+                    case PartType.Coil: x = 0.0f; y = 1.0f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 1.0f; } else { x = 1.1f; y = 0.8f; }
+                        return;
+                    default: x = 0.0f; y = 1.3f; return;
+                }
+            }
+            if (kind == MonumentKind.PocketWatch)
+            {
+                switch (type)
+                {
+                    case PartType.Button: x = 0.0f; y = 3.0f; return;
+                    case PartType.BalanceWheel: x = 0.0f; y = 1.4f; return;
+                    case PartType.Gear:
+                        if (slot == 0) { x = -0.7f; y = 1.0f; }
+                        else if (slot == 1) { x = 0.6f; y = 1.9f; }
+                        else { x = 0.0f; y = 1.0f; }
+                        return;
+                    case PartType.Ruby:
+                        if (slot == 0) { x = -0.5f; y = 1.8f; }
+                        else if (slot == 1) { x = 0.5f; y = 1.2f; }
+                        else { x = 0.0f; y = 0.9f; }
+                        return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 1.5f; } else { x = 0.9f; y = 1.9f; }
+                        return;
+                    default: x = 0.0f; y = 1.5f; return; // Casing, Glass, Dial, Hand
                 }
             }
             Position(type, slot, out x, out y);
@@ -241,6 +305,9 @@ namespace ColorGateBlast
         public List<Placement> placements = new List<Placement>();
         public List<GateSpec> gates = new List<GateSpec>();
         public List<PartSpec> parts = new List<PartSpec>();
+        public List<PortalSpec> portals = new List<PortalSpec>();
+        /// <summary>Level starts with the monument spin-hint (a 360 icon) visible.</summary>
+        public bool showRotateHint;
 
         public int GridWidth { get { return gridSize.x; } }
         public int GridHeight { get { return gridSize.y; } }
@@ -267,6 +334,9 @@ namespace ColorGateBlast
                 b.iceLayer = b.immovable ? 0 : Math.Max(0, Math.Min(2, p.iceLayer));
                 b.hasInner = p.hasInner && !b.immovable;
                 b.innerColor = p.innerColor;
+                b.hasKey = p.hasBrassKey && !b.immovable;
+                b.lockId = p.lockId;
+                b.innerKey = p.innerHasKey && b.hasInner;
                 r.Add(b);
             }
             int authored = r.Count;
@@ -278,6 +348,8 @@ namespace ColorGateBlast
                 c.cells = new Int2[] { new Int2(0, 0) };
                 c.isCompanion = true;
                 c.companionOf = i;
+                c.hasKey = r[i].innerKey;
+                c.lockId = r[i].lockId;
                 r[i].companion = r.Count;
                 r.Add(c);
             }
@@ -325,6 +397,20 @@ namespace ColorGateBlast
                 if (gt.color == BlockColor.Gray) return "gate " + g + " cannot be gray";
                 int span = (gt.direction == GateDirection.Up || gt.direction == GateDirection.Down) ? w : h;
                 if (gt.start < 0 || gt.length < 1 || gt.start + gt.length > span) return "gate " + g + " out of range";
+            }
+            for (int pi = 0; pi < portals.Count; pi++)
+            {
+                PortalSpec ps = portals[pi];
+                Int2[] ends = { ps.a, ps.b };
+                for (int e = 0; e < 2; e++)
+                {
+                    if (ends[e].x < 0 || ends[e].y < 0 || ends[e].x >= w || ends[e].y >= h) return "portal " + pi + " out of grid";
+                    for (int bi = 0; bi < blocks.Length; bi++)
+                        if (blocks[bi].IsObstacle && !blocks[bi].isCompanion)
+                            for (int c = 0; c < blocks[bi].cells.Length; c++)
+                                if (blocks[bi].origin + blocks[bi].cells[c] == ends[e]) return "portal " + pi + " is under an obstacle";
+                }
+                if (ps.a == ps.b) return "portal " + pi + " has identical ends";
             }
             if (parts.Count == 0) return "no monument parts";
             for (int i = 0; i < parts.Count; i++)

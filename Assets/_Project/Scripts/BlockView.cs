@@ -215,6 +215,15 @@ namespace ColorGateBlast
 
         public void SetHidden() { gameObject.SetActive(false); }
 
+        /// <summary>Portal warp: appear instantly at <paramref name="worldPos"/> with a pop.</summary>
+        public void TeleportTo(Vector3 worldPos)
+        {
+            smoothed = worldPos;
+            target = worldPos;
+            transform.position = worldPos + new Vector3(0f, lift, 0f);
+            StartCoroutine(Pop(1.25f, 0.28f));
+        }
+
         /// <summary>Zoom-exit: slides out through the gate while scaling down, then destroys itself.</summary>
         public void PlayExit(Vector3 worldDir, float travel, Action onDone)
         {

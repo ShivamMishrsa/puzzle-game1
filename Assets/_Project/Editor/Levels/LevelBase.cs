@@ -13,6 +13,7 @@ namespace ColorGateBlast.EditorTools
         protected const BlockColor B = BlockColor.Blue;
         protected const BlockColor Y = BlockColor.Yellow;
         protected const BlockColor X = BlockColor.Gray;
+        protected const BlockColor G = BlockColor.Green;
 
         protected const GateDirection Up = GateDirection.Up;
         protected const GateDirection Down = GateDirection.Down;
@@ -51,7 +52,17 @@ namespace ColorGateBlast.EditorTools
         /// <summary>Makes the block dual-layer: it respawns as a 1x1 of <paramref name="inner"/> after exiting.</summary>
         protected static Placement Peeled(Placement p, BlockColor inner) { p.hasInner = true; p.innerColor = inner; return p; }
 
+        /// <summary>Directional rail block: slides only along <paramref name="axis"/> (Horizontal / Vertical).</summary>
         protected static Placement Arrow(Placement p, MoveAxis axis) { p.arrow = axis; return p; }
+
+        protected const MoveAxis Horizontal = MoveAxis.Horizontal;
+        protected const MoveAxis Vertical = MoveAxis.Vertical;
+
+        /// <summary>Brass key block: when it leaves, every padlocked gate with this lock id opens.</summary>
+        protected static Placement Key(Placement p, int lockId) { p.hasBrassKey = true; p.lockId = lockId; return p; }
+
+        /// <summary>Peeled block whose respawned inner core carries the brass key for <paramref name="lockId"/>.</summary>
+        protected static Placement PeeledKey(Placement p, BlockColor inner, int lockId) { p.hasInner = true; p.innerColor = inner; p.innerHasKey = true; p.lockId = lockId; return p; }
 
         protected static GateSpec Gate(GateDirection d, int start, int length, BlockColor c)
         {
@@ -68,6 +79,22 @@ namespace ColorGateBlast.EditorTools
             return g;
         }
 
+        /// <summary>Seals the gate with chains and a brass padlock until the key with this lock id has left the tray.</summary>
+        protected static GateSpec Padlock(GateSpec g, int lockId) { g.isPadlocked = true; g.lockId = lockId; return g; }
+
+        /// <summary>Clockwork piercing gate: its turrets pierce the outer shell and the layer behind it.</summary>
+        protected static GateSpec Piercing(GateSpec g) { g.isPiercingGate = true; return g; }
+
+        protected static PortalSpec Pad(int pair, int ax, int ay, int bx, int by)
+        {
+            PortalSpec p = new PortalSpec();
+            p.pair = pair; p.a = new Int2(ax, ay); p.b = new Int2(bx, by);
+            return p;
+        }
+
+        /// <summary>Pins a monument part down with a slotted brass screw of the given colour.</summary>
+        protected static PartSpec Screw(PartSpec p, BlockColor screwColor) { p.hasScrew = true; p.screwColor = screwColor; return p; }
+
         protected static PartSpec Part(PartType t, int slot, BlockColor c, int hp, int layer)
         {
             PartSpec p = new PartSpec();
@@ -80,7 +107,7 @@ namespace ColorGateBlast.EditorTools
             LevelDefinition d = new LevelDefinition();
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
-            d.monument = id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock;
+            d.monument = id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock));
             return d;
         }
 
@@ -96,21 +123,54 @@ namespace ColorGateBlast.EditorTools
             {
                 PartSpec p = d.parts[i];
                 int mask = 0;
-                if (d.monument == MonumentKind.AlarmClock)
+                switch (d.monument)
                 {
-                    if (p.type == PartType.Gear) mask = MaskOf(d, PartType.Casing);
-                }
-                else
-                {
-                    if (p.type == PartType.Cassette) mask = MaskOf(d, PartType.Door);
-                    else if (p.type == PartType.Gear || p.type == PartType.Pcb || p.type == PartType.Tnt)
-                    {
-                        mask = MaskOf(d, PartType.Cassette);
-                        if (mask == 0) mask = MaskOf(d, PartType.Door);
-                    }
+                    case MonumentKind.AlarmClock:
+                        if (p.type == PartType.Gear) mask = MaskOf(d, PartType.Casing);
+                        break;
+                    case MonumentKind.CassettePlayer:
+                        if (p.type == PartType.Cassette) mask = MaskOf(d, PartType.Door);
+                        else if (p.type == PartType.Gear || p.type == PartType.Pcb || p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Cassette);
+                            if (mask == 0) mask = MaskOf(d, PartType.Door);
+                        }
+                        break;
+                    case MonumentKind.RotaryPhone:
+                        // stage 2: the dial sits behind the handset; stage 3 (ringer bells, coil, TNT) sits behind the dial
+                        if (p.type == PartType.Dial) mask = MaskOf(d, PartType.Handset);
+                        else if (p.type == PartType.Ringer || p.type == PartType.Coil || p.type == PartType.Tnt || p.type == PartType.Gear)
+                        {
+                            mask = MaskOf(d, PartType.Dial);
+                            if (mask == 0) mask = MaskOf(d, PartType.Handset);
+                        }
+                        break;
+                    case MonumentKind.PocketWatch:
+                        // stage 2 (dome, porcelain dial, hands) sits behind the hunter case; stage 3 behind the dial
+                        if (p.type == PartType.Glass || p.type == PartType.Dial || p.type == PartType.Hand) mask = MaskOf(d, PartType.Casing);
+                        else if (p.type == PartType.BalanceWheel || p.type == PartType.Gear || p.type == PartType.Ruby || p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Dial);
+                            if (mask == 0) mask = MaskOf(d, PartType.Casing);
+                        }
+                        break;
                 }
                 p.hiddenByMask = mask;
                 d.parts[i] = p;
+            }
+        }
+
+        /// <summary>Makes one part visible from the start (e.g. a rear TNT capacitor) regardless of the default hide rules.</summary>
+        protected static void Unhide(LevelDefinition d, PartType type, int slot)
+        {
+            for (int i = 0; i < d.parts.Count; i++)
+            {
+                if (d.parts[i].type == type && d.parts[i].slot == slot)
+                {
+                    PartSpec p = d.parts[i];
+                    p.hiddenByMask = 0;
+                    d.parts[i] = p;
+                }
             }
         }
 

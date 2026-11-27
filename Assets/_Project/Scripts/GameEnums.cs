@@ -6,7 +6,15 @@ namespace ColorGateBlast
         Red = 0,
         Blue = 1,
         Yellow = 2,
-        Gray = 3
+        Gray = 3,
+        /// <summary>Emerald Enamel Green (levels 21+).</summary>
+        Green = 4
+    }
+
+    public static class ColorCount
+    {
+        /// <summary>Number of BlockColor values (array size for per-colour tables).</summary>
+        public const int Total = 5;
     }
 
     /// <summary>Which edge of the tray a gate is on = the direction a block moves to leave through it.</summary>
@@ -56,14 +64,25 @@ namespace ColorGateBlast
         Door,
         Cassette,
         Pcb,
-        Button
+        Button,
+        // ---- Chapter 3: Vintage Rotary Phone ----
+        Handset,
+        Cradle,
+        Dial,
+        Ringer,
+        Coil,
+        // ---- Chapter 4: Antique Pocket Watch ----
+        BalanceWheel,
+        Ruby
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
     public enum MonumentKind
     {
         AlarmClock = 0,
-        CassettePlayer = 1
+        CassettePlayer = 1,
+        RotaryPhone = 2,
+        PocketWatch = 3
     }
 
     public enum LevelTier

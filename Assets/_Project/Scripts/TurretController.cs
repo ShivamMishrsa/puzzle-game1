@@ -35,6 +35,7 @@ namespace ColorGateBlast
         private bool finished;
         private float scaleMul = 1f;
         private Vector3 pos;
+        private float nextPing;
 
         public Vector3 Position { get { return pos; } }
 
@@ -194,6 +195,13 @@ namespace ColorGateBlast
             if (part < 0 || Ammo <= 0)
             {
                 if (laser != null) laser.enabled = false;
+                // a pinned plate of my colour deflects shots: harmless metallic ping (no ammo spent)
+                int pinned = (Ammo > 0 && monument != null) ? monument.FindDeflectedPlate((int)Color) : -1;
+                if (pinned >= 0 && Time.time > nextPing)
+                {
+                    nextPing = Time.time + 1.4f;
+                    monument.Deflect(pinned, head.position + head.forward * 0.9f, Color);
+                }
                 fireTimer = 0.12f;
                 return;
             }

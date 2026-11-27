@@ -14,8 +14,8 @@ namespace ColorGateBlast
     {
         public const float TrayTop = 0.3f;
 
-        /// <summary>Raised when a block leaves through a gate: (block index, world centre at exit, exit direction).</summary>
-        public event Action<int, Vector3, GateDirection> BlockExited;
+        /// <summary>Raised when a block leaves through a gate: (block index, world centre at exit, exit direction, gate is a Clockwork Piercing Gate).</summary>
+        public event Action<int, Vector3, GateDirection, bool> BlockExited;
         /// <summary>Raised once per finished drag that changed the board (costs one move).</summary>
         public event Action MoveCommitted;
         /// <summary>Short feedback strings ("Frozen!", "Track full!").</summary>
@@ -37,6 +37,7 @@ namespace ColorGateBlast
             public Vector3 closedScale, openScale;
             public bool lastOpen;
             public Vector3 center;
+            public GameObject lockVisual;
         }
 
         private Camera cam;
@@ -379,9 +380,13 @@ namespace ColorGateBlast
                     StepResult r = board.Probe(dragging, cur, dir);
                     if (r == StepResult.Moved)
                     {
-                        cur = cur + dir;
+                        Int2 landing = board.Land(dragging, cur, dir);
+                        bool warped = landing != cur + dir;
+                        Int2 before = cur;
+                        cur = landing;
                         board.Commit(dragging, cur);
-                        views[dragging].SetTarget(CellWorld(cur));
+                        if (warped) WarpEffect(dragging, before + dir, cur);
+                        else views[dragging].SetTarget(CellWorld(cur));
                         stepped = true;
                         if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.BlockSnap, UnityEngine.Random.Range(0.95f, 1.1f), 0.5f);
                         if (FXManager.Instance != null) FXManager.Instance.Haptic();
@@ -409,7 +414,7 @@ namespace ColorGateBlast
             GateDirection gd = Dirs.From(dir);
 
             ExitEffects fx = new ExitEffects();
-            board.ExitBlock(i, fx);
+            board.ExitBlock(i, fx, gd, startPos, board.Pos[i]);
             views[i] = null;
             dragging = -1;
             dragExited = true;
@@ -434,7 +439,8 @@ namespace ColorGateBlast
             if (fx.spawned >= 0 && views[fx.spawned] != null) views[fx.spawned].Appear(CellWorld(fx.spawnCell));
             if (fx.shutterToggled) UpdateShutters(true);
 
-            if (BlockExited != null) BlockExited(i, center, gd);
+            if (fx.unlockedLock >= 0) UnlockPadlocks(fx.unlockedLock, center);
+            if (BlockExited != null) BlockExited(i, center, gd, fx.piercing);
             if (MoveCommitted != null) MoveCommitted();
         }
 
@@ -446,6 +452,71 @@ namespace ColorGateBlast
             if (idx < 0 || views == null || views[idx] == null) return;
             views[idx].SetLifted(false);
             if (!dragExited && board.Pos[idx] != startPos && MoveCommitted != null) MoveCommitted();
+        }
+
+        // ------------------------------------------------------------------ portals, padlocks (visual hooks)
+
+        /// <summary>A 1x1 block stepped onto a pad: zap out of the entry pad and appear at the partner pad.</summary>
+        private void WarpEffect(int blockIndex, Int2 entryPad, Int2 exitPad)
+        {
+            Vector3 a = CellWorld(entryPad), b = CellWorld(exitPad);
+            if (FXManager.Instance != null)
+            {
+                FXManager.Instance.Burst(FxKind.Spark, a + new Vector3(0f, 0.4f, 0f), 14, new Color(0.4f, 0.9f, 1f), 4f, 1f);
+                FXManager.Instance.Burst(FxKind.Spark, b + new Vector3(0f, 0.4f, 0f), 14, new Color(0.8f, 0.5f, 1f), 4f, 1f);
+                FXManager.Instance.Haptic();
+            }
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PortalZap);
+            views[blockIndex].TeleportTo(b);
+        }
+
+        /// <summary>Called when a brass key block leaves: opens the padlocked gates with that lock id.</summary>
+        private void UnlockPadlocks(int lockId, Vector3 keyFrom)
+        {
+            for (int g = 0; g < gateViews.Count; g++)
+            {
+                GateView gv = gateViews[g];
+                if (!gv.spec.isPadlocked || gv.spec.lockId != lockId) continue;
+                StartCoroutine(KeyFlight(gv, keyFrom));
+            }
+        }
+
+        private IEnumerator KeyFlight(GateView gv, Vector3 from)
+        {
+            GameObject key = Prims.Make("FlyingKey", root, Prims.Sphere, GameMaterials.Brass, from + new Vector3(0f, 0.8f, 0f), Vector3.one * 0.3f);
+            Prims.Make("Shaft", key.transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, -1.6f, 0f), new Vector3(0.35f, 1.4f, 0.35f));
+            Vector3 to = gv.center + new Vector3(0f, 0.5f, 0f);
+            Vector3 start = key.transform.position;
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.7f;
+                float e = Mathf.Clamp01(t);
+                Vector3 p = Vector3.Lerp(start, to, e);
+                p.y += Mathf.Sin(e * Mathf.PI) * 3.2f; // 3D arc
+                key.transform.position = p;
+                key.transform.Rotate(0f, 540f * Time.deltaTime, 0f, Space.World);
+                yield return null;
+            }
+            Destroy(key);
+            if (FXManager.Instance != null) FXManager.Instance.GoldSparks(to, 28);
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PadlockSnap);
+            if (gv.lockVisual != null)
+            {
+                // the padlock snaps open and the chains drop with gravity
+                for (int c = 0; c < gv.lockVisual.transform.childCount; c++)
+                {
+                    Transform ch = gv.lockVisual.transform.GetChild(c);
+                    Rigidbody rb = ch.gameObject.AddComponent<Rigidbody>();
+                    rb.mass = 0.2f;
+                    ch.gameObject.AddComponent<BoxCollider>();
+                    rb.AddForce(new Vector3(UnityEngine.Random.Range(-1f, 1f), 2f, UnityEngine.Random.Range(-1f, 0.5f)), ForceMode.Impulse);
+                }
+                gv.lockVisual.transform.DetachChildren();
+                Destroy(gv.lockVisual, 0.1f);
+                gv.lockVisual = null;
+            }
+            if (Message != null) Message("Padlock unlocked!");
         }
 
         // ------------------------------------------------------------------ trajectory preview

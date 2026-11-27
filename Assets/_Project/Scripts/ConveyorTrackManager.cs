@@ -266,7 +266,11 @@ namespace ColorGateBlast
 
             TurretController t = TurretController.Create(this, monument, root, color, ammo, s0, fromWorld, piercing);
             turrets.Add(t);
-            if (existing != null) existing.MergeInto(t);
+            if (existing != null)
+            {
+                if (existing.Piercing) t.Piercing = true;
+                existing.MergeInto(t);
+            }
             if (SlotsChanged != null) SlotsChanged();
         }
 
