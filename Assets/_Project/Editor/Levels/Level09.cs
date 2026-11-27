@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(9, "The Wall", 6, 6, 14, 3, LevelTier.Normal, "Two TNT boxes chain together - find the order that lights the fuse.");
+            LevelDefinition d = Make(9, "The Wall", 6, 6, 11, 3, LevelTier.Normal, "Two TNT boxes chain together - find the order that lights the fuse.");
             d.placements.Add(Scrap(4, 1, 1, 3));
             d.placements.Add(Rect(R, 2, 1, 2, 0));
             d.placements.Add(Rect(Y, 2, 1, 4, 0));
