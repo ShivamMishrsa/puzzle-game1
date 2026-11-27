@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(50, "Espresso Finale", 7, 7, 23, 4, LevelTier.ChapterBoss, "Rotate the machine for the rear bolt. Snap both welds, time the steam, blow the dynamite!");
+            LevelDefinition d = Make(50, "Espresso Finale", 7, 7, 20, 4, LevelTier.ChapterBoss, "Rotate the machine for the rear bolt. Snap both welds, time the steam, blow the dynamite!");
             d.showRotateHint = true;
             d.reward = "Chapter 5 Complete: Vintage Espresso Machine Dismantled! Espresso Machine trophy placed on your workshop shelf.";
             d.placements.Add(Scrap(1, 2, 3, 3));
