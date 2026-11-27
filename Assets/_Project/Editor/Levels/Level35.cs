@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(35, "Escapement Trap", 7, 7, 20, 4, LevelTier.MiniBoss, "The key is walled in: warp it out through the portal. Stuck? Use the hint!");
+            LevelDefinition d = Make(35, "Escapement Trap", 7, 7, 15, 4, LevelTier.MiniBoss, "The key is walled in: warp it out through the portal. Stuck? Use the hint!");
             d.placements.Add(Scrap(1, 2, 2, 5));
             d.placements.Add(Scrap(2, 1, 0, 4));
             d.placements.Add(Key(Rect(B, 1, 1, 0, 6), 0));
