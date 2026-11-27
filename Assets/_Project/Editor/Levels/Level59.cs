@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(59, "Shutter Speed", 7, 7, 18, 4, LevelTier.Normal, "Ice, welds, prisms and magnets - plan two moves ahead!");
+            LevelDefinition d = Make(59, "Shutter Speed", 7, 7, 16, 4, LevelTier.Normal, "Ice, welds, prisms and magnets - plan two moves ahead!");
             d.placements.Add(Scrap(2, 2, 2, 2));
             d.placements.Add(Scrap(1, 1, 5, 5));
             d.placements.Add(Rect(Y, 2, 2, 0, 3));
