@@ -174,6 +174,20 @@ namespace ColorGateBlast.EditorTools
             }
         }
 
+        /// <summary>Additionally hides one part behind every part of another type (e.g. the TNT behind the phone casing).</summary>
+        protected static void HideBehind(LevelDefinition d, PartType type, int slot, PartType by)
+        {
+            for (int i = 0; i < d.parts.Count; i++)
+            {
+                if (d.parts[i].type == type && d.parts[i].slot == slot)
+                {
+                    PartSpec p = d.parts[i];
+                    p.hiddenByMask |= MaskOf(d, by);
+                    d.parts[i] = p;
+                }
+            }
+        }
+
         private static int MaskOf(LevelDefinition d, PartType type)
         {
             int mask = 0;

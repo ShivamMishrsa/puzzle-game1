@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
@@ -18,6 +18,9 @@ namespace ColorGateBlast.EditorTools
 
         [MenuItem("Tools/Color Gate Blast/Generate Levels 11-20", false, 11)]
         public static void Generate11To20() { GenerateRange(11, 20); }
+
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 21-30", false, 12)]
+        public static void Generate21To30() { GenerateRange(21, 30); }
 
         [MenuItem("Tools/Color Gate Blast/Verify All Levels (solver)", false, 30)]
         public static void VerifyAll()
@@ -128,3 +131,4 @@ namespace ColorGateBlast.EditorTools
         }
     }
 }
+

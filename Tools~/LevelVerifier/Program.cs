@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using ColorGateBlast;
@@ -6,7 +6,7 @@ using ColorGateBlast.EditorTools;
 
 class Program
 {
-    static string C(BlockColor c) { return c == BlockColor.Red ? "R" : c == BlockColor.Blue ? "B" : c == BlockColor.Yellow ? "Y" : "X"; }
+    static string C(BlockColor c) { return c == BlockColor.Red ? "R" : c == BlockColor.Blue ? "B" : c == BlockColor.Yellow ? "Y" : c == BlockColor.Green ? "G" : "X"; }
 
     static string Fmt(Placement p)
     {
@@ -14,8 +14,12 @@ class Program
         if (p.locked) s = "Scrap(" + p.width + ", " + p.height + ", " + p.x + ", " + p.y + ")";
         else if (p.shape == BlockShape.L) s = "Ell(" + C(p.color) + ", " + p.rotation + ", " + p.x + ", " + p.y + ")";
         else s = "Rect(" + C(p.color) + ", " + p.width + ", " + p.height + ", " + p.x + ", " + p.y + ")";
+        if (p.arrow == MoveAxis.Horizontal) s = "Arrow(" + s + ", Horizontal)";
+        if (p.arrow == MoveAxis.Vertical) s = "Arrow(" + s + ", Vertical)";
         if (p.iceLayer > 0) s = "Ice(" + s + ", " + p.iceLayer + ")";
-        if (p.hasInner) s = "Peeled(" + s + ", " + C(p.innerColor) + ")";
+        if (p.hasInner && p.innerHasKey) s = "PeeledKey(" + s + ", " + C(p.innerColor) + ", " + p.lockId + ")";
+        else if (p.hasInner) s = "Peeled(" + s + ", " + C(p.innerColor) + ")";
+        if (p.hasBrassKey) s = "Key(" + s + ", " + p.lockId + ")";
         return s;
     }
 
@@ -23,7 +27,7 @@ class Program
     {
         LevelDefinition d = new LevelDefinition();
         d.levelID = t.levelID; d.gridSize = t.gridSize; d.moveLimit = t.moveLimit; d.maxTrackSlots = t.maxTrackSlots;
-        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts;
+        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals;
         return d;
     }
 
@@ -219,5 +223,6 @@ class Program
         Verify(from, to);
     }
 }
+
 
 

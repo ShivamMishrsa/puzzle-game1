@@ -80,30 +80,31 @@ namespace ColorGateBlast
         public bool IsScrewTargetable(int i) { return Hp[i] > 0 && Screw[i] && !IsHidden(i); }
 
         /// <summary>
-        /// The target a turret of this colour shoots next (lowest layer first; screws before plates; then lowest index),
-        /// or -1. See the class comment for the encoding.
+        /// The target a turret of this colour shoots next, or -1. Turrets UNSCREW first: any visible brass screw of
+        /// their colour is hit before plates (lowest layer, then lowest index); otherwise the plate with the lowest
+        /// layer and index. See the class comment for the encoding.
         /// </summary>
         public int FindTarget(int color)
         {
-            int best = -1;
-            int bestLayer = int.MaxValue;
-            bool bestScrew = false;
+            int bestScrew = -1, bestScrewLayer = int.MaxValue;
+            int bestPlate = -1, bestPlateLayer = int.MaxValue;
             for (int i = 0; i < Parts.Length; i++)
             {
                 if (Hp[i] <= 0 || IsHidden(i)) continue;
                 int layer = Parts[i].layer;
-                bool screwCandidate = Screw[i] && (int)Parts[i].screwColor == color;
-                bool plateCandidate = !Screw[i] && (int)Parts[i].color == color;
-                if (!screwCandidate && !plateCandidate) continue;
-                bool better = best < 0 || layer < bestLayer || (layer == bestLayer && screwCandidate && !bestScrew);
-                if (better)
+                if (Screw[i] && (int)Parts[i].screwColor == color && layer < bestScrewLayer)
                 {
-                    best = screwCandidate ? ScrewBase + i : i;
-                    bestLayer = layer;
-                    bestScrew = screwCandidate;
+                    bestScrew = i;
+                    bestScrewLayer = layer;
+                }
+                if (!Screw[i] && (int)Parts[i].color == color && layer < bestPlateLayer)
+                {
+                    bestPlate = i;
+                    bestPlateLayer = layer;
                 }
             }
-            return best;
+            if (bestScrew >= 0) return ScrewBase + bestScrew;
+            return bestPlate;
         }
 
         /// <summary>Parts of this colour still alive plus screws of this colour still attached: used to retire useless turrets.</summary>
