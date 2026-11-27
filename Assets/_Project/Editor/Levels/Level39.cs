@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(39, "Pre-Boss Chronometer", 7, 7, 21, 4, LevelTier.Normal, "Ice, portals, shutters and three screws - the chronometer wants everything.");
+            LevelDefinition d = Make(39, "Pre-Boss Chronometer", 7, 7, 17, 4, LevelTier.Normal, "Ice, portals, shutters and three screws - the chronometer wants everything.");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Scrap(1, 1, 2, 5));
             d.placements.Add(Ice(Rect(G, 2, 2, 5, 3), 2));
