@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(22, "Dual-Key Dominoes", 6, 6, 16, 5, LevelTier.Normal, "Key one opens gate one. Key two leaves through it and opens gate two!");
+            LevelDefinition d = Make(22, "Dual-Key Dominoes", 6, 6, 10, 5, LevelTier.Normal, "Key one opens gate one. Key two leaves through it and opens gate two!");
             d.placements.Add(Scrap(1, 1, 2, 3));
             d.placements.Add(Rect(R, 2, 1, 3, 5));
             d.placements.Add(Rect(G, 2, 1, 2, 4));
