@@ -23,12 +23,16 @@ See `docs/PLAYTEST.md` for the in-Unity checklist (what the solver cannot prove:
 | 4 | 31-40 | Antique Pocket Watch | teleporter portal pads, clockwork piercing gates |
 | 3 | 21-30 | Vintage Rotary Phone | Green, brass screw-bolts, key blocks + padlocked gates, rail blocks, Overdrive |
 
+## Play in the browser
+See `docs/WEBGL.md` (GitHub Actions auto-build, or a local one-click build into `docs/play`). Link after publishing: https://shivammishrsa.github.io/puzzle-game1/
+
 ## Verify levels without Unity
 See `Tools~/LevelVerifier/README.md`.
 
 ## In Unity
 `Tools > Color Gate Blast > Generate Levels 1-10` (and `11-20`) writes `Resources/Levels/Level_NNN.asset`, saving a
 level only if the solver proves it winnable in its move limit. `Verify All Levels (solver)` re-checks them.
+
 
 
 

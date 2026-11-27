@@ -1,4 +1,4 @@
-// Minimal UnityEditor / URP surface for compile-checking the Editor scripts (signatures only).
+﻿// Minimal UnityEditor / URP surface for compile-checking the Editor scripts (signatures only).
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -87,7 +87,8 @@ namespace UnityEditor
     }
     public static class PlayerSettings
     {
-        public static string productName, bundleVersion;
+        public static string productName, bundleVersion; public static int defaultWebScreenWidth, defaultWebScreenHeight;
+        public static class WebGL { public static WebGLCompressionFormat compressionFormat; public static bool decompressionFallback, dataCaching; public static WebGLExceptionSupport exceptionSupport; }
         public static UIOrientation defaultInterfaceOrientation;
         public static bool allowedAutorotateToPortrait, allowedAutorotateToPortraitUpsideDown, allowedAutorotateToLandscapeLeft, allowedAutorotateToLandscapeRight;
         public static void SetApplicationIdentifier(Build.NamedBuildTarget t, string id) { }
@@ -105,6 +106,20 @@ namespace UnityEditor
     public enum AndroidArchitecture { ARM64 }
     public enum ScriptingImplementation { IL2CPP }
     public static class EditorUserBuildSettings { public static bool buildAppBundle; }
+    public enum WebGLCompressionFormat { Disabled }
+    public enum WebGLExceptionSupport { None }
+    public enum BuildTarget { WebGL }
+    [Flags] public enum BuildOptions { None = 0 }
+    public struct BuildPlayerOptions { public string[] scenes; public string locationPathName; public BuildTarget target; public BuildOptions options; }
+    namespace Build.Reporting
+    {
+        public enum BuildResult { Succeeded, Failed }
+        public class BuildSummary { public BuildResult result; public int totalErrors; public ulong totalSize; }
+        public class BuildReport { public BuildSummary summary; }
+    }
+    public static class BuildPipeline { public static Build.Reporting.BuildReport BuildPlayer(BuildPlayerOptions o) { return null; } }
+    public static class EditorApplication { public static void Exit(int c) { } }
     public class EditorBuildSettingsScene { public EditorBuildSettingsScene(string p, bool e) { } }
     public static class EditorBuildSettings { public static EditorBuildSettingsScene[] scenes; }
 }
+

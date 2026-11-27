@@ -17,14 +17,19 @@ namespace ColorGateBlast.EditorTools
     public static class EditorSetupColorGateBlast
     {
         private const string Root = "Assets/_Project";
-        private const string ScenePath = Root + "/Scenes/Main.unity";
+        public const string ScenePath = Root + "/Scenes/Main.unity";
         private const string AdMobSymbol = "GOOGLE_MOBILE_ADS";
 
         [MenuItem("Tools/Color Gate Blast/Setup Phase 1", false, 1)]
         public static void SetupPhase1()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            SetupPhase1Silent();
+        }
 
+        /// <summary>Same as the menu item but never shows a dialog (used by WebBuild / CI in batch mode).</summary>
+        public static void SetupPhase1Silent()
+        {
             EnsureFolder(Root + "/Scenes");
             EnsureFolder(Root + "/Settings");
             EnsureFolder(Root + "/Resources/Levels");

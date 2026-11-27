@@ -43,8 +43,13 @@ namespace ColorGateBlast
             if (pending != null || grid == null || grid.Board == null || monument.Model == null) return;
             ClearHint();
             PuzzleState snap = new PuzzleState(grid.Level, grid.Board, monument.Model, track.Snapshot());
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // WebGL has no threads: solve on the main thread with a smaller budget so the page stays responsive.
+            Present(LevelSolver.Solve(snap, 8000, 40000));
+#else
             pending = Task<LevelSolver.SolveResult>.Factory.StartNew(delegate () { return LevelSolver.Solve(snap, 20000, 150000); });
             if (Message != null) Message("Thinking...");
+#endif
         }
 
         private void Update()

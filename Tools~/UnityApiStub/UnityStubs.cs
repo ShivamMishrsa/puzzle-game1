@@ -226,7 +226,7 @@ namespace UnityEngine
         public static void LogWarning(object o) { }
         public static void LogError(object o) { }
     }
-    public static class Application { public static bool isEditor, isPlaying; public static int targetFrameRate; }
+    public static class Application { public static bool isEditor, isPlaying, isBatchMode; public static int targetFrameRate; public static string dataPath; }
     public static class Screen { public static int width, height; }
     public static class Resources
     {
@@ -377,6 +377,7 @@ namespace UnityEngine
         public class Outline : Behaviour { public Color effectColor; public Vector2 effectDistance; }
     }
 }
+
 
 
 
