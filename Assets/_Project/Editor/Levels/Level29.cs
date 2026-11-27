@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(29, "Pre-Boss Locksmith", 7, 7, 20, 4, LevelTier.Normal, "Ice, rails, a shutter and a padlock - all around the iron pillar.");
+            LevelDefinition d = Make(29, "Pre-Boss Locksmith", 7, 7, 13, 4, LevelTier.Normal, "Ice, rails, a shutter and a padlock - all around the iron pillar.");
             d.placements.Add(Scrap(1, 3, 3, 2));
             d.placements.Add(Ice(Rect(G, 2, 2, 0, 5), 2));
             d.placements.Add(Rect(Y, 2, 1, 3, 6));
