@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(46, "Steam Cascade", 7, 7, 11, 5, LevelTier.Normal, "Rail blocks slide one way only. Chain three of a colour for an Overdrive surge!");
+            LevelDefinition d = Make(46, "Steam Cascade", 7, 7, 9, 5, LevelTier.Normal, "Rail blocks slide one way only. Chain three of a colour for an Overdrive surge!");
             d.placements.Add(Rect(Y, 2, 1, 3, 6));
             d.placements.Add(Rect(G, 2, 1, 1, 0));
             d.placements.Add(Rect(G, 1, 2, 2, 1));
