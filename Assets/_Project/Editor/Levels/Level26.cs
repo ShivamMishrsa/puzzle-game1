@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(26, "Rail Curtain", 7, 7, 10, 5, LevelTier.Normal, "Slide the central key down. The curtain of rail blocks follows!");
+            LevelDefinition d = Make(26, "Rail Curtain", 7, 7, 6, 5, LevelTier.Normal, "Slide the central key down. The curtain of rail blocks follows!");
             d.placements.Add(Key(Rect(B, 1, 1, 3, 3), 0));
             d.placements.Add(Arrow(Rect(R, 2, 1, 1, 3), Horizontal));
             d.placements.Add(Arrow(Rect(R, 2, 1, 4, 3), Horizontal));
