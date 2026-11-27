@@ -59,9 +59,9 @@
     var buildUrl = "Build";
     var config = {
       arguments: [],
-      dataUrl: buildUrl + "/webout.data",
-      frameworkUrl: buildUrl + "/webout.framework.js",
-      codeUrl: buildUrl + "/webout.wasm",
+      dataUrl: buildUrl + "/webout.data.unityweb",
+      frameworkUrl: buildUrl + "/webout.framework.js.unityweb",
+      codeUrl: buildUrl + "/webout.wasm.unityweb",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "Color Gate Blast",
@@ -78,6 +78,7 @@
         document.querySelector("#unity-progress-bar-full").style.width = (100 * progress) + "%";
       }).then(function (unityInstance) {
         document.querySelector("#unity-loading-bar").style.display = "none";
+        window.unityInstance = unityInstance;
         document.querySelector("#unity-fullscreen").onclick = function () { unityInstance.SetFullscreen(1); };
       }).catch(function (message) { alert(message); });
     };
