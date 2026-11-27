@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #120f0f; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center; font-family: system-ui, Segoe UI, Arial, sans-serif; color: #f3eadf; }
+    #unity-container { position: relative; }
+    #unity-canvas { display: block; background: #120f0f; touch-action: none; }
+    #unity-loading-bar { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: #120f0f; }
+    #unity-loading-bar h1 { margin: 0 0 18px; font-size: 1.6rem; letter-spacing: .04em; }
+    #unity-progress-bar-empty { width: 60%; max-width: 320px; height: 14px; border-radius: 8px; background: #3a3030; overflow: hidden; }
+    #unity-progress-bar-full { width: 0%; height: 100%; background: #3f7cf4; }
+    #unity-hint { margin-top: 14px; font-size: .85rem; opacity: .7; }
+    #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; color: #111; padding: 10px; display: none; }
+    #unity-fullscreen { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; border-radius: 8px; background: #ffffff22; cursor: pointer; text-align: center; line-height: 32px; font-size: 18px; user-select: none; }
+  </style>
+</head>
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="unity-loading-bar">
+      <h1>Color Gate Blast</h1>
+      <div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div>
+      <div id="unity-hint">Loading... tap the game once to enable sound.</div>
+    </div>
+    <div id="unity-warning"></div>
+    <div id="unity-fullscreen" title="Fullscreen">&#x26F6;</div>
+  </div>
+  <script>
+    var canvas = document.querySelector("#unity-canvas");
+    var container = document.querySelector("#unity-container");
+
+    // Keep a 9:16 portrait canvas that fits the window (desktop and phones).
+    function fit() {
+      var w = window.innerWidth, h = window.innerHeight;
+      var cw = Math.min(w, h * 9 / 16);
+      var ch = cw * 16 / 9;
+      canvas.style.width = Math.floor(cw) + "px";
+      canvas.style.height = Math.floor(ch) + "px";
+      container.style.width = Math.floor(cw) + "px";
+      container.style.height = Math.floor(ch) + "px";
+    }
+    fit();
+    window.addEventListener("resize", fit);
+
+    function unityShowBanner(msg, type) {
+      var banner = document.querySelector("#unity-warning");
+      var div = document.createElement("div");
+      div.innerHTML = msg;
+      banner.appendChild(div);
+      banner.style.display = "block";
+      if (type != "error") setTimeout(function () { banner.removeChild(div); banner.style.display = banner.children.length ? "block" : "none"; }, 5000);
+    }
+
+    var buildUrl = "Build";
+    var config = {
+      arguments: [],
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}",
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      showBanner: unityShowBanner
+    };
+
+    document.querySelector("#unity-loading-bar").style.display = "flex";
+    var script = document.createElement("script");
+    script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (progress) {
+        document.querySelector("#unity-progress-bar-full").style.width = (100 * progress) + "%";
+      }).then(function (unityInstance) {
+        document.querySelector("#unity-loading-bar").style.display = "none";
+        document.querySelector("#unity-fullscreen").onclick = function () { unityInstance.SetFullscreen(1); };
+      }).catch(function (message) { alert(message); });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>

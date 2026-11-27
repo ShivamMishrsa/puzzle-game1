@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 
 namespace ColorGateBlast
@@ -33,9 +34,10 @@ namespace ColorGateBlast
         [Header("World layout (table plane y = 0, +z away from the player)")]
         public Vector3 trayCenter = new Vector3(0f, 0f, -3.3f);
         public Vector3 monumentAnchor = new Vector3(0f, 0f, 4.5f);
-        public Vector3 cameraTarget = new Vector3(0f, 0.8f, 0.9f);
-        public float cameraPitch = 62f;
-        public float cameraDistance = 24f;
+        public Vector3 cameraTarget = new Vector3(0f, 0.8f, 2.0f);
+        public float cameraPitch = 50f;
+        public float cameraDistance = 28f;
+        private int urlLevel = -1;
 
         private enum LoseKind { OutOfMoves, TrackJam, NoMoves, NoAmmo }
 
@@ -64,8 +66,42 @@ namespace ColorGateBlast
             if (cam == null) cam = Camera.main;
         }
 
+        /// <summary>
+        /// WebGL only: the page URL can override the framing and the start level, e.g.
+        /// index.html?pitch=55&amp;dist=27&amp;tx=0&amp;ty=0.8&amp;tz=1.5&amp;mz=4.5&amp;level=21
+        /// (handy for tuning the camera without rebuilding).
+        /// </summary>
+        private void ApplyUrlOverrides()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            string url = Application.absoluteURL;
+            int q = url.IndexOf('?');
+            if (q < 0) return;
+            string[] pairs = url.Substring(q + 1).Split('&');
+            for (int i = 0; i < pairs.Length; i++)
+            {
+                string[] kv = pairs[i].Split('=');
+                if (kv.Length != 2) continue;
+                float v;
+                if (!float.TryParse(kv[1], NumberStyles.Float, CultureInfo.InvariantCulture, out v)) continue;
+                switch (kv[0])
+                {
+                    case "pitch": cameraPitch = v; break;
+                    case "dist": cameraDistance = v; break;
+                    case "tx": cameraTarget.x = v; break;
+                    case "ty": cameraTarget.y = v; break;
+                    case "tz": cameraTarget.z = v; break;
+                    case "mz": monumentAnchor.z = v; break;
+                    case "bz": trayCenter.z = v; break;
+                    case "level": urlLevel = (int)v; break;
+                }
+            }
+#endif
+        }
+
         private void Start()
         {
+            ApplyUrlOverrides();
             ConfigureCamera();
             BuildTable();
             if (fx != null) fx.SetCamera(cam);
@@ -95,7 +131,7 @@ namespace ColorGateBlast
                 return;
             }
 
-            int wanted = PlayerPrefs.GetInt(LevelPref, 1);
+            int wanted = urlLevel > 0 ? urlLevel : PlayerPrefs.GetInt(LevelPref, 1);
             int start = 0;
             for (int i = 0; i < levels.Length; i++) if (levels[i].LevelNumber <= wanted) start = i;
             StartLevel(start);

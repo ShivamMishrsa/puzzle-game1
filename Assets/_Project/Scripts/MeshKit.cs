@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace ColorGateBlast
@@ -173,9 +173,23 @@ namespace ColorGateBlast
         public static Mesh Cylinder { get { if (cylinder == null) cylinder = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx"); return cylinder; } }
         public static Mesh Capsule { get { if (capsule == null) capsule = Resources.GetBuiltinResource<Mesh>("Capsule.fbx"); return capsule; } }
 
+        /// <summary>
+        /// Unity's built-in primitive MESH FILES are bigger than the CreatePrimitive versions: sphere and cylinder are 2 units
+        /// across, the capsule is 2 x 4. Every scale in this project is written for the standard sizes (sphere 1, cylinder
+        /// 1 x 2, capsule 1 x 2, cube 1), so Make() compensates here once.
+        /// </summary>
+        private static Vector3 Compensate(Mesh mesh, Vector3 s)
+        {
+            if (mesh == sphere) return s * 0.5f;
+            if (mesh == cylinder) return new Vector3(s.x * 0.5f, s.y, s.z * 0.5f);
+            if (mesh == capsule) return s * 0.5f;
+            return s;
+        }
+
         /// <summary>Creates a child object showing a mesh with a material (no collider).</summary>
         public static GameObject Make(string name, Transform parent, Mesh mesh, Material mat, Vector3 localPos, Vector3 localScale)
         {
+            localScale = Compensate(mesh, localScale);
             GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;

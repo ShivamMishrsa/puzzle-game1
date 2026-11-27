@@ -219,7 +219,7 @@ namespace ColorGateBlast
                     led.transform.SetParent(go.transform, false);
                     Vector3 side = horiz ? new Vector3(0f, 0f, (gs.direction == GateDirection.Up ? 1f : -1f) * (thick * 0.62f)) : new Vector3((gs.direction == GateDirection.Right ? 1f : -1f) * (thick * 0.62f), 0f, 0f);
                     led.transform.position = new Vector3(c.x, TrayTop + 0.5f, c.z) + side;
-                    led.transform.localScale = Vector3.one * (cs * 0.16f);
+                    led.transform.localScale = Vector3.one * (cs * 0.08f); // built-in sphere mesh is 2 units across
                     led.AddComponent<MeshFilter>().sharedMesh = Prims.Sphere;
                     gv.led = led.AddComponent<MeshRenderer>();
                 }

@@ -41,6 +41,7 @@ namespace ColorGateBlast.EditorTools
             PlayerSettings.WebGL.decompressionFallback = false;
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.None;
             PlayerSettings.WebGL.dataCaching = true;
+            PlayerSettings.WebGL.template = "PROJECT:ColorGateBlast";
             PlayerSettings.defaultWebScreenWidth = 540;
             PlayerSettings.defaultWebScreenHeight = 960;
             PlayerSettings.productName = "Color Gate Blast";

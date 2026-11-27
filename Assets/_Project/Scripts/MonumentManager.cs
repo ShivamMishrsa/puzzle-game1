@@ -27,6 +27,9 @@ namespace ColorGateBlast
             public Transform screw;     // slotted brass screw pinning this part (null when none / removed)
         }
 
+        /// <summary>The monument is built at a modelling scale of about 3 units; this makes it fill the upper half of the screen.</summary>
+        public const float MonumentScale = 1.5f;
+
         public MonumentModel Model { get; private set; }
         public int InFlight { get; private set; }
         public int AliveCount { get { return Model == null ? 0 : Model.AliveCount; } }
@@ -94,7 +97,7 @@ namespace ColorGateBlast
             debrisRoot.SetParent(root, false);
 
             // brass turntable the monument rotates on
-            GameObject turntable = Prims.Make("Turntable", root, Prims.Cylinder, GameMaterials.Brass, anchor + new Vector3(0f, 0.12f, 0f), new Vector3(4.4f, 0.12f, 4.4f));
+            GameObject turntable = Prims.Make("Turntable", root, Prims.Cylinder, GameMaterials.Brass, anchor + new Vector3(0f, 0.1f, 0f), new Vector3(3.6f * MonumentScale, 0.1f, 3.6f * MonumentScale));
             Prims.Make("TurntableRim", turntable.transform, Prims.Cylinder, GameMaterials.Steel, new Vector3(0f, 0.55f, 0f), new Vector3(0.88f, 0.4f, 0.88f));
             BoxCollider tc = turntable.AddComponent<BoxCollider>();
             tc.size = new Vector3(1f, 2f, 1f);
@@ -108,6 +111,7 @@ namespace ColorGateBlast
             pivot = new GameObject("Pivot").transform;
             pivot.SetParent(root, false);
             pivot.position = anchor + new Vector3(0f, 0.24f, 0f);
+            pivot.localScale = Vector3.one * MonumentScale;
 
             views = new PartView[Model.Parts.Length];
             for (int i = 0; i < views.Length; i++)
