@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(34, "Twin Portals", 7, 7, 18, 5, LevelTier.Normal, "Two portal pairs and steel rails: 1x1 blocks warp, rail blocks only slide on their guide.");
+            LevelDefinition d = Make(34, "Twin Portals", 7, 7, 12, 5, LevelTier.Normal, "Two portal pairs and steel rails: 1x1 blocks warp, rail blocks only slide on their guide.");
             d.placements.Add(Scrap(1, 1, 3, 3));
             d.placements.Add(Rect(Y, 2, 2, 3, 5));
             d.placements.Add(Rect(B, 2, 1, 1, 1));
