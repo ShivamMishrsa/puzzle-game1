@@ -37,6 +37,11 @@ namespace ColorGateBlast
         public bool piercing;
         /// <summary>Bonus ammo from a Pressurized steam gate (+2), else 0.</summary>
         public int bonusAmmo;
+        /// <summary>Crated blocks that burst open because a neighbour left.</summary>
+        public readonly List<int> revealed = new List<int>();
+        /// <summary>Blocks that a carriage row slid by one tile (and where they came from).</summary>
+        public readonly List<int> shifted = new List<int>();
+        public readonly List<Int2> shiftedFrom = new List<Int2>();
         /// <summary>Index of the welded partner that was freed by this exit, or -1.</summary>
         public int linkBroken = -1;
 
@@ -44,6 +49,9 @@ namespace ColorGateBlast
         {
             bonusAmmo = 0;
             linkBroken = -1;
+            revealed.Clear();
+            shifted.Clear();
+            shiftedFrom.Clear();
             thawed.Clear();
             spawned = -1;
             shutterToggled = false;
@@ -80,6 +88,10 @@ namespace ColorGateBlast
         public readonly int[] Ice;
         /// <summary>True while a welded pair is still joined (both halves share the flag).</summary>
         public readonly bool[] Linked;
+        /// <summary>True while a mystery crate is still closed.</summary>
+        public readonly bool[] Crated;
+        /// <summary>Current direction of every carriage row (+1 right / -1 left).</summary>
+        public readonly int[] CarriageDir;
         /// <summary>Player moves made so far (drives the Steam Pressure Gate cycle).</summary>
         public int Moves;
         public int ExitedCount;
@@ -111,6 +123,10 @@ namespace ColorGateBlast
             Ice = new int[n];
             Linked = new bool[n];
             for (int i = 0; i < n; i++) Linked[i] = Blocks[i].partner >= 0;
+            Crated = new bool[n];
+            for (int i = 0; i < n; i++) Crated[i] = Blocks[i].crate;
+            CarriageDir = new int[def.carriages.Count];
+            for (int k = 0; k < CarriageDir.Length; k++) CarriageDir[k] = def.carriages[k].dir >= 0 ? 1 : -1;
             occ = new int[Width * Height];
             partner = BuildPartners(def);
             for (int i = 0; i < occ.Length; i++) occ[i] = -1;
@@ -134,6 +150,8 @@ namespace ColorGateBlast
             Dormant = (bool[])o.Dormant.Clone();
             Ice = (int[])o.Ice.Clone();
             Linked = (bool[])o.Linked.Clone();
+            Crated = (bool[])o.Crated.Clone();
+            CarriageDir = (int[])o.CarriageDir.Clone();
             Moves = o.Moves;
             steamPeriod = o.steamPeriod;
             occ = (int[])o.occ.Clone();
@@ -321,6 +339,7 @@ namespace ColorGateBlast
             Int2 o = origin + dir;
             int outCount;
             if (!CheckPlacement(i, o, ignore, out outCount)) return StepResult.Blocked;
+            if (outCount > 0 && Crated[i]) return StepResult.Blocked; // a closed crate cannot leave through a gate
             if (outCount == 0)
             {
                 // a 1x1 block stepping onto a pad warps to the partner - only if the exit pad is free
@@ -471,6 +490,7 @@ namespace ColorGateBlast
             for (int k = 0; k < neighbours.Count; k++)
             {
                 int j = neighbours[k];
+                if (Crated[j]) { Crated[j] = false; if (fx != null) fx.revealed.Add(j); }
                 if (Ice[j] > 0)
                 {
                     Ice[j]--;
@@ -485,6 +505,57 @@ namespace ColorGateBlast
                 Pos[c] = startOrigin + b.cells[0];
                 Stamp(c, Pos[c], c);
                 if (fx != null) { fx.spawned = c; fx.spawnCell = Pos[c]; }
+            }
+
+            if (viaGate) ApplyCarriages(fx);
+        }
+
+        /// <summary>Typewriter carriages: every gate exit slides the blocks lying inside a carriage row by one tile (bouncing at the walls).</summary>
+        public void ApplyCarriages(ExitEffects fx)
+        {
+            for (int k = 0; k < Def.carriages.Count; k++)
+            {
+                int row = Def.carriages[k].row;
+                List<int> eligible = new List<int>();
+                for (int i = 0; i < Blocks.Length; i++)
+                {
+                    if (Exited[i] || Dormant[i] || Blocks[i].IsObstacle || Ice[i] > 0 || Linked[i]) continue;
+                    bool inside = true;
+                    for (int c = 0; c < Blocks[i].cells.Length; c++) if (Pos[i].y + Blocks[i].cells[c].y != row) { inside = false; break; }
+                    if (inside) eligible.Add(i);
+                }
+                if (eligible.Count == 0) continue;
+                int dir = CarriageDir[k];
+                // bounce: if any block would be pushed through the side wall the row reverses first
+                for (int e = 0; e < eligible.Count; e++)
+                {
+                    int i = eligible[e];
+                    for (int c = 0; c < Blocks[i].cells.Length; c++)
+                    {
+                        int nx = Pos[i].x + Blocks[i].cells[c].x + dir;
+                        if (nx < 0 || nx >= Width) { dir = -dir; e = eligible.Count; break; }
+                    }
+                }
+                CarriageDir[k] = dir;
+                // move the leading blocks first so a train of blocks can move together
+                eligible.Sort(delegate (int a, int b) { return dir > 0 ? Pos[b].x.CompareTo(Pos[a].x) : Pos[a].x.CompareTo(Pos[b].x); });
+                for (int e = 0; e < eligible.Count; e++)
+                {
+                    int i = eligible[e];
+                    Int2 target = Pos[i] + new Int2(dir, 0);
+                    int oc;
+                    if (!CheckPlacement(i, target, out oc) || oc != 0) continue;
+                    Int2 dest = target;
+                    if (Blocks[i].cells.Length == 1 && IsPortal(target))
+                    {
+                        Int2 q = PortalPartner(target);
+                        if (occ[q.y * Width + q.x] != -1) continue;
+                        dest = q;
+                    }
+                    Int2 from = Pos[i];
+                    Commit(i, dest);
+                    if (fx != null) { fx.shifted.Add(i); fx.shiftedFrom.Add(from); }
+                }
             }
         }
 
@@ -587,6 +658,8 @@ namespace ColorGateBlast
             }
             if (hasShutter) key.Add((char)((Toggles & 1) + 1));
             if (steamPeriod > 0) key.Add((char)((Moves % steamPeriod) + 1));
+            for (int i = 0; i < Pos.Length; i++) if (Blocks[i].crate) key.Add(Crated[i] ? (char)2 : (char)1);
+            for (int k = 0; k < CarriageDir.Length; k++) key.Add(CarriageDir[k] > 0 ? (char)2 : (char)1);
             for (int i = 0; i < Pos.Length; i++) if (Blocks[i].partner > i && !Linked[i]) key.Add((char)(i + 1)); // pair already broken
             if (UnlockedMask != 0) key.Add((char)(UnlockedMask + 1));
         }

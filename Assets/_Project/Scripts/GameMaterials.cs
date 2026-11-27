@@ -22,6 +22,8 @@ namespace ColorGateBlast
         public static Material MetalRed { get { Ensure(); return Named("MetalRed", ColorOf(BlockColor.Red), 0.45f, 0.58f, TexKind.Scratch); } }
         public static Material MetalBlue { get { Ensure(); return Named("MetalBlue", ColorOf(BlockColor.Blue), 0.45f, 0.58f, TexKind.Scratch); } }
         /// <summary>Emerald Enamel Green #10B981: baked-enamel metal (metallic 0.75, smoothness 0.68).</summary>
+        /// <summary>Royal Amethyst Purple #7C3AED: baked-enamel metal.</summary>
+        public static Material MetalPurple { get { Ensure(); return Named("MetalPurple", ColorOf(BlockColor.Purple), 0.6f, 0.64f, TexKind.Scratch); } }
         public static Material EmeraldEnamel { get { Ensure(); return Named("EmeraldEnamel", ColorOf(BlockColor.Green), 0.45f, 0.58f, TexKind.Scratch); } }
         public static Material PlasticYellow { get { Ensure(); return Named("PlasticYellow", ColorOf(BlockColor.Yellow), 0.45f, 0.58f, TexKind.Scratch); } }
         public static Material ScrapIron { get { Ensure(); return Named("ScrapIron", new Color(0.353f, 0.345f, 0.337f), 0.85f, 0.25f, TexKind.Rust); } }
@@ -75,6 +77,7 @@ namespace ColorGateBlast
                 case BlockColor.Blue: return MetalBlue;
                 case BlockColor.Yellow: return PlasticYellow;
                 case BlockColor.Green: return EmeraldEnamel;
+                case BlockColor.Purple: return MetalPurple;
                 default: return ScrapIron;
             }
         }
@@ -87,6 +90,7 @@ namespace ColorGateBlast
                 case BlockColor.Blue: return new Color(0.18f, 0.392f, 0.62f);     // #2E649E
                 case BlockColor.Yellow: return new Color(0.788f, 0.635f, 0.212f); // #C9A236
                 case BlockColor.Green: return new Color(0.118f, 0.51f, 0.361f);   // #1E825C
+                case BlockColor.Purple: return new Color(0.486f, 0.227f, 0.929f); // #7C3AED
                 default: return new Color(0.353f, 0.345f, 0.337f);                // scrap iron #5A5856
             }
         }
@@ -108,6 +112,7 @@ namespace ColorGateBlast
                 case BlockColor.Blue: return new Color(0.2f, 0.55f, 1f);
                 case BlockColor.Yellow: return new Color(1f, 0.85f, 0.2f);
                 case BlockColor.Green: return new Color(0.15f, 1f, 0.55f);
+                case BlockColor.Purple: return new Color(0.72f, 0.4f, 1f);
                 default: return new Color(0.7f, 0.7f, 0.75f);
             }
         }
@@ -119,6 +124,9 @@ namespace ColorGateBlast
             Color col = NeonOf(c);
             return Emissive("Neon_" + c, col * 0.5f, col, 2.6f);
         }
+
+        /// <summary>Dark-oak mystery crate planks.</summary>
+        public static Material CrateWood { get { Ensure(); return Named("CrateWood", new Color(0.55f, 0.36f, 0.2f), 0.02f, 0.35f, TexKind.Wood); } }
 
         /// <summary>Gunmetal riveted tray frame.</summary>
         public static Material TrayFrame { get { Ensure(); return Named("TrayFrame", new Color(0.33f, 0.35f, 0.39f), 0.85f, 0.42f, TexKind.Scratch); } }

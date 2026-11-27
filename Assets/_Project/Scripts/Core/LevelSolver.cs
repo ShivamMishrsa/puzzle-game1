@@ -226,6 +226,7 @@ namespace ColorGateBlast
                 }
                 me.x = 0; me.y = 0;
                 me.linkGroup = 0;
+                me.crate = false;
                 BlockColor[] cyc = me.cycle;
                 me.cycle = null;
                 // a prism block may leave in any colour of its cycle: the table keeps the best of them

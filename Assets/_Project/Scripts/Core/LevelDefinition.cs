@@ -81,6 +81,8 @@ namespace ColorGateBlast
         public int linkGroup;
         /// <summary>Colour-shifting prism block: colours it cycles through (first = starting colour). Advances by one on every block exit.</summary>
         public BlockColor[] cycle;
+        /// <summary>Crated mystery block: cannot leave a gate until an orthogonally adjacent block has left (then the crate bursts open).</summary>
+        public bool crate;
 
         /// <summary>True while the placement still has to be given a position (x &lt; 0) - level authoring helper.</summary>
         public bool Unplaced { get { return x < 0 || y < 0; } }
@@ -129,6 +131,7 @@ namespace ColorGateBlast
         /// <summary>Index of the welded partner block, or -1.</summary>
         public int partner = -1;
         public int linkGroup;
+        public bool crate;
         /// <summary>Prism colour cycle (null when this is an ordinary block).</summary>
         public BlockColor[] cycle;
         public bool IsPrism { get { return cycle != null && cycle.Length > 1; } }
@@ -176,6 +179,14 @@ namespace ColorGateBlast
         public bool isPiercingGate;
         /// <summary>Steam pressure gate: every N player moves the gate flips between Normal and Pressurized (an exit while pressurized gives the turret +2 bonus ammo). 0 = normal gate.</summary>
         public int steamInterval;
+    }
+
+    /// <summary>Typewriter carriage row: after every gate exit, blocks lying completely inside this row slide one tile (dir +1 = right, -1 = left, bouncing at the edge).</summary>
+    [Serializable]
+    public struct CarriageSpec
+    {
+        public int row;
+        public int dir;
     }
 
     /// <summary>Electromagnetic floor pad: after a block comes to rest next to it (on the side opposite <see cref="pull"/>) it is pulled one tile onto the pad for free.</summary>
@@ -278,6 +289,26 @@ namespace ColorGateBlast
                     default: x = 0.0f; y = 1.5f; return;
                 }
             }
+            if (kind == MonumentKind.Typewriter)
+            {
+                switch (type)
+                {
+                    case PartType.Hood: x = 0.0f; y = 2.4f; return;
+                    case PartType.Platen: x = 0.0f; y = 2.95f; return;
+                    case PartType.Lever: x = -1.45f; y = 2.1f; return;
+                    case PartType.Keys: x = 0.0f; y = 0.75f; return;
+                    case PartType.Typebar: x = 0.0f; y = 1.7f; return;
+                    case PartType.Ribbon: x = slot == 0 ? -1.0f : 1.0f; y = 2.0f; return;
+                    case PartType.Rack: x = 0.0f; y = 1.15f; return;
+                    case PartType.Spring:
+                        if (slot == 0) { x = -0.7f; y = 1.45f; } else if (slot == 1) { x = 0.7f; y = 1.45f; } else { x = 0.0f; y = 1.9f; }
+                        return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 1.3f; } else { x = 0.8f; y = 1.7f; }
+                        return;
+                    default: x = 0.0f; y = 1.5f; return;
+                }
+            }
             if (kind == MonumentKind.TlrCamera)
             {
                 switch (type)
@@ -367,12 +398,44 @@ namespace ColorGateBlast
         public List<PartSpec> parts = new List<PartSpec>();
         public List<PortalSpec> portals = new List<PortalSpec>();
         public List<MagnetSpec> magnets = new List<MagnetSpec>();
+        public List<CarriageSpec> carriages = new List<CarriageSpec>();
+        /// <summary>Countdown in seconds (0 = untimed).</summary>
+        public int timeLimit;
         /// <summary>Level starts with the monument spin-hint (a 360 icon) visible.</summary>
         public bool showRotateHint;
 
         public int GridWidth { get { return gridSize.x; } }
         public int GridHeight { get { return gridSize.y; } }
         public bool UnlimitedTrack { get { return maxTrackSlots <= 0; } }
+
+        public DifficultyClass Difficulty
+        {
+            get
+            {
+                if (levelID <= 20) return DifficultyClass.Easy;
+                if (levelID <= 40) return DifficultyClass.Medium;
+                return tier == LevelTier.Normal ? DifficultyClass.Hard : DifficultyClass.Extreme;
+            }
+        }
+
+        /// <summary>Hard and extreme levels allow exactly the shortest solution - not a single spare move.</summary>
+        public bool ExactMoves { get { return Difficulty >= DifficultyClass.Hard; } }
+
+        /// <summary>Clock for this level: class base time (30 / 45 / 60 / 120 s), stretched so a long solution still fits (2 s per move + 10 s).</summary>
+        public int ComputeTimeLimit(int par)
+        {
+            int baseSec;
+            switch (Difficulty)
+            {
+                case DifficultyClass.Easy: baseSec = 30; break;
+                case DifficultyClass.Medium: baseSec = 45; break;
+                case DifficultyClass.Hard: baseSec = 60; break;
+                default: baseSec = 120; break;
+            }
+            int need = par * 2 + 10;
+            int t = Math.Max(baseSec, need);
+            return ((t + 4) / 5) * 5;
+        }
 
         public int PartHp(int i) { return Math.Max(1, (int)Math.Ceiling(parts[i].hp * targetHpScale - 0.0001)); }
 
@@ -399,6 +462,7 @@ namespace ColorGateBlast
                 b.lockId = p.lockId;
                 b.innerKey = p.innerHasKey && b.hasInner;
                 b.linkGroup = b.immovable ? 0 : p.linkGroup;
+                b.crate = p.crate && !b.immovable;
                 b.cycle = (p.cycle != null && p.cycle.Length > 1 && !b.immovable) ? p.cycle : null;
                 r.Add(b);
             }
@@ -490,6 +554,8 @@ namespace ColorGateBlast
                 for (int j = 0; j < placements.Count; j++) if (placements[j].linkGroup == placements[i].linkGroup) n++;
                 if (n != 2) return "link group " + placements[i].linkGroup + " must have exactly two blocks";
             }
+            for (int ci = 0; ci < carriages.Count; ci++)
+                if (carriages[ci].row < 0 || carriages[ci].row >= h || carriages[ci].dir == 0) return "carriage " + ci + " is invalid";
             for (int mi = 0; mi < magnets.Count; mi++)
                 if (magnets[mi].cell.x < 0 || magnets[mi].cell.y < 0 || magnets[mi].cell.x >= w || magnets[mi].cell.y >= h) return "magnet " + mi + " out of grid";
             if (parts.Count == 0) return "no monument parts";

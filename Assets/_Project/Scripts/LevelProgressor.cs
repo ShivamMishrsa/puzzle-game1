@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -40,7 +40,9 @@ namespace ColorGateBlast
         private WorkshopLightingSetup lighting;
         private Vector3 trayCenter, monumentAnchor;
 
-        private enum LoseKind { OutOfMoves, TrackJam, NoMoves, NoAmmo }
+        private enum LoseKind { OutOfMoves, TrackJam, NoMoves, NoAmmo, TimeUp }
+        private float timeLeft;
+        private bool clockRunning;
 
         private LevelDefinition def;
         private int levelIndex;
@@ -111,6 +113,7 @@ namespace ColorGateBlast
             grid.CanExit = delegate (BlockColor c) { return track.CanAccept(c); };
             grid.BlockExited += OnBlockExited;
             grid.MoveCommitted += OnMoveCommitted;
+            grid.DragStarted += StartClock;
             grid.Message += ui.ShowToast;
             track.SlotsChanged += RefreshTrackUi;
             monument.PartDestroyed += delegate (int p) { ui.SetTargets(monument.AliveCount); };
@@ -220,6 +223,9 @@ namespace ColorGateBlast
 
             movesLeft = def.moveLimit;
             movesUsed = 0;
+            timeLeft = def.timeLimit;
+            clockRunning = false;
+            ui.SetTime(def.timeLimit > 0 ? def.timeLimit : -1f);
             ui.SetLevel(def.levelID, def.title, def.tier);
             ui.SetMoves(movesLeft);
             ui.SetTargets(monument.AliveCount);
@@ -263,8 +269,12 @@ namespace ColorGateBlast
             RefreshTrackUi();
         }
 
+        /// <summary>The countdown starts with the first touch on the board.</summary>
+        private void StartClock() { if (state == GameState.Playing && def != null && def.timeLimit > 0) clockRunning = true; }
+
         private void OnMoveCommitted()
         {
+            StartClock();
             if (state != GameState.Playing) return;
             movesUsed++;
             movesLeft = Mathf.Max(0, movesLeft - 1);
@@ -289,6 +299,18 @@ namespace ColorGateBlast
             {
                 Win();
                 return;
+            }
+            if (clockRunning && !adBusy && timeLeft > 0f)
+            {
+                timeLeft -= Time.deltaTime;
+                ui.SetTime(Mathf.Max(0f, timeLeft));
+                if (timeLeft <= 0f)
+                {
+                    clockRunning = false;
+                    grid.InputEnabled = false;
+                    Lose(LoseKind.TimeUp);
+                    return;
+                }
             }
             if (grid.IsDragging) return;
 
@@ -384,6 +406,9 @@ namespace ColorGateBlast
                 case LoseKind.TrackJam:
                     ui.ShowLose("TRACK FULL", "The conveyor is at capacity (" + track.UsedSlots + "/" + track.MaxSlots + ") and no block can leave.", "+1 TRACK SLOT");
                     break;
+                case LoseKind.TimeUp:
+                    ui.ShowLose("TIME'S UP", "The clock ran out before the " + MonumentName() + " was dismantled.", "+20 SECONDS");
+                    break;
                 case LoseKind.NoMoves:
                     ui.ShowLose("NO MOVES LEFT", "Every remaining block is stuck.", "");
                     break;
@@ -395,7 +420,16 @@ namespace ColorGateBlast
 
         private string MonumentName()
         {
-            return def.monument == MonumentKind.CassettePlayer ? "Cassette Player" : "Alarm Clock";
+            switch (def.monument)
+            {
+                case MonumentKind.CassettePlayer: return "Cassette Player";
+                case MonumentKind.RotaryPhone: return "Rotary Phone";
+                case MonumentKind.PocketWatch: return "Pocket Watch";
+                case MonumentKind.EspressoMachine: return "Espresso Machine";
+                case MonumentKind.TlrCamera: return "Twin-Lens Camera";
+                case MonumentKind.Typewriter: return "Typewriter";
+                default: return "Alarm Clock";
+            }
         }
 
         // ------------------------------------------------------------------ buttons (rewarded ads, interstitials)
@@ -411,6 +445,7 @@ namespace ColorGateBlast
         private void OnHintClicked()
         {
             if (state != GameState.Playing || adBusy || ads == null) return;
+            hint.MovesLeft = movesLeft;
             adBusy = true;
             ads.ShowRewarded(RewardPlacement.Hint, delegate (bool earned)
             {
@@ -470,6 +505,12 @@ namespace ColorGateBlast
                 else if (loseKind == LoseKind.TrackJam)
                 {
                     track.AddSlot();
+                }
+                else if (loseKind == LoseKind.TimeUp)
+                {
+                    timeLeft = 20f;
+                    clockRunning = true;
+                    ui.SetTime(timeLeft);
                 }
                 ui.HidePanels();
                 state = GameState.Playing;

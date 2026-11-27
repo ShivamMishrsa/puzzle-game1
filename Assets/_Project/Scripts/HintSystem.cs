@@ -37,6 +37,16 @@ namespace ColorGateBlast
             grid.MoveCommitted += ClearHint;
         }
 
+        /// <summary>Moves the player still has (set by the level flow); the hint must fit inside this budget.</summary>
+        public int MovesLeft;
+
+        private LevelSolver.SolveResult SolveBudget(PuzzleState snap, int cb, int ch)
+        {
+            LevelSolver.SolveResult r = MovesLeft > 0 ? LevelSolver.Solve(snap, cb, ch, MovesLeft) : null;
+            if (r == null || !r.solved) r = LevelSolver.Solve(snap, cb, ch);
+            return r;
+        }
+
         /// <summary>Starts a background solve of the current position.</summary>
         public void RequestHint()
         {
@@ -45,9 +55,9 @@ namespace ColorGateBlast
             PuzzleState snap = new PuzzleState(grid.Level, grid.Board, monument.Model, track.Snapshot());
 #if UNITY_WEBGL && !UNITY_EDITOR
             // WebGL has no threads: solve on the main thread with a smaller budget so the page stays responsive.
-            Present(LevelSolver.Solve(snap, 12000, 90000));
+            Present(SolveBudget(snap, 12000, 90000));
 #else
-            pending = Task<LevelSolver.SolveResult>.Factory.StartNew(delegate () { return LevelSolver.Solve(snap, 20000, 150000); });
+            pending = Task<LevelSolver.SolveResult>.Factory.StartNew(delegate () { return SolveBudget(snap, 30000, 300000); });
             if (Message != null) Message("Thinking...");
 #endif
         }

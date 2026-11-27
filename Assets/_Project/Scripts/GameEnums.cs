@@ -8,13 +8,15 @@ namespace ColorGateBlast
         Yellow = 2,
         Gray = 3,
         /// <summary>Emerald Enamel Green (levels 21+).</summary>
-        Green = 4
+        Green = 4,
+        /// <summary>Royal Amethyst Purple (levels 61+).</summary>
+        Purple = 5
     }
 
     public static class ColorCount
     {
         /// <summary>Number of BlockColor values (array size for per-colour tables).</summary>
-        public const int Total = 5;
+        public const int Total = 6;
     }
 
     /// <summary>Which edge of the tray a gate is on = the direction a block moves to leave through it.</summary>
@@ -89,7 +91,14 @@ namespace ColorGateBlast
         Iris,
         Crank,
         Spool,
-        ShutterGear
+        ShutterGear,
+        // ---- Chapter 7: Vintage Mechanical Typewriter ----
+        Platen,
+        Keys,
+        Typebar,
+        Ribbon,
+        Rack,
+        Spring
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -100,7 +109,17 @@ namespace ColorGateBlast
         RotaryPhone = 2,
         PocketWatch = 3,
         EspressoMachine = 4,
-        TlrCamera = 5
+        TlrCamera = 5,
+        Typewriter = 6
+    }
+
+    /// <summary>Difficulty class of a level: sets the countdown clock and whether the move limit is exact.</summary>
+    public enum DifficultyClass
+    {
+        Easy = 0,       // levels 1-20:   30 s
+        Medium = 1,     // levels 21-40:  45 s
+        Hard = 2,       // levels 41+:    60 s, exact move count
+        Extreme = 3     // bosses / mini-bosses from 41 on: 120 s, exact move count
     }
 
     public enum LevelTier

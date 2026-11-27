@@ -39,6 +39,17 @@ One look for every `LevelData` (1-40 today, 41-150 automatically): `Assets/_Proj
 | 3 | 21-30 | Vintage Rotary Phone | Green, brass screw-bolts, key blocks + padlocked gates, rail blocks, Overdrive |
 | 5 | 41-50 | Vintage Brass & Copper Espresso Machine | welded twin-linked blocks (steel bridge bar), steam pressure gates (+2 bonus ammo while pressurized) |
 | 6 | 51-60 | Vintage Twin-Lens Reflex Camera | colour-shifting prism blocks (advance on every exit), electromagnetic pull-pads (free 1-tile pull) |
+| 7 | 61-70 | Vintage Mechanical Typewriter | 5th colour Purple, carriage-shift rows (blocks slide 1 tile after every exit), crated mystery blocks |
+
+## Clock and move limits
+| Class | Levels | Clock | Moves |
+|---|---|---|---|
+| Easy | 1-20 | 30 s | a few spare moves |
+| Medium | 21-40 | 45 s | a couple of spare moves |
+| Hard | 41+ (normal levels) | 60 s | exactly the shortest solution |
+| Extremely hard | 41+ (mini-boss and chapter boss) | 120 s | exactly the shortest solution |
+
+The clock starts at your first touch and pauses during rewarded ads. It is stretched to 2 s per move + 10 s when a level's solution is long, so it is always winnable. When it runs out you can revive with +20 s (rewarded ad).
 
 ## Play in the browser
 See `docs/WEBGL.md` (GitHub Actions auto-build, or a local one-click build into `docs/play`). Link after publishing: https://shivammishrsa.github.io/puzzle-game1/

@@ -80,6 +80,7 @@ namespace ColorGateBlast
         private sealed class SteamGate { public int index; public Vector3 vent; public Transform needle; public Vector3 outward; }
         private readonly List<SteamGate> steamGates = new List<SteamGate>();
         private int lastSteamPhase = -1;
+        private readonly List<Transform> carriageArrows = new List<Transform>();
         private float nextPuff;
         private float nextNudge;
 
@@ -105,6 +106,7 @@ namespace ColorGateBlast
             dragArrow = null;
             dragArrowRenderer = null;
             links.Clear();
+            carriageArrows.Clear();
             steamGates.Clear();
             lastSteamPhase = -1;
             if (root != null) Destroy(root.gameObject);
@@ -131,6 +133,7 @@ namespace ColorGateBlast
             BuildGates();
             BuildPortals();
             BuildMagnets();
+            BuildCarriages();
             BuildRails();
             BuildBlocks();
             BuildLinks();
@@ -295,6 +298,99 @@ namespace ColorGateBlast
             sg.needle = needle.transform;
             sg.outward = outward;
             steamGates.Add(sg);
+        }
+
+        /// <summary>Typewriter carriage rows: notched brass rails with tick marks and a chevron strip showing the current slide direction.</summary>
+        private void BuildCarriages()
+        {
+            for (int k = 0; k < def.carriages.Count; k++)
+            {
+                int row = def.carriages[k].row;
+                Vector3 c = CellWorld(def.GridWidth / 2, row);
+                float halfW = def.GridWidth * cs * 0.5f;
+                GameObject cr = new GameObject("CarriageRow_" + k);
+                cr.transform.SetParent(root, false);
+                float zLo = originBL.z + row * cs + 0.03f * cs, zHi = originBL.z + (row + 1) * cs - 0.03f * cs;
+                float cx = originBL.x + halfW;
+                Prims.Make("RailLow", cr.transform, Prims.Cube, GameMaterials.Brass, new Vector3(cx, TrayTop + 0.035f, zLo), new Vector3(halfW * 2f, 0.05f, cs * 0.07f));
+                Prims.Make("RailHigh", cr.transform, Prims.Cube, GameMaterials.Brass, new Vector3(cx, TrayTop + 0.035f, zHi), new Vector3(halfW * 2f, 0.05f, cs * 0.07f));
+                for (int t = 0; t <= def.GridWidth * 4; t++)
+                {
+                    float x = originBL.x + t * cs * 0.25f;
+                    float len = t % 4 == 0 ? cs * 0.2f : cs * 0.1f;
+                    Prims.Make("Tick", cr.transform, Prims.Cube, GameMaterials.Brass, new Vector3(x, TrayTop + 0.036f, zLo + len * 0.5f), new Vector3(cs * 0.02f, 0.045f, len));
+                }
+                // chevron strip (points +x; flipped by yaw when the carriage runs left)
+                GameObject arrows = new GameObject("Arrows");
+                arrows.transform.SetParent(cr.transform, false);
+                arrows.transform.position = new Vector3(cx, TrayTop + 0.045f, c.z);
+                MeshBuilder mb = new MeshBuilder();
+                for (int i = 0; i < def.GridWidth; i++)
+                {
+                    float x = (i + 0.5f - def.GridWidth * 0.5f) * cs;
+                    float hh = cs * 0.1f, arm = cs * 0.13f, th = cs * 0.05f;
+                    Vector3 tip = new Vector3(x + hh, 0f, 0f), e1 = new Vector3(x - hh, 0f, arm), e2 = new Vector3(x - hh, 0f, -arm);
+                    Vector3 d = new Vector3(1f, 0f, 0f);
+                    mb.AddQuad(tip, e1, e1 - d * th, tip - d * th, Vector3.up);
+                    mb.AddQuad(tip, e2, e2 - d * th, tip - d * th, Vector3.up);
+                }
+                arrows.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("CarriageChevrons");
+                arrows.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Gold;
+                arrows.transform.rotation = Quaternion.Euler(0f, def.carriages[k].dir >= 0 ? 0f : 180f, 0f);
+                carriageArrows.Add(arrows.transform);
+            }
+        }
+
+        private void AnimateCarriages()
+        {
+            for (int k = 0; k < carriageArrows.Count && k < board.CarriageDir.Length; k++)
+            {
+                if (carriageArrows[k] == null) continue;
+                Quaternion want = Quaternion.Euler(0f, board.CarriageDir[k] >= 0 ? 0f : 180f, 0f);
+                carriageArrows[k].rotation = Quaternion.RotateTowards(carriageArrows[k].rotation, want, 720f * Time.deltaTime);
+            }
+        }
+
+        /// <summary>Crates that burst open and blocks that a carriage row slid.</summary>
+        private void ApplyBoardEffects(ExitEffects fx)
+        {
+            for (int k = 0; k < fx.revealed.Count; k++)
+            {
+                int j = fx.revealed[k];
+                if (views[j] == null) continue;
+                Vector3 p = views[j].CentroidWorld;
+                views[j].OpenCrate();
+                if (FXManager.Instance != null)
+                {
+                    FXManager.Instance.Burst(FxKind.Splinter, p + new Vector3(0f, 0.4f, 0f), 18, new Color(0.62f, 0.42f, 0.22f), 3.5f, 1f);
+                    FXManager.Instance.Haptic();
+                }
+                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.CrateCrack);
+                if (Message != null) Message("Crate opened!");
+            }
+            if (fx.shifted.Count > 0)
+            {
+                for (int k = 0; k < fx.shifted.Count; k++)
+                {
+                    int j = fx.shifted[k];
+                    if (views[j] == null) continue;
+                    Vector3 target = CellWorld(board.Pos[j]);
+                    Vector3 before = CellWorld(fx.shiftedFrom[k]);
+                    if ((target - before).magnitude > cs * 1.6f) views[j].TeleportTo(target);
+                    else views[j].SetTarget(target);
+                }
+                if (SoundSynth.Instance != null)
+                {
+                    SoundSynth.Instance.Play(Sfx.CarriageSlide, 1f, 0.7f);
+                    StartCoroutine(DingLater());
+                }
+            }
+        }
+
+        private IEnumerator DingLater()
+        {
+            yield return new WaitForSeconds(0.2f);
+            if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.Ding, 1f, 0.8f);
         }
 
         /// <summary>Electromagnetic floor pads: recessed copper-wound tiles with glowing chevrons showing the pull direction.</summary>
@@ -747,6 +843,7 @@ namespace ColorGateBlast
             AnimateExtras();
             UpdateLinks();
             AnimateSteam();
+            AnimateCarriages();
 
             if (!InputEnabled)
             {
@@ -951,6 +1048,7 @@ namespace ColorGateBlast
 
             if (fx.unlockedLock >= 0) UnlockPadlocks(fx.unlockedLock, center);
             board.CountMove();
+            ApplyBoardEffects(fx);
             RefreshPrisms(true);
             if (BlockExited != null) BlockExited(i, center, gd, fx.piercing);
             if (MoveCommitted != null) MoveCommitted();
@@ -968,6 +1066,7 @@ namespace ColorGateBlast
             views[idx] = null;
             Destroy(view.gameObject);
             if (fx.linkBroken >= 0) BreakLink(idx, fx.linkBroken, center);
+            ApplyBoardEffects(fx);
             RefreshPrisms(true);
             if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PadlockSnap);
             if (FXManager.Instance != null)

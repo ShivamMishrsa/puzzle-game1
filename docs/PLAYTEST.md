@@ -77,3 +77,11 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **Magnet pads (52, 56, 59):** a block that comes to rest right behind a pad is pulled onto it with a clunk, free of charge (no move used).
 - [ ] **Monuments:** espresso machine (copper boiler dome + eagle finial, gauge, lever pinned by a rear screw, chrome group head, glass sight tube, drip grid, coils, valves, dynamite bundle) and TLR camera (leatherette plates, hood, two lenses that shatter, spinning iris blades, film crank, spinning spools, shutter gears, dynamite). Rotate 360 degrees on L50 / L60 for the rear screws.
 - [ ] Chapter bosses (50, 60) show the "Chapter N Complete" banner and add a trophy to the shelf counter.
+
+## Batch 7 (levels 61-70) and the clock
+- [ ] **Clock:** a steel plate between MOVES and REMAINING shows the time; it starts on your first touch, turns red and pulses in the last 10 s; TIME'S UP offers +20 s (rewarded ad). Easy 30 s, medium 45 s, hard 60 s, extreme 120 s (stretched for long solutions).
+- [ ] **Hard / extreme (41+):** MOVES equals the shortest solution - one wasted move and the level is lost.
+- [ ] **Purple (61+):** amethyst blocks, gates, turrets and lasers.
+- [ ] **Carriage rows (61, 63, 65, 66, 69, 70):** brass rails with a gold chevron strip; after EVERY exit the blocks lying inside the row slide one tile (carriage slide + bell ding); the strip flips when the row bounces off a wall. A 1x1 sliding onto a portal pad warps (63).
+- [ ] **Mystery crates (62, 64, 67, 69, 70):** dark-oak crates with a gold "?": they slide but cannot leave a gate; the planks burst off (splinters + crack) when a neighbour exits. L64: ice + crate together. L67 / L70: the brass key is inside a crate.
+- [ ] **Typewriter:** hood, rubber platen that slides + dings when hit, carriage-return lever, round brass keys (rear screws), typebar fan that flicks, ink-ribbon spools, escapement rack, springs, dynamite bundle.

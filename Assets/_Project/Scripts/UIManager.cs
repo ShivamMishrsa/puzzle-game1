@@ -53,6 +53,7 @@ namespace ColorGateBlast
         [SerializeField] private Text reviveButtonText;
         [SerializeField] private Button retryButton;
 
+        private Text timerText;
         private float toastUntil;
         private float lastToastTime = -10f;
         private string lastToast;
@@ -106,6 +107,20 @@ namespace ColorGateBlast
                 bannerImage.color = tier == LevelTier.ChapterBoss ? new Color(0.78f, 0.12f, 0.14f, 0.95f) : new Color(0.95f, 0.72f, 0.12f, 0.95f);
                 bannerText.color = tier == LevelTier.ChapterBoss ? new Color(1f, 0.9f, 0.45f) : new Color(0.45f, 0.08f, 0.08f);
             }
+        }
+
+        /// <summary>Countdown clock between the two plaques; red and pulsing in the last 10 seconds. seconds &lt; 0 hides it.</summary>
+        public void SetTime(float seconds)
+        {
+            if (timerText == null) return;
+            timerText.transform.parent.gameObject.SetActive(seconds >= 0f);
+            if (seconds < 0f) return;
+            int s = Mathf.CeilToInt(seconds);
+            timerText.text = (s / 60) + ":" + (s % 60).ToString("00");
+            bool low = s <= 10;
+            timerText.color = low ? new Color(0.78f, 0.05f, 0.05f) : PlaqueText;
+            float k = low ? 1f + 0.08f * Mathf.Sin(Time.unscaledTime * 10f) : 1f;
+            timerText.transform.parent.localScale = Vector3.one * k;
         }
 
         public void SetTargets(int remaining) { targetsText.text = "REMAINING: " + remaining; }
@@ -269,6 +284,22 @@ namespace ColorGateBlast
             movesText = MakePlaque(root, "MovesPlaque", font, new Vector2(0f, 1f), new Vector2(240, -190), new Vector2(430, 108), new Color(0.78f, 0.16f, 0.12f));
             targetsText = MakePlaque(root, "RemainingPlaque", font, new Vector2(1f, 1f), new Vector2(-240, -190), new Vector2(430, 108), new Color(0.2f, 0.45f, 0.85f));
             targetsText.fontSize = 32;
+
+            // --- countdown clock between the plaques ---
+            GameObject tp = new GameObject("TimerPlate", typeof(RectTransform));
+            tp.transform.SetParent(root, false);
+            RectTransform tpr = tp.GetComponent<RectTransform>();
+            tpr.anchorMin = tpr.anchorMax = topC; tpr.pivot = new Vector2(0.5f, 0.5f);
+            tpr.anchoredPosition = new Vector2(0, -190); tpr.sizeDelta = new Vector2(150, 96);
+            Image tpi = tp.AddComponent<Image>();
+            tpi.sprite = HudSkin.Plate; tpi.type = Image.Type.Sliced; tpi.raycastTarget = false;
+            timerText = MakeText(tpr, "TimerText", font, 46, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140, 80));
+            timerText.color = PlaqueText;
+            timerText.GetComponent<Outline>().enabled = false;
+            Shadow tsh = timerText.gameObject.AddComponent<Shadow>();
+            tsh.effectColor = new Color(1f, 1f, 1f, 0.5f);
+            tsh.effectDistance = new Vector2(0f, -2f);
+            tp.SetActive(false);
 
             // --- bottom row: track capacity LEDs (left), Restart plaque (centre), booster medallions (right) ---
             trackText = MakeText(root, "TrackText", font, 34, TextAnchor.MiddleLeft, new Vector2(0f, 0f), new Vector2(44, 178), new Vector2(520, 50));

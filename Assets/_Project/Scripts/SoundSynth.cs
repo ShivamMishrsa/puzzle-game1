@@ -10,7 +10,9 @@ namespace ColorGateBlast
         // batch 3 / 4
         Ratchet, MetalPing, PadlockSnap, Overdrive, PortalZap, TickTock, DialClick, Unlock,
         // batch 5 / 6
-        WeldBreak, SteamHiss, PrismChime, MagnetClunk
+        WeldBreak, SteamHiss, PrismChime, MagnetClunk,
+        // batch 7
+        Ding, CrateCrack, CarriageSlide
     }
 
     /// <summary>
@@ -230,6 +232,9 @@ namespace ColorGateBlast
             Add(Sfx.PrismChime, Clip("prism1", Mix(Ring(3300f, 0.45f, 0.22f, 8f, 1.5f), Delay(Ring(4400f, 0.35f, 0.14f, 10f, 1.5f), 0.025f))),
                                 Clip("prism2", Mix(Ring(3700f, 0.45f, 0.22f, 8f, 1.5f), Delay(Ring(4900f, 0.35f, 0.14f, 10f, 1.5f), 0.025f))));
             Add(Sfx.MagnetClunk, Clip("clunk", Mix(Ring(130f, 0.22f, 0.6f, 20f, 2.1f), Noise(0.05f, 0.4f, 60f, 0.1f, 0.5f), Delay(Ring(900f, 0.18f, 0.2f, 14f, 2.7f), 0.02f))));
+            Add(Sfx.Ding, Clip("ding", Mix(Ring(2350f, 1.1f, 0.34f, 4.5f, 2.42f), Delay(Ring(3500f, 0.8f, 0.18f, 6f, 2.2f), 0.004f))));
+            Add(Sfx.CrateCrack, Clip("crate", Mix(Noise(0.16f, 0.6f, 24f, 0.2f, 0.7f), Ring(180f, 0.2f, 0.45f, 16f, 2.3f), Delay(Noise(0.1f, 0.4f, 30f, 0.5f, 0.9f), 0.05f))));
+            Add(Sfx.CarriageSlide, Clip("slide", Mix(Sweep(420f, 230f, 0.2f, 0.18f, 0.7f, 0.8f), Noise(0.2f, 0.12f, 8f, 0.6f, 0.9f), Delay(Ring(1900f, 0.05f, 0.25f, 70f, 1.7f), 0.18f))));
             Add(Sfx.Unlock, Clip("unlock", Mix(Marimba(BaseFreq * 2f, 0.4f, 0.4f), Delay(Marimba(BaseFreq * 3f, 0.5f, 0.4f), 0.08f))));
         }
     }

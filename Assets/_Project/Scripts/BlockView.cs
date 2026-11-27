@@ -75,7 +75,76 @@ namespace ColorGateBlast
             if (info.hasInner) BuildStripe();
             if (info.axis != MoveAxis.Free) BuildArrows();
             if (info.hasKey) BuildKey();
+            if (info.crate) BuildCrate();
             if (info.iceLayer > 0) SetIce(info.iceLayer, false);
+        }
+
+        private Transform crateRoot;
+
+        /// <summary>Slatted dark-oak shipping crate with riveted steel corners and a glowing brass question mark: hides the block inside.</summary>
+        private void BuildCrate()
+        {
+            crateRoot = new GameObject("MysteryCrate").transform;
+            crateRoot.SetParent(transform, false);
+            float hh = height * 1.32f;
+            for (int i = 0; i < info.cells.Length; i++)
+            {
+                Vector3 c = new Vector3(info.cells[i].x * cs, 0f, info.cells[i].y * cs);
+                Prims.Make("Box", crateRoot, Prims.Cube, GameMaterials.CrateWood, c + new Vector3(0f, hh * 0.5f, 0f), new Vector3(cs * 0.94f, hh, cs * 0.94f));
+                for (int sl = 0; sl < 3; sl++)
+                    Prims.Make("Slat", crateRoot, Prims.Cube, GameMaterials.Charcoal, c + new Vector3(0f, hh * (0.2f + 0.3f * sl), -cs * 0.472f), new Vector3(cs * 0.96f, hh * 0.07f, cs * 0.02f));
+                for (int sx = -1; sx <= 1; sx += 2)
+                    for (int sz = -1; sz <= 1; sz += 2)
+                    {
+                        Prims.Make("Corner", crateRoot, Prims.Cube, GameMaterials.Steel, c + new Vector3(sx * cs * 0.43f, hh * 0.5f, sz * cs * 0.43f), new Vector3(cs * 0.11f, hh * 1.02f, cs * 0.11f));
+                        Prims.Make("Rivet", crateRoot, Prims.Sphere, GameMaterials.Brass, c + new Vector3(sx * cs * 0.43f, hh + 0.01f, sz * cs * 0.43f), Vector3.one * (cs * 0.08f));
+                    }
+                TextMesh q = Prims.Label(crateRoot, "?", cs * 0.5f, new Color(1f, 0.82f, 0.3f), c + new Vector3(0f, hh + 0.02f, 0f));
+                q.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+            Transform key = transform.Find("BrassKey");
+            if (key != null) key.gameObject.SetActive(false);
+        }
+
+        /// <summary>The crate bursts open: the planks fly off and fade; the painted block (and a hidden key) is revealed.</summary>
+        public void OpenCrate()
+        {
+            if (crateRoot == null) return;
+            Transform root = crateRoot;
+            crateRoot = null;
+            Transform key = transform.Find("BrassKey");
+            if (key != null) key.gameObject.SetActive(true);
+            StartCoroutine(CrateBurst(root));
+        }
+
+        private IEnumerator CrateBurst(Transform root)
+        {
+            int n = root.childCount;
+            Vector3[] vel = new Vector3[n];
+            Vector3 centre = root.position + new Vector3(centroidLocal.x, 0f, centroidLocal.z);
+            for (int i = 0; i < n; i++)
+            {
+                Vector3 dir = root.GetChild(i).position - centre;
+                dir.y = 0f;
+                if (dir.sqrMagnitude < 0.001f) dir = UnityEngine.Random.insideUnitSphere;
+                vel[i] = (dir.normalized * 2.4f + Vector3.up * UnityEngine.Random.Range(1.2f, 3.2f));
+            }
+            float t = 0f;
+            while (t < 0.5f && root != null)
+            {
+                t += Time.deltaTime;
+                for (int i = 0; i < n; i++)
+                {
+                    Transform c = root.GetChild(i);
+                    if (c == null) continue;
+                    vel[i].y -= 11f * Time.deltaTime;
+                    c.position += vel[i] * Time.deltaTime;
+                    c.Rotate(vel[i].z * 90f * Time.deltaTime, vel[i].x * 90f * Time.deltaTime, 0f);
+                    c.localScale *= 1f - Mathf.Clamp01(Time.deltaTime * 2.2f);
+                }
+                yield return null;
+            }
+            if (root != null) Destroy(root.gameObject);
         }
 
         private Renderer prismCore, prismNext;

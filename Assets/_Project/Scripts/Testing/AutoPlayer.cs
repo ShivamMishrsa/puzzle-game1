@@ -94,7 +94,8 @@ namespace ColorGateBlast
                     if (lp.grid.RemainingBlocks == 0 && lp.monument.AliveCount == 0) { yield return new WaitForSeconds(0.5f); continue; }
 
                     PuzzleState snap = new PuzzleState(lp.grid.Level, lp.grid.Board, lp.monument.Model, lp.track.Snapshot());
-                    LevelSolver.SolveResult r = LevelSolver.Solve(snap, 20000, 150000);
+                    LevelSolver.SolveResult r = LevelSolver.Solve(snap, 30000, 300000, lp.MovesLeft);
+                    if (!r.solved) r = LevelSolver.Solve(snap, 30000, 300000);
                     if (!r.solved || r.moves == 0) { result = "NO_SOLUTION_FROM_LIVE_STATE"; break; }
                     bool ok = lp.grid.AutoMove(r.firstMove);
                     steps++;

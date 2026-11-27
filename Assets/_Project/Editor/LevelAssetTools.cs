@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
@@ -30,6 +30,9 @@ namespace ColorGateBlast.EditorTools
 
         [MenuItem("Tools/Color Gate Blast/Generate Levels 51-60", false, 15)]
         public static void Generate51To60() { GenerateRange(51, 60); }
+
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 61-70", false, 16)]
+        public static void Generate61To70() { GenerateRange(61, 70); }
 
         [MenuItem("Tools/Color Gate Blast/Verify All Levels (solver)", false, 30)]
         public static void VerifyAll()
@@ -98,6 +101,7 @@ namespace ColorGateBlast.EditorTools
                         data = ScriptableObject.CreateInstance<LevelData>();
                         AssetDatabase.CreateAsset(data, path);
                     }
+                    def.timeLimit = def.ComputeTimeLimit(within.moves);
                     data.definition = def;
                     EditorUtility.SetDirty(data);
                     ok++;

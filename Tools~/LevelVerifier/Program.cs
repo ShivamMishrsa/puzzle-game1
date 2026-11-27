@@ -6,7 +6,7 @@ using ColorGateBlast.EditorTools;
 
 class Program
 {
-    static string C(BlockColor c) { return c == BlockColor.Red ? "R" : c == BlockColor.Blue ? "B" : c == BlockColor.Yellow ? "Y" : c == BlockColor.Green ? "G" : "X"; }
+    static string C(BlockColor c) { return c == BlockColor.Red ? "R" : c == BlockColor.Blue ? "B" : c == BlockColor.Yellow ? "Y" : c == BlockColor.Green ? "G" : c == BlockColor.Purple ? "P" : "X"; }
 
     static string Fmt(Placement p)
     {
@@ -27,6 +27,7 @@ class Program
             s = "Prism(" + s + cs + ")";
         }
         if (p.linkGroup != 0) s = "Link(" + s + ", " + p.linkGroup + ")";
+        if (p.crate) s = "Crate(" + s + ")";
         return s;
     }
 
@@ -34,7 +35,7 @@ class Program
     {
         LevelDefinition d = new LevelDefinition();
         d.levelID = t.levelID; d.gridSize = t.gridSize; d.moveLimit = t.moveLimit; d.maxTrackSlots = t.maxTrackSlots;
-        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.targetHpScale = t.targetHpScale;
+        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.carriages = t.carriages; d.targetHpScale = t.targetHpScale;
         return d;
     }
 
@@ -307,6 +308,39 @@ class Program
         int pulls = mb.PullAll(0);
         Check(pulls == 1 && mb.Pos[0].x == 2, "magnet: block resting at (1,1) pulled to (2,1) (pulls=" + pulls + ", x=" + mb.Pos[0].x + ")");
         Check(mb.PullAll(0) == 0, "magnet: block on the pad is not pulled further");
+
+        // crates: closed crate cannot exit; opens when a neighbour leaves
+        LevelDefinition cd = Tiny(5, 4);
+        Placement crate = Blk(BlockColor.Red, 1, 1); crate.crate = true;
+        cd.placements.Add(crate);
+        cd.placements.Add(Blk(BlockColor.Blue, 2, 1));
+        cd.gates.Add(Gt(GateDirection.Down, 1, 1, BlockColor.Red));
+        cd.gates.Add(Gt(GateDirection.Down, 2, 1, BlockColor.Blue));
+        BoardModel cb = new BoardModel(cd);
+        Check(cb.Crated[0], "crate: starts closed");
+        cb.Commit(0, new Int2(1, 0));
+        Check(cb.Probe(0, new Int2(0, -1)) == StepResult.Blocked, "crate: closed crate cannot leave through its gate");
+        cb.Commit(0, new Int2(1, 1));
+        ExitEffects cfx = new ExitEffects();
+        cb.ExitBlock(1, cfx, GateDirection.Down, cb.Pos[1], cb.Pos[1]);
+        Check(!cb.Crated[0] && cfx.revealed.Count == 1, "crate: opens when the adjacent block leaves");
+        cb.Commit(0, new Int2(1, 0));
+        Check(cb.Probe(0, new Int2(0, -1)) == StepResult.Exit, "crate: opened block can use its gate");
+
+        // carriages: row 0 slides right after every exit, bounces at the wall
+        LevelDefinition rd = Tiny(4, 3);
+        rd.placements.Add(Blk(BlockColor.Red, 0, 0));
+        rd.placements.Add(Blk(BlockColor.Blue, 3, 2));
+        rd.gates.Add(Gt(GateDirection.Up, 3, 1, BlockColor.Blue));
+        rd.carriages.Add(new CarriageSpec { row = 0, dir = 1 });
+        BoardModel cab = new BoardModel(rd);
+        ExitEffects rfx = new ExitEffects();
+        cab.ExitBlock(1, rfx, GateDirection.Up, cab.Pos[1], cab.Pos[1]);
+        Check(cab.Pos[0].x == 1 && rfx.shifted.Count == 1, "carriage: red slid from x=0 to x=1");
+        cab.ApplyCarriages(null); cab.ApplyCarriages(null);
+        Check(cab.Pos[0].x == 3, "carriage: red reached the right wall");
+        cab.ApplyCarriages(null);
+        Check(cab.Pos[0].x == 2 && cab.CarriageDir[0] == -1, "carriage: bounced back (x=" + cab.Pos[0].x + ")");
 
         Console.WriteLine(selfFail == 0 ? "SELFTEST ALL PASS" : ("SELFTEST FAILURES: " + selfFail));
     }
