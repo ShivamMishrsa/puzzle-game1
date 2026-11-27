@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(67, "Unbox the Key", 7, 7, 23, 5, LevelTier.Normal, "The brass key is crated! Pop the crate first, then unlock the Purple gate.");
+            LevelDefinition d = Make(67, "Unbox the Key", 7, 7, 17, 5, LevelTier.Normal, "The brass key is crated! Pop the crate first, then unlock the Purple gate.");
             d.placements.Add(Scrap(1, 2, 3, 3));
             d.placements.Add(Scrap(1, 1, 5, 1));
             d.placements.Add(Crate(Key(Rect(B, 1, 1, 1, 5), 1)));
