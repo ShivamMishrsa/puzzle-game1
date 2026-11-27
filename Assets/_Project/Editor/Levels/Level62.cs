@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(62, "Mystery Crates", 7, 7, 17, 5, LevelTier.Normal, "Crates cannot leave a gate until a neighbouring block has left. Send the Yellow one out!");
+            LevelDefinition d = Make(62, "Mystery Crates", 7, 7, 16, 5, LevelTier.Normal, "Crates cannot leave a gate until a neighbouring block has left. Send the Yellow one out!");
             d.placements.Add(Scrap(1, 1, 5, 2));
             d.placements.Add(Rect(Y, 2, 1, 1, 3));
             d.placements.Add(Crate(Rect(R, 1, 1, 3, 3)));
