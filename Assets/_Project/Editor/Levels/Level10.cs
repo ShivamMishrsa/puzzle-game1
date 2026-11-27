@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(10, "The Grand Alarm Clock", 6, 6, 24, 2, LevelTier.ChapterBoss, "Only 2 track slots! Chain the TNT, then dismantle the gears.");
+            LevelDefinition d = Make(10, "The Grand Alarm Clock", 6, 6, 23, 2, LevelTier.ChapterBoss, "Only 2 track slots! Chain the TNT, then dismantle the gears.");
             d.reward = "Diorama Unlock: Alarm Clock Disassembled + Chapter Chest";
             d.placements.Add(Scrap(1, 1, 2, 2));
             d.placements.Add(Scrap(1, 1, 3, 3));
