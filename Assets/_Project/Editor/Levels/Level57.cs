@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(57, "Prism Portal", 7, 7, 12, 5, LevelTier.Normal, "Warp the prism across the wall - but only exit when it glows Yellow!");
+            LevelDefinition d = Make(57, "Prism Portal", 7, 7, 10, 5, LevelTier.Normal, "Warp the prism across the wall - but only exit when it glows Yellow!");
             d.placements.Add(Scrap(1, 7, 3, 0));
             d.placements.Add(Prism(Rect(B, 1, 1, 1, 3), B, Y));
             d.placements.Add(Rect(R, 2, 1, 5, 2));
