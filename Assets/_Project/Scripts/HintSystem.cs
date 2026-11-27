@@ -43,6 +43,10 @@ namespace ColorGateBlast
         private LevelSolver.SolveResult SolveBudget(PuzzleState snap, int cb, int ch)
         {
             LevelSolver.SolveResult r = MovesLeft > 0 ? LevelSolver.Solve(snap, cb, ch, MovesLeft) : null;
+#if !(UNITY_WEBGL && !UNITY_EDITOR)
+            // the zero-margin levels need a deeper search to find a route that still fits the remaining moves
+            if ((r == null || !r.solved) && MovesLeft > 0) r = LevelSolver.Solve(snap, 200000, 1500000, MovesLeft);
+#endif
             if (r == null || !r.solved) r = LevelSolver.Solve(snap, cb, ch);
             return r;
         }

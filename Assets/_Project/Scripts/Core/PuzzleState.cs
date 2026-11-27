@@ -89,6 +89,7 @@ namespace ColorGateBlast
             {
                 Board.Commit(m.block, m.to);
                 Board.PullAll(m.block);
+                Board.RepelAfterSlide(m.block, Dirs.Of(m.dir));
                 Board.CountMove();
                 return;
             }
@@ -105,7 +106,7 @@ namespace ColorGateBlast
                 if (Parked[i].color == color)
                 {
                     Parked[i].ammo += ammoGain;
-                    Parked[i].piercing = Parked[i].piercing || m.piercing;
+                    Parked[i].piercing = Parked[i].piercing || m.piercing || Def.megaPierces;
                     merged = true;
                     break;
                 }

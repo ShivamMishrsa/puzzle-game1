@@ -16,7 +16,7 @@ namespace ColorGateBlast
         private static Shader lit, unlit, particleLit, particleUnlit;
         private static Font font;
         private static readonly Dictionary<string, Material> Cache = new Dictionary<string, Material>();
-        private static Texture2D scratchNormal, rustTex, woodTex, woodNormal, noiseTex, crackTex, hazardTex, beltTex, dashTex;
+        private static Texture2D hammerNormal, scratchNormal, rustTex, woodTex, woodNormal, noiseTex, crackTex, hazardTex, beltTex, dashTex;
 
         // ---------------------------------------------------------------- named materials from the spec
         public static Material MetalRed { get { Ensure(); return Named("MetalRed", ColorOf(BlockColor.Red), 0.45f, 0.58f, TexKind.Scratch); } }
@@ -24,6 +24,10 @@ namespace ColorGateBlast
         /// <summary>Emerald Enamel Green #10B981: baked-enamel metal (metallic 0.75, smoothness 0.68).</summary>
         /// <summary>Royal Amethyst Purple #7C3AED: baked-enamel metal.</summary>
         public static Material MetalPurple { get { Ensure(); return Named("MetalPurple", ColorOf(BlockColor.Purple), 0.6f, 0.64f, TexKind.Scratch); } }
+        /// <summary>Hammered Copper Orange #D95D1E (metallic 0.78 / smoothness 0.64, hammered micro-normal).</summary>
+        public static Material MetalOrange { get { Ensure(); return Named("MetalOrange", ColorOf(BlockColor.Orange), 0.78f, 0.64f, TexKind.Hammered); } }
+        /// <summary>Anodized Arctic Teal #0891B2 (metallic 0.72 / smoothness 0.72, satin).</summary>
+        public static Material MetalCyan { get { Ensure(); return Named("MetalCyan", ColorOf(BlockColor.Cyan), 0.72f, 0.72f, TexKind.Scratch); } }
         public static Material EmeraldEnamel { get { Ensure(); return Named("EmeraldEnamel", ColorOf(BlockColor.Green), 0.45f, 0.58f, TexKind.Scratch); } }
         public static Material PlasticYellow { get { Ensure(); return Named("PlasticYellow", ColorOf(BlockColor.Yellow), 0.45f, 0.58f, TexKind.Scratch); } }
         public static Material ScrapIron { get { Ensure(); return Named("ScrapIron", new Color(0.353f, 0.345f, 0.337f), 0.85f, 0.25f, TexKind.Rust); } }
@@ -78,6 +82,8 @@ namespace ColorGateBlast
                 case BlockColor.Yellow: return PlasticYellow;
                 case BlockColor.Green: return EmeraldEnamel;
                 case BlockColor.Purple: return MetalPurple;
+                case BlockColor.Orange: return MetalOrange;
+                case BlockColor.Cyan: return MetalCyan;
                 default: return ScrapIron;
             }
         }
@@ -91,6 +97,8 @@ namespace ColorGateBlast
                 case BlockColor.Yellow: return new Color(0.788f, 0.635f, 0.212f); // #C9A236
                 case BlockColor.Green: return new Color(0.118f, 0.51f, 0.361f);   // #1E825C
                 case BlockColor.Purple: return new Color(0.486f, 0.227f, 0.929f); // #7C3AED
+                case BlockColor.Orange: return new Color(0.851f, 0.365f, 0.118f); // #D95D1E
+                case BlockColor.Cyan: return new Color(0.031f, 0.569f, 0.698f);   // #0891B2
                 default: return new Color(0.353f, 0.345f, 0.337f);                // scrap iron #5A5856
             }
         }
@@ -113,6 +121,8 @@ namespace ColorGateBlast
                 case BlockColor.Yellow: return new Color(1f, 0.85f, 0.2f);
                 case BlockColor.Green: return new Color(0.15f, 1f, 0.55f);
                 case BlockColor.Purple: return new Color(0.72f, 0.4f, 1f);
+                case BlockColor.Orange: return new Color(1f, 0.55f, 0.15f);
+                case BlockColor.Cyan: return new Color(0.2f, 0.95f, 1f);
                 default: return new Color(0.7f, 0.7f, 0.75f);
             }
         }
@@ -124,6 +134,9 @@ namespace ColorGateBlast
             Color col = NeonOf(c);
             return Emissive("Neon_" + c, col * 0.5f, col, 2.6f);
         }
+
+        /// <summary>Carved mahogany (gramophone cabinet).</summary>
+        public static Material Mahogany { get { Ensure(); return Named("Mahogany", new Color(0.78f, 0.36f, 0.26f), 0.02f, 0.55f, TexKind.Wood); } }
 
         /// <summary>Dark-oak mystery crate planks.</summary>
         public static Material CrateWood { get { Ensure(); return Named("CrateWood", new Color(0.55f, 0.36f, 0.2f), 0.02f, 0.35f, TexKind.Wood); } }
@@ -237,7 +250,7 @@ namespace ColorGateBlast
         }
 
         // ---------------------------------------------------------------- construction
-        private enum TexKind { None, Scratch, Noise, Rust, Wood, Belt, Hazard }
+        private enum TexKind { None, Scratch, Noise, Rust, Wood, Belt, Hazard, Hammered }
 
         private static void Ensure()
         {
@@ -257,6 +270,7 @@ namespace ColorGateBlast
             hazardTex = MakeHazard(128);
             beltTex = MakeBelt(128, 7);
             woodNormal = MakeWoodNormal(256, 3);
+            hammerNormal = MakeHammerNormal(128, 17);
             dashTex = MakeDash(64);
             ready = true;
         }
@@ -323,6 +337,11 @@ namespace ColorGateBlast
                     break;
                 case TexKind.Hazard:
                     m.SetTexture("_BaseMap", hazardTex);
+                    break;
+                case TexKind.Hammered:
+                    m.SetTexture("_BumpMap", hammerNormal);
+                    m.SetFloat("_BumpScale", 1.0f);
+                    m.EnableKeyword("_NORMALMAP");
                     break;
             }
             Cache[name] = m;
@@ -491,6 +510,39 @@ namespace ColorGateBlast
                     float hl = h[y * size + (x + size - 1) % size], hr = h[y * size + (x + 1) % size];
                     float hd = h[((y + size - 1) % size) * size + x], hu = h[((y + 1) % size) * size + x];
                     Vector3 n = new Vector3((hl - hr) * 1.5f, (hd - hu) * 1.5f, 1f).normalized;
+                    px2[y * size + x] = new Color32((byte)((n.x * 0.5f + 0.5f) * 255f), (byte)((n.y * 0.5f + 0.5f) * 255f), (byte)((n.z * 0.5f + 0.5f) * 255f), 255);
+                }
+            t.SetPixels32(px2);
+            t.Apply(true, false);
+            return t;
+        }
+
+        /// <summary>Hammered-copper micro normal map: overlapping round dimples.</summary>
+        private static Texture2D MakeHammerNormal(int size, int seed)
+        {
+            float[] h = new float[size * size];
+            System.Random rng = new System.Random(seed);
+            for (int d = 0; d < 260; d++)
+            {
+                float cx = (float)rng.NextDouble() * size, cy = (float)rng.NextDouble() * size;
+                float rad = 4f + (float)rng.NextDouble() * 6f;
+                for (int y = (int)(cy - rad); y <= (int)(cy + rad); y++)
+                    for (int x = (int)(cx - rad); x <= (int)(cx + rad); x++)
+                    {
+                        float dd = Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / rad;
+                        if (dd > 1f) continue;
+                        int px = ((x % size) + size) % size, py = ((y % size) + size) % size;
+                        h[py * size + px] -= (1f - dd * dd) * 0.35f;
+                    }
+            }
+            Texture2D t = NewTex(size, true);
+            Color32[] px2 = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float hl = h[y * size + (x + size - 1) % size], hr = h[y * size + (x + 1) % size];
+                    float hd = h[((y + size - 1) % size) * size + x], hu = h[((y + 1) % size) * size + x];
+                    Vector3 n = new Vector3((hl - hr) * 2.2f, (hd - hu) * 2.2f, 1f).normalized;
                     px2[y * size + x] = new Color32((byte)((n.x * 0.5f + 0.5f) * 255f), (byte)((n.y * 0.5f + 0.5f) * 255f), (byte)((n.z * 0.5f + 0.5f) * 255f), 255);
                 }
             t.SetPixels32(px2);

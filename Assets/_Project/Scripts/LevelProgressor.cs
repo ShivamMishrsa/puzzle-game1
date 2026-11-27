@@ -42,6 +42,8 @@ namespace ColorGateBlast
 
         private enum LoseKind { OutOfMoves, TrackJam, NoMoves, NoAmmo, TimeUp }
         private float timeLeft;
+        private float clockTotal;
+        private bool skipMenu;
         private bool clockRunning;
 
         private LevelDefinition def;
@@ -57,6 +59,9 @@ namespace ColorGateBlast
         private BlockColor lastExitColor = BlockColor.Gray;
         private int overdriveSurges;
 
+        public string LastLoseReason { get; private set; }
+        /// <summary>Test hook: the autoplay bot runs at 6x speed with slow solver frames, so it switches the countdown off.</summary>
+        public bool ClockDisabled;
         public GameState State { get { return state; } }
         public LevelDefinition Level { get { return def; } }
         public int MovesLeft { get { return movesLeft; } }
@@ -119,6 +124,9 @@ namespace ColorGateBlast
             monument.PartDestroyed += delegate (int p) { ui.SetTargets(monument.AliveCount); };
             ui.RestartClicked += delegate { StartLevel(levelIndex); };
             ui.NextClicked += OnNextClicked;
+            ui.MapClicked += OpenMap;
+            ui.Map.LevelChosen += OnMapLevelChosen;
+            ui.Map.Toast += ui.ShowToast;
             ui.HintClicked += OnHintClicked;
             ui.ExtraSlotClicked += OnExtraSlotClicked;
             ui.ReviveClicked += OnReviveClicked;
@@ -140,6 +148,35 @@ namespace ColorGateBlast
             int start = 0;
             for (int i = 0; i < levels.Length; i++) if (levels[i].LevelNumber <= wanted) start = i;
             StartLevel(start);
+            skipMenu = urlLevel > 0;
+#if UNITY_EDITOR
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-cgbBot") >= 0) skipMenu = true;
+#endif
+            if (!skipMenu)
+            {
+                // splash + story map first; the level underneath is already built
+                state = GameState.Preparing;
+                grid.InputEnabled = false;
+                ui.Map.ShowSplash(2.6f, delegate { OpenMap(); });
+            }
+        }
+
+        /// <summary>Shows the story map (all 150 levels, stars, padlocks); nothing underneath runs while it is open.</summary>
+        public void OpenMap()
+        {
+            if (levels == null || levels.Length == 0) return;
+            state = GameState.Preparing;
+            grid.InputEnabled = false;
+            clockRunning = false;
+            hint.ClearHint();
+            ui.HidePanels();
+            ui.Map.ShowMap(PlayerPrefs.GetInt(LevelPref, 1), levels[levels.Length - 1].LevelNumber, def != null ? def.levelID : 1);
+        }
+
+        private void OnMapLevelChosen(int number)
+        {
+            ui.Map.Hide();
+            for (int i = 0; i < levels.Length; i++) if (levels[i].LevelNumber == number) { StartLevel(i); return; }
         }
 
         // ------------------------------------------------------------------ camera + bench
@@ -225,7 +262,8 @@ namespace ColorGateBlast
             movesUsed = 0;
             timeLeft = def.timeLimit;
             clockRunning = false;
-            ui.SetTime(def.timeLimit > 0 ? def.timeLimit : -1f);
+            clockTotal = def.timeLimit;
+            ui.SetTime(def.timeLimit > 0 ? def.timeLimit : -1f, clockTotal);
             ui.SetLevel(def.levelID, def.title, def.tier);
             ui.SetMoves(movesLeft);
             ui.SetTargets(monument.AliveCount);
@@ -300,10 +338,10 @@ namespace ColorGateBlast
                 Win();
                 return;
             }
-            if (clockRunning && !adBusy && timeLeft > 0f)
+            if (clockRunning && !adBusy && !ClockDisabled && timeLeft > 0f)
             {
                 timeLeft -= Time.deltaTime;
-                ui.SetTime(Mathf.Max(0f, timeLeft));
+                ui.SetTime(Mathf.Max(0f, timeLeft), clockTotal);
                 if (timeLeft <= 0f)
                 {
                     clockRunning = false;
@@ -354,6 +392,7 @@ namespace ColorGateBlast
             int par = def.parMoves;
             int stars = movesUsed <= par ? 3 : (movesUsed <= par + (def.moveLimit - par) / 2 ? 2 : 1);
 
+            MapScreen.SetStars(def.levelID, stars);
             int next = def.levelID + 1;
             if (next > PlayerPrefs.GetInt(LevelPref, 1))
             {
@@ -393,6 +432,7 @@ namespace ColorGateBlast
         {
             state = GameState.Lost;
             loseKind = kind;
+            LastLoseReason = kind.ToString() + " (movesLeft=" + movesLeft + ", timeLeft=" + timeLeft.ToString("F1") + ", blocksLeft=" + grid.RemainingBlocks + ", partsAlive=" + monument.AliveCount + ", slots=" + track.UsedSlots + "/" + track.MaxSlots + ")";
             grid.InputEnabled = false;
             hint.ClearHint();
             ui.SetExtraSlotVisible(false);
@@ -510,7 +550,8 @@ namespace ColorGateBlast
                 {
                     timeLeft = 20f;
                     clockRunning = true;
-                    ui.SetTime(timeLeft);
+                    clockTotal = 20f;
+                    ui.SetTime(timeLeft, clockTotal);
                 }
                 ui.HidePanels();
                 state = GameState.Playing;

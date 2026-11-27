@@ -26,6 +26,7 @@ namespace ColorGateBlast
         private float overdriveUntil;
         private Vector3 trayCenter;
         private float beltScroll;
+        private bool megaPierces;
         private const float DashPeriod = 2.4f; // belt length covered by one texture repeat
 
         public float Speed { get { return BaseSpeed * (OverdriveActive ? 1.75f : 1f); } }
@@ -57,6 +58,7 @@ namespace ColorGateBlast
             trayCenter = loopCenter;
             maxSlots = def.maxTrackSlots;
             unlimited = def.UnlimitedTrack;
+            megaPierces = def.megaPierces;
             overdriveUntil = 0f;
 
             BuildPath(loopHalfX, loopHalfZ, 1.1f);
@@ -285,7 +287,7 @@ namespace ColorGateBlast
             turrets.Add(t);
             if (existing != null)
             {
-                if (existing.Piercing) t.Piercing = true;
+                if (existing.Piercing || megaPierces) t.Piercing = true;
                 existing.MergeInto(t);
             }
             if (SlotsChanged != null) SlotsChanged();
@@ -315,6 +317,7 @@ namespace ColorGateBlast
                 TurretInfo ti = new TurretInfo();
                 ti.color = (int)turrets[i].Color;
                 ti.ammo = turrets[i].Ammo;
+                ti.piercing = turrets[i].Piercing;
                 l.Add(ti);
             }
             return l;

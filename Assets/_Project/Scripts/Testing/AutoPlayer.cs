@@ -61,6 +61,7 @@ namespace ColorGateBlast
             }
             yield return new WaitForSeconds(1f);
 
+            lp.ClockDisabled = true;
             int from = Arg("-cgbFrom", 1), to = Arg("-cgbTo", 999);
             int won = 0, lost = 0, other = 0, errLevels = 0;
             for (int idx = 0; idx < lp.levels.Length; idx++)
@@ -75,10 +76,10 @@ namespace ColorGateBlast
                 string result = "TIMEOUT";
                 int steps = 0, rejected = 0;
                 float t0 = Time.realtimeSinceStartup;
-                while (Time.realtimeSinceStartup - t0 < 90f && steps < 80)
+                while (Time.realtimeSinceStartup - t0 < 400f && steps < 90)
                 {
                     if (lp.State == GameState.Won) { result = "WON"; break; }
-                    if (lp.State == GameState.Lost) { result = "LOST"; break; }
+                    if (lp.State == GameState.Lost) { result = "LOST " + lp.LastLoseReason; break; }
 
                     // wait until the conveyor / monument stopped changing by themselves
                     float w0 = Time.realtimeSinceStartup;
@@ -95,9 +96,24 @@ namespace ColorGateBlast
 
                     PuzzleState snap = new PuzzleState(lp.grid.Level, lp.grid.Board, lp.monument.Model, lp.track.Snapshot());
                     LevelSolver.SolveResult r = LevelSolver.Solve(snap, 30000, 300000, lp.MovesLeft);
+                    if (!r.solved) r = LevelSolver.Solve(snap, 200000, 1500000, lp.MovesLeft);
                     if (!r.solved) r = LevelSolver.Solve(snap, 30000, 300000);
                     if (!r.solved || r.moves == 0) { result = "NO_SOLUTION_FROM_LIVE_STATE"; break; }
+                    PuzzleState pred = snap.Clone();
+                    pred.Apply(r.firstMove);
                     bool ok = lp.grid.AutoMove(r.firstMove);
+                    if (true)
+                    {
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                        BoardModel lb = lp.grid.Board;
+                        for (int bi = 0; bi < lb.BlockCount; bi++)
+                        {
+                            bool pe = pred.Board.Exited[bi], le = lb.Exited[bi];
+                            if (pe != le || (!pe && !le && !lb.Dormant[bi] && (pred.Board.Pos[bi] != lb.Pos[bi] || pred.Board.Crated[bi] != lb.Crated[bi] || pred.Board.Ice[bi] != lb.Ice[bi])))
+                                sb.Append(" block" + bi + "(" + lb.Blocks[bi].color + ") pred=" + (pe ? "exited" : pred.Board.Pos[bi].ToString()) + " live=" + (le ? "exited" : lb.Pos[bi].ToString()));
+                        }
+                        if (sb.Length > 0) Debug.Log("[BOT] DIVERGE at step " + steps + " move block" + r.firstMove.block + " dir " + r.firstMove.dir + " to " + r.firstMove.to + " exit=" + r.firstMove.exit + ":" + sb);
+                    }
                     steps++;
                     if (!ok && ++rejected > 3) { result = "MOVE_REJECTED"; break; }
                     yield return null;
@@ -105,7 +121,7 @@ namespace ColorGateBlast
                 if (result == "TIMEOUT" && lp.State == GameState.Won) result = "WON";
                 for (int f = 0; f < 90 && lp.State == GameState.Playing && result == "TIMEOUT"; f++) yield return null;
                 if (lp.State == GameState.Won) result = "WON";
-                else if (lp.State == GameState.Lost && result == "TIMEOUT") result = "LOST";
+                else if (lp.State == GameState.Lost && result == "TIMEOUT") result = "LOST " + lp.LastLoseReason;
 
                 int used = lp.Level.moveLimit - lp.MovesLeft;
                 string line = "[BOT] Level " + num + " '" + lp.Level.title + "': " + result + " | moves used " + used + "/" + lp.Level.moveLimit +

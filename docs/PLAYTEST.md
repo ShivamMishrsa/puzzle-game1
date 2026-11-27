@@ -85,3 +85,13 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **Carriage rows (61, 63, 65, 66, 69, 70):** brass rails with a gold chevron strip; after EVERY exit the blocks lying inside the row slide one tile (carriage slide + bell ding); the strip flips when the row bounces off a wall. A 1x1 sliding onto a portal pad warps (63).
 - [ ] **Mystery crates (62, 64, 67, 69, 70):** dark-oak crates with a gold "?": they slide but cannot leave a gate; the planks burst off (splinters + crack) when a neighbour exits. L64: ice + crate together. L67 / L70: the brass key is inside a crate.
 - [ ] **Typewriter:** hood, rubber platen that slides + dings when hit, carriage-return lever, round brass keys (rear screws), typebar fan that flicks, ink-ribbon spools, escapement rack, springs, dynamite bundle.
+
+## Front end, clock and batches 8-9 (levels 71-90)
+- [ ] **Splash -> story map:** pastel splash with the three block buddies and a loading bar, then the map scrolled to your current level; locked / coming-soon nodes show a padlock and a toast; gear = sound + unlock-all (testing).
+- [ ] **Stopwatch clock** between MOVES and REMAINING: brass bezel, ring drains green -> amber -> red, pulses in the last 10 s.
+- [ ] **MOVES plaque** glows with a pulsing red rim at 3 moves or fewer; numerals are amber "Nixie" digits in a dark tube window.
+- [ ] **One-way ratchets (73, 75, 77-80, 83, 88, 89...):** brass ratchet gear + chevron; pushing a block onto it from the wrong side clicks (click-clack) and does not move.
+- [ ] **Nested armour (71-90):** inner parts (bracket, governor, mainspring / planets, cage) cannot be hit until their outer shell is gone. In 81-90 a Mega-Turret (merged colour) and a piercing-gate turret also strip the layer behind their target.
+- [ ] **Repulsor coils (81, 83, 85-90):** a block that stops on or next to a coil is shoved one tile away with a thump + sparks (a welded pair moves together).
+- [ ] **Orange / Cyan (81+),** hammered copper and satin teal; amber lamp rim light + floating dust motes on every level.
+- [ ] **Gramophone / Orrery monuments:** spinning record, governor weights, flared horn; orbiting planets on brass gear arms inside tilted hoops.

@@ -70,6 +70,7 @@ namespace ColorGateBlast
         private int dragging = -1;
         private Vector2 grabGrid;
         private Int2 startPos;
+        private Int2 lastDragDir = new Int2(0, 1);
         private bool dragExited;
         private readonly LineRenderer[] preview = new LineRenderer[4];
         private float gatePulse;
@@ -134,6 +135,8 @@ namespace ColorGateBlast
             BuildPortals();
             BuildMagnets();
             BuildCarriages();
+            BuildTurnstiles();
+            BuildRepulsors();
             BuildRails();
             BuildBlocks();
             BuildLinks();
@@ -298,6 +301,84 @@ namespace ColorGateBlast
             sg.needle = needle.transform;
             sg.outward = outward;
             steamGates.Add(sg);
+        }
+
+        /// <summary>Repulsor coils: recessed crimson-copper induction coils with outward warning chevrons and flickering arc sparks.</summary>
+        private void BuildRepulsors()
+        {
+            for (int k = 0; k < def.repulsors.Count; k++)
+            {
+                Vector3 c = CellWorld(def.repulsors[k].cell);
+                GameObject rg = new GameObject("Repulsor_" + k);
+                rg.transform.SetParent(root, false);
+                rg.transform.position = new Vector3(c.x, TrayTop + 0.004f, c.z);
+                Prims.Make("Bed", rg.transform, Prims.Cylinder, GameMaterials.Gunmetal, Vector3.zero, new Vector3(cs * 0.9f, 0.012f, cs * 0.9f));
+                for (int r = 0; r < 4; r++)
+                    Prims.Make("Coil" + r, rg.transform, Prims.Cylinder, r % 2 == 0 ? GameMaterials.Copper : GameMaterials.TntRed, new Vector3(0f, 0.012f + r * 0.004f, 0f), new Vector3(cs * (0.8f - r * 0.17f), 0.01f, cs * (0.8f - r * 0.17f)));
+                Prims.Make("Core", rg.transform, Prims.Sphere, GameMaterials.Neon(BlockColor.Red), new Vector3(0f, 0.04f, 0f), Vector3.one * (cs * 0.13f));
+                MeshBuilder mb = new MeshBuilder();
+                for (int d = 0; d < 4; d++)
+                {
+                    Vector3 dir = new Vector3(d == 0 ? 1f : d == 1 ? -1f : 0f, 0f, d == 2 ? 1f : d == 3 ? -1f : 0f);
+                    Vector3 p = new Vector3(-dir.z, 0f, dir.x);
+                    Vector3 tip = dir * (cs * 0.4f), e1 = dir * (cs * 0.27f) + p * (cs * 0.1f), e2 = dir * (cs * 0.27f) - p * (cs * 0.1f);
+                    float th = cs * 0.05f;
+                    mb.AddQuad(tip, e1, e1 - dir * th, tip - dir * th, Vector3.up);
+                    mb.AddQuad(tip, e2, e2 - dir * th, tip - dir * th, Vector3.up);
+                }
+                GameObject ch = new GameObject("Chevrons");
+                ch.transform.SetParent(rg.transform, false);
+                ch.transform.localPosition = new Vector3(0f, 0.034f, 0f);
+                ch.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("RepulsorChevrons");
+                ch.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Neon(BlockColor.Red);
+            }
+        }
+
+        private float nextArc;
+        private void AnimateRepulsors()
+        {
+            if (def.repulsors.Count == 0 || Time.time < nextArc || FXManager.Instance == null) return;
+            nextArc = Time.time + 0.55f;
+            for (int k = 0; k < def.repulsors.Count; k++)
+                FXManager.Instance.Burst(FxKind.Spark, CellWorld(def.repulsors[k].cell) + new Vector3(0f, 0.12f, 0f), 2, new Color(1f, 0.6f, 0.3f), 1.2f, 0.5f);
+        }
+
+        /// <summary>One-way ratchet turnstiles: a recessed brass ratchet gear with a glowing chevron showing the only direction a block may enter from.</summary>
+        private void BuildTurnstiles()
+        {
+            for (int k = 0; k < def.turnstiles.Count; k++)
+            {
+                TurnstileSpec ts = def.turnstiles[k];
+                Vector3 c = CellWorld(ts.cell);
+                Int2 pd = Dirs.Of(ts.dir);
+                Vector3 d = new Vector3(pd.x, 0f, pd.y);
+                GameObject tg = new GameObject("Turnstile_" + k);
+                tg.transform.SetParent(root, false);
+                tg.transform.position = new Vector3(c.x, TrayTop + 0.004f, c.z);
+                Prims.Make("Bed", tg.transform, Prims.Cylinder, GameMaterials.Gunmetal, Vector3.zero, new Vector3(cs * 0.86f, 0.012f, cs * 0.86f));
+                GameObject gear = new GameObject("RatchetGear");
+                gear.transform.SetParent(tg.transform, false);
+                gear.transform.localPosition = new Vector3(0f, 0.014f, 0f);
+                Prims.Make("Disc", gear.transform, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(cs * 0.66f, 0.012f, cs * 0.66f));
+                for (int t = 0; t < 12; t++)
+                {
+                    float a = t * 30f;
+                    Vector3 off = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad), 0f, Mathf.Sin(a * Mathf.Deg2Rad)) * (cs * 0.36f);
+                    Prims.Make("Tooth" + t, gear.transform, Prims.Cube, GameMaterials.Brass, off + new Vector3(0f, 0.006f, 0f), new Vector3(cs * 0.1f, 0.014f, cs * 0.07f), new Vector3(0f, -a, 0f));
+                }
+                Prims.Make("Hub", gear.transform, Prims.Cylinder, GameMaterials.Steel, new Vector3(0f, 0.012f, 0f), new Vector3(cs * 0.14f, 0.014f, cs * 0.14f));
+                MeshBuilder mb = new MeshBuilder();
+                Vector3 p = new Vector3(-d.z, 0f, d.x);
+                Vector3 tip = d * (cs * 0.26f), e1 = -d * (cs * 0.12f) + p * (cs * 0.22f), e2 = -d * (cs * 0.12f) - p * (cs * 0.22f);
+                float th = cs * 0.09f;
+                mb.AddQuad(tip, e1, e1 - d * th, tip - d * th, Vector3.up);
+                mb.AddQuad(tip, e2, e2 - d * th, tip - d * th, Vector3.up);
+                GameObject chev = new GameObject("Chevron");
+                chev.transform.SetParent(tg.transform, false);
+                chev.transform.localPosition = new Vector3(0f, 0.04f, 0f);
+                chev.AddComponent<MeshFilter>().sharedMesh = mb.ToMesh("TurnstileChevron");
+                chev.AddComponent<MeshRenderer>().sharedMaterial = GameMaterials.Neon(BlockColor.Yellow);
+            }
         }
 
         /// <summary>Typewriter carriage rows: notched brass rails with tick marks and a chevron strip showing the current slide direction.</summary>
@@ -844,6 +925,7 @@ namespace ColorGateBlast
             UpdateLinks();
             AnimateSteam();
             AnimateCarriages();
+            AnimateRepulsors();
 
             if (!InputEnabled)
             {
@@ -945,6 +1027,7 @@ namespace ColorGateBlast
                         Int2 before = cur;
                         cur = landing;
                         board.Commit(dragging, cur);
+                        lastDragDir = dir;
                         if (warped) WarpEffect(dragging, before + dir, cur);
                         else { views[dragging].SetTarget(CellWorld(cur)); SyncLinked(dragging); }
                         stepped = true;
@@ -961,6 +1044,15 @@ namespace ColorGateBlast
                         if (Message != null) Message("Track full! Let the turrets finish first");
                         if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.ErrorBuzz);
                         views[dragging].Shake();
+                    }
+                    else if (r == StepResult.Blocked && board.Def.turnstiles.Count > 0 && Time.time > nextNudge && board.TurnstileBlocks(dragging, cur, dir))
+                    {
+                        // wrong way onto a one-way ratchet: it locks with a click-clack
+                        nextNudge = Time.time + 0.4f;
+                        views[dragging].Shake();
+                        if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.RatchetClack);
+                        if (FXManager.Instance != null) FXManager.Instance.Haptic();
+                        if (Message != null) Message("One-way ratchet!");
                     }
                 }
                 if (!stepped) break;
@@ -998,6 +1090,7 @@ namespace ColorGateBlast
                 Int2 before = cur;
                 cur = landing;
                 board.Commit(i, cur);
+                lastDragDir = dir;
                 if (warped) WarpEffect(i, before + dir, cur);
                 else { views[i].SetTarget(CellWorld(cur)); SyncLinked(i); }
             }
@@ -1099,6 +1192,13 @@ namespace ColorGateBlast
                 views[idx].SetTarget(CellWorld(pulled));
                 if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.MagnetClunk, UnityEngine.Random.Range(0.95f, 1.05f), 0.8f);
                 if (FXManager.Instance != null) { FXManager.Instance.Sparks(CellWorld(pulled) + new Vector3(0f, 0.3f, 0f), 8); FXManager.Instance.Haptic(); }
+            }
+            if (board.RepelAfterSlide(idx, lastDragDir))
+            {
+                views[idx].SetTarget(CellWorld(board.Pos[idx]));
+                SyncLinked(idx);
+                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.RepulsorThump);
+                if (FXManager.Instance != null) { FXManager.Instance.Sparks(views[idx].CentroidWorld + new Vector3(0f, 0.3f, 0f), 14); FXManager.Instance.Shake(0.05f, 0.1f); FXManager.Instance.Haptic(); }
             }
             board.CountMove();
             if (MoveCommitted != null) MoveCommitted();

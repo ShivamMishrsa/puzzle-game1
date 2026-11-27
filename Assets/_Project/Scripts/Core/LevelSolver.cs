@@ -237,6 +237,7 @@ namespace ColorGateBlast
                     one.gridSize = solo.gridSize;
                     one.gates = solo.gates;
                     one.portals = solo.portals;
+                    one.turnstiles = def.turnstiles;
                     one.placements = new List<Placement>(solo.placements);
                     Placement mv = me;
                     if (variants > 1) mv.color = cyc[vv];

@@ -34,6 +34,12 @@ namespace ColorGateBlast.EditorTools
         [MenuItem("Tools/Color Gate Blast/Generate Levels 61-70", false, 16)]
         public static void Generate61To70() { GenerateRange(61, 70); }
 
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 71-80", false, 17)]
+        public static void Generate71To80() { GenerateRange(71, 80); }
+
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 81-90", false, 18)]
+        public static void Generate81To90() { GenerateRange(81, 90); }
+
         [MenuItem("Tools/Color Gate Blast/Verify All Levels (solver)", false, 30)]
         public static void VerifyAll()
         {
@@ -48,7 +54,7 @@ namespace ColorGateBlast.EditorTools
                     LevelData data = AssetDatabase.LoadAssetAtPath<LevelData>(path);
                     string err = data.definition.Validate();
                     LevelSolver.SolveResult r = err == null
-                        ? LevelSolver.SolveWithin(data.definition, 30000, 300000, data.definition.moveLimit)
+                        ? SolveExact(data.definition)
                         : null;
                     if (err != null || !r.solved)
                     {
@@ -59,6 +65,14 @@ namespace ColorGateBlast.EditorTools
             }
             finally { EditorUtility.ClearProgressBar(); }
             Debug.Log("[Color Gate Blast] Verified " + guids.Length + " level(s): " + (guids.Length - bad) + " OK, " + bad + " broken.");
+        }
+
+        /// <summary>Fast search first; the zero-margin levels whose exact optimum needs a deeper search get a second, bigger budget.</summary>
+        private static LevelSolver.SolveResult SolveExact(LevelDefinition def)
+        {
+            LevelSolver.SolveResult r = LevelSolver.SolveWithin(def, 30000, 300000, def.moveLimit);
+            if (!r.solved) r = LevelSolver.SolveWithin(def, 200000, 1500000, def.moveLimit);
+            return r;
         }
 
         public static void GenerateRange(int from, int to)
@@ -85,7 +99,7 @@ namespace ColorGateBlast.EditorTools
                         continue;
                     }
 
-                    LevelSolver.SolveResult within = LevelSolver.SolveWithin(def, 30000, 300000, def.moveLimit);
+                    LevelSolver.SolveResult within = SolveExact(def);
                     if (!within.solved)
                     {
                         failed++;
@@ -102,6 +116,15 @@ namespace ColorGateBlast.EditorTools
                         AssetDatabase.CreateAsset(data, path);
                     }
                     def.timeLimit = def.ComputeTimeLimit(within.moves);
+                    int distinctColours = 0;
+                    {
+                        System.Collections.Generic.HashSet<BlockColor> seen = new System.Collections.Generic.HashSet<BlockColor>();
+                        for (int pi = 0; pi < def.placements.Count; pi++) if (def.placements[pi].color != BlockColor.Gray) seen.Add(def.placements[pi].color);
+                        for (int pi = 0; pi < def.placements.Count; pi++) if (def.placements[pi].cycle != null) for (int ci = 0; ci < def.placements[pi].cycle.Length; ci++) seen.Add(def.placements[pi].cycle[ci]);
+                        distinctColours = seen.Count;
+                    }
+                    Debug.Log("[Color Gate Blast] Level " + id + " grid=" + def.GridWidth + "x" + def.GridHeight + " colours=" + distinctColours + " slots=" + def.maxTrackSlots + ": optimalMoveCount=" + within.moves + (within.exact ? " (proven optimal)" : " (best found)") +
+                              "  moveLimit=" + def.moveLimit + "  extra moves=" + (def.moveLimit - within.moves) + "  clock=" + def.timeLimit + "s");
                     data.definition = def;
                     EditorUtility.SetDirty(data);
                     ok++;

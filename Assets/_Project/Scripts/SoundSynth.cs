@@ -12,7 +12,11 @@ namespace ColorGateBlast
         // batch 5 / 6
         WeldBreak, SteamHiss, PrismChime, MagnetClunk,
         // batch 7
-        Ding, CrateCrack, CarriageSlide
+        Ding, CrateCrack, CarriageSlide,
+        // batch 8
+        RatchetClack,
+        // batch 9
+        RepulsorThump
     }
 
     /// <summary>
@@ -180,11 +184,53 @@ namespace ColorGateBlast
 
         private void Add(Sfx s, params AudioClip[] list) { clips[s] = list; }
 
+        private AudioSource musicSource;
+
+        /// <summary>Soft looping workshop music: a slow marimba pentatonic arpeggio over a warm drone, ~22 s, played quietly.</summary>
+        private void BuildMusic()
+        {
+            float[] scale = { 1f, 9f / 8f, 5f / 4f, 3f / 2f, 5f / 3f, 2f };
+            int[] melody = { 0, 2, 3, 2, 4, 3, 2, 1, 0, 2, 4, 5, 4, 3, 2, 3, 1, 2, 3, 5, 4, 2, 1, 0, 2, 3, 4, 3, 2, 1, 0, 1 };
+            float beat = 0.66f;
+            int total = (int)(melody.Length * beat * Rate) + Rate * 2;
+            float[] data = new float[total];
+            for (int i = 0; i < melody.Length; i++)
+            {
+                float f = BaseFreq * 0.5f * scale[melody[i]];
+                float[] n = Marimba(f, 1.3f, 0.2f);
+                int off = (int)(i * beat * Rate);
+                for (int k = 0; k < n.Length && off + k < total; k++) data[off + k] += n[k];
+                if (i % 4 == 0)
+                {
+                    float[] bass = Marimba(f * 0.5f, 2.2f, 0.16f);
+                    for (int k = 0; k < bass.Length && off + k < total; k++) data[off + k] += bass[k];
+                }
+            }
+            // warm drone pad
+            for (int i = 0; i < total; i++)
+            {
+                float t = i / (float)Rate;
+                float env = Mathf.Min(1f, t / 2f) * Mathf.Min(1f, (total - i) / (float)(Rate * 2));
+                data[i] += env * 0.035f * (Mathf.Sin(2f * Mathf.PI * 130.8f * t) + 0.5f * Mathf.Sin(2f * Mathf.PI * 196f * t));
+            }
+            AudioClip clip = Clip("music", data);
+            GameObject go = new GameObject("Music");
+            go.transform.SetParent(transform, false);
+            musicSource = go.AddComponent<AudioSource>();
+            musicSource.clip = clip;
+            musicSource.loop = true;
+            musicSource.volume = 0.32f;
+            musicSource.spatialBlend = 0f;
+            musicSource.playOnAwake = false;
+            musicSource.Play();
+        }
+
         // ------------------------------------------------------------------ the sound set
 
         private void Build()
         {
             pluck = Clip("pluck", Marimba(BaseFreq, 0.55f, 0.6f));
+            BuildMusic();
 
             // Block_Pick: quick upward pitch-bend with rubbery resonance
             Add(Sfx.BlockPick, Clip("pick", Mix(Sweep(220f, 520f, 0.11f, 0.45f, 0f, 1.5f), Ring(330f, 0.12f, 0.15f, 28f, 1.5f))));
@@ -235,6 +281,8 @@ namespace ColorGateBlast
             Add(Sfx.Ding, Clip("ding", Mix(Ring(2350f, 1.1f, 0.34f, 4.5f, 2.42f), Delay(Ring(3500f, 0.8f, 0.18f, 6f, 2.2f), 0.004f))));
             Add(Sfx.CrateCrack, Clip("crate", Mix(Noise(0.16f, 0.6f, 24f, 0.2f, 0.7f), Ring(180f, 0.2f, 0.45f, 16f, 2.3f), Delay(Noise(0.1f, 0.4f, 30f, 0.5f, 0.9f), 0.05f))));
             Add(Sfx.CarriageSlide, Clip("slide", Mix(Sweep(420f, 230f, 0.2f, 0.18f, 0.7f, 0.8f), Noise(0.2f, 0.12f, 8f, 0.6f, 0.9f), Delay(Ring(1900f, 0.05f, 0.25f, 70f, 1.7f), 0.18f))));
+            Add(Sfx.RatchetClack, Clip("ratchet2", Mix(Ring(1400f, 0.04f, 0.45f, 90f, 1.8f), Noise(0.015f, 0.4f, 160f, 0.6f, 0.9f), Delay(Ring(1050f, 0.05f, 0.4f, 80f, 2.0f), 0.07f), Delay(Noise(0.015f, 0.35f, 160f, 0.6f, 0.9f), 0.07f))));
+            Add(Sfx.RepulsorThump, Clip("thump", Mix(Sweep(160f, 55f, 0.22f, 0.7f, 0f, 1.2f), Ring(95f, 0.3f, 0.45f, 12f, 2.0f), Noise(0.05f, 0.35f, 70f, 0.4f, 0.8f), Delay(Sweep(2600f, 900f, 0.07f, 0.2f, 0.4f, 1.5f), 0.01f))));
             Add(Sfx.Unlock, Clip("unlock", Mix(Marimba(BaseFreq * 2f, 0.4f, 0.4f), Delay(Marimba(BaseFreq * 3f, 0.5f, 0.4f), 0.08f))));
         }
     }

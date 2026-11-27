@@ -189,6 +189,21 @@ namespace ColorGateBlast
         public int dir;
     }
 
+    /// <summary>Electromagnetic repulsor coil: a block that comes to rest on, or orthogonally next to, this tile is pushed one tile away.</summary>
+    [Serializable]
+    public struct RepulsorSpec
+    {
+        public Int2 cell;
+    }
+
+    /// <summary>One-way ratchet turnstile: a block can only slide ONTO this tile while moving in <see cref="dir"/>.</summary>
+    [Serializable]
+    public struct TurnstileSpec
+    {
+        public Int2 cell;
+        public GateDirection dir;
+    }
+
     /// <summary>Electromagnetic floor pad: after a block comes to rest next to it (on the side opposite <see cref="pull"/>) it is pulled one tile onto the pad for free.</summary>
     [Serializable]
     public struct MagnetSpec
@@ -285,6 +300,37 @@ namespace ColorGateBlast
                         return;
                     case PartType.Tnt:
                         if (slot == 0) { x = 0.0f; y = 1.5f; } else { x = 0.8f; y = 1.9f; }
+                        return;
+                    default: x = 0.0f; y = 1.5f; return;
+                }
+            }
+            if (kind == MonumentKind.Orrery)
+            {
+                switch (type)
+                {
+                    case PartType.Ring: x = 0.0f; y = 3.0f - 0.4f * slot; return;
+                    case PartType.Planet:
+                        if (slot == 0) { x = -0.9f; y = 2.1f; } else if (slot == 1) { x = 0.9f; y = 2.4f; } else if (slot == 2) { x = 0.0f; y = 1.5f; } else { x = 0.5f; y = 2.9f; }
+                        return;
+                    case PartType.Cage: x = 0.0f; y = 2.05f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 2.1f; } else { x = 0.45f; y = 1.9f; }
+                        return;
+                    default: x = 0.0f; y = 2.0f; return;
+                }
+            }
+            if (kind == MonumentKind.Gramophone)
+            {
+                switch (type)
+                {
+                    case PartType.Horn: x = slot == 0 ? 0.0f : -0.4f; y = slot == 0 ? 2.5f : 3.1f; return;
+                    case PartType.Bracket: x = 0.0f; y = 1.9f; return;
+                    case PartType.Record: x = slot == 0 ? 0.0f : 0.5f; y = 1.3f; return;
+                    case PartType.Governor: x = 1.1f; y = 1.0f; return;
+                    case PartType.Cabinet: x = slot == 0 ? 0.0f : -0.8f; y = 0.55f; return;
+                    case PartType.Mainspring: x = 0.5f; y = 0.8f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 0.9f; } else { x = -0.9f; y = 0.8f; }
                         return;
                     default: x = 0.0f; y = 1.5f; return;
                 }
@@ -399,6 +445,10 @@ namespace ColorGateBlast
         public List<PortalSpec> portals = new List<PortalSpec>();
         public List<MagnetSpec> magnets = new List<MagnetSpec>();
         public List<CarriageSpec> carriages = new List<CarriageSpec>();
+        public List<TurnstileSpec> turnstiles = new List<TurnstileSpec>();
+        public List<RepulsorSpec> repulsors = new List<RepulsorSpec>();
+        /// <summary>Merged (Mega) turrets punch through the layer behind their target, like a clockwork piercing gate (levels 81+).</summary>
+        public bool megaPierces;
         /// <summary>Countdown in seconds (0 = untimed).</summary>
         public int timeLimit;
         /// <summary>Level starts with the monument spin-hint (a 360 icon) visible.</summary>
@@ -425,14 +475,15 @@ namespace ColorGateBlast
         public int ComputeTimeLimit(int par)
         {
             int baseSec;
-            switch (Difficulty)
+            if (levelID >= 71) baseSec = 60; // chapter 8 onward: a flat minute for everything
+            else switch (Difficulty)
             {
                 case DifficultyClass.Easy: baseSec = 30; break;
                 case DifficultyClass.Medium: baseSec = 45; break;
                 case DifficultyClass.Hard: baseSec = 60; break;
                 default: baseSec = 120; break;
             }
-            int need = par * 2 + 10;
+            int need = levelID >= 81 ? (int)Math.Ceiling(par * 2.5) + 10 : par * 2 + 10;
             int t = Math.Max(baseSec, need);
             return ((t + 4) / 5) * 5;
         }
@@ -554,6 +605,10 @@ namespace ColorGateBlast
                 for (int j = 0; j < placements.Count; j++) if (placements[j].linkGroup == placements[i].linkGroup) n++;
                 if (n != 2) return "link group " + placements[i].linkGroup + " must have exactly two blocks";
             }
+            for (int ri = 0; ri < repulsors.Count; ri++)
+                if (repulsors[ri].cell.x < 0 || repulsors[ri].cell.y < 0 || repulsors[ri].cell.x >= w || repulsors[ri].cell.y >= h) return "repulsor " + ri + " out of grid";
+            for (int ti = 0; ti < turnstiles.Count; ti++)
+                if (turnstiles[ti].cell.x < 0 || turnstiles[ti].cell.y < 0 || turnstiles[ti].cell.x >= w || turnstiles[ti].cell.y >= h) return "turnstile " + ti + " out of grid";
             for (int ci = 0; ci < carriages.Count; ci++)
                 if (carriages[ci].row < 0 || carriages[ci].row >= h || carriages[ci].dir == 0) return "carriage " + ci + " is invalid";
             for (int mi = 0; mi < magnets.Count; mi++)

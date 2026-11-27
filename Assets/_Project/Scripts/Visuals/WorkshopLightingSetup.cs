@@ -13,7 +13,7 @@ namespace ColorGateBlast
     /// </summary>
     public sealed class WorkshopLightingSetup : MonoBehaviour
     {
-        private Light key, rim;
+        private Light key, rim, lamp;
         private Volume volume;
 
         public void Apply(Camera cam, float focusDistance)
@@ -35,6 +35,10 @@ namespace ColorGateBlast
 
             if (rim == null) rim = MakeLight("WorkshopRimLight", new Color(0.55f, 0.72f, 1f), 0.45f, LightShadows.None);
             rim.transform.rotation = Quaternion.LookRotation(new Vector3(0.5f, -0.45f, 0.75f), Vector3.up);
+
+            // golden-hour banker's desk lamp: a low amber rim light from the back right lifts brushed steel, brass and bevels
+            if (lamp == null) lamp = MakeLight("WorkshopLampLight", new Color(1f, 0.70f, 0.28f), 0.55f, LightShadows.None);
+            lamp.transform.rotation = Quaternion.LookRotation(new Vector3(-0.55f, -0.32f, -0.78f), Vector3.up);
 
             // flat horizontal metal (belt, casings, tray) mirrors the bright default sky: tame it so nothing blows out to pure white
             RenderSettings.reflectionIntensity = 0.38f;

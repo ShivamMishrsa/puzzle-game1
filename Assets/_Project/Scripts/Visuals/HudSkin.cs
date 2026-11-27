@@ -9,7 +9,7 @@ namespace ColorGateBlast
     /// </summary>
     public static class HudSkin
     {
-        private static Sprite plate, medallion, disc, ledSocket, ledLit, padlock, pliers, gear;
+        private static Sprite plate, medallion, disc, ledSocket, ledLit, padlock, pliers, gear, star, ring, clockFace, blob;
 
         public const float PlateBorder = 26f;
 
@@ -20,6 +20,37 @@ namespace ColorGateBlast
         public static Sprite LedLit { get { if (ledLit == null) ledLit = MakeLed(96); return ledLit; } }
         public static Sprite Padlock { get { if (padlock == null) padlock = MakePadlock(64); return padlock; } }
         public static Sprite Pliers { get { if (pliers == null) pliers = MakePliers(128); return pliers; } }
+        /// <summary>Flat, soft-edged white circle (clouds, trees, ponds).</summary>
+        public static Sprite Blob
+        {
+            get
+            {
+                if (blob == null)
+                {
+                    int size = 64;
+                    Texture2D t = NewTex(size);
+                    Color32[] px = new Color32[size * size];
+                    float c = size * 0.5f;
+                    for (int y = 0; y < size; y++)
+                        for (int x = 0; x < size; x++)
+                        {
+                            float r = Mathf.Sqrt((x + 0.5f - c) * (x + 0.5f - c) + (y + 0.5f - c) * (y + 0.5f - c));
+                            float a = Cov(c - 1f - r);
+                            float shade = 1f - 0.1f * Mathf.Clamp01((r / c - 0.6f) * 2.5f);
+                            byte b = (byte)(shade * 255f);
+                            px[y * size + x] = new Color32(b, b, b, (byte)(a * 255f));
+                        }
+                    t.SetPixels32(px);
+                    blob = ToSprite(t, Vector4.zero);
+                }
+                return blob;
+            }
+        }
+        public static Sprite Star { get { if (star == null) star = MakeStar(96); return star; } }
+        /// <summary>Thin white ring (use with Image.Type.Filled radial for the countdown arc).</summary>
+        public static Sprite Ring { get { if (ring == null) ring = MakeRing(128); return ring; } }
+        /// <summary>Brass-rimmed cream clock face with hour ticks.</summary>
+        public static Sprite ClockFace { get { if (clockFace == null) clockFace = MakeClockFace(128); return clockFace; } }
         public static Sprite Gear { get { if (gear == null) gear = MakeGear(128); return gear; } }
 
         private static Texture2D NewTex(int size)
@@ -251,6 +282,80 @@ namespace ColorGateBlast
                         col.a = Mathf.Max(col.a, ap);
                     }
                     px[y * size + x] = (Color32)col;
+                }
+            t.SetPixels32(px);
+            return ToSprite(t, Vector4.zero);
+        }
+
+        private static Sprite MakeStar(int size)
+        {
+            Texture2D t = NewTex(size);
+            Color32[] px = new Color32[size * size];
+            float c = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x + 0.5f - c, dy = y + 0.5f - c;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float ang = Mathf.Atan2(dx, dy); // 0 = up
+                    float sector = Mathf.Repeat(ang, 2f * Mathf.PI / 5f) / (2f * Mathf.PI / 5f); // 0..1 across one point
+                    float tri = Mathf.Abs(sector - 0.5f) * 2f;                                     // 0 at the valley .. 1 at the tip (mirrored)
+                    float edge = Mathf.Lerp(size * 0.22f, size * 0.47f, tri);
+                    float a = Cov(edge - r);
+                    float shade = 0.82f + 0.18f * Mathf.Clamp01(1f - r / (size * 0.5f)) + (r > edge - 3f ? -0.2f : 0f);
+                    byte b = (byte)(Mathf.Clamp01(shade) * 255f);
+                    px[y * size + x] = new Color32(b, b, b, (byte)(a * 255f));
+                }
+            t.SetPixels32(px);
+            return ToSprite(t, Vector4.zero);
+        }
+
+        private static Sprite MakeRing(int size)
+        {
+            Texture2D t = NewTex(size);
+            Color32[] px = new Color32[size * size];
+            float c = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x + 0.5f - c, dy = y + 0.5f - c;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Cov(c - 1f - r) * Cov(r - (c - 14f));
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                }
+            t.SetPixels32(px);
+            return ToSprite(t, Vector4.zero);
+        }
+
+        private static Sprite MakeClockFace(int size)
+        {
+            Texture2D t = NewTex(size);
+            Color32[] px = new Color32[size * size];
+            float c = size * 0.5f, R = c - 1f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x + 0.5f - c, dy = y + 0.5f - c;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Cov(R - r);
+                    if (a <= 0f) { px[y * size + x] = new Color32(0, 0, 0, 0); continue; }
+                    float ang = Mathf.Atan2(dy, dx);
+                    Color col;
+                    if (r > R - 4f) col = new Color(0.25f, 0.16f, 0.06f);
+                    else if (r > R - 15f)
+                    {
+                        float light = 0.62f + 0.38f * Mathf.Cos(ang - 2.35f);
+                        col = new Color(0.95f * light, 0.72f * light, 0.28f * light);          // brass bezel
+                    }
+                    else
+                    {
+                        col = new Color(0.99f, 0.96f, 0.86f);                                    // cream face
+                        float deg = Mathf.Repeat(90f - ang * Mathf.Rad2Deg, 360f);
+                        float nearTick = Mathf.Abs(Mathf.Repeat(deg + 15f, 30f) - 15f);
+                        if (r > R - 30f && r < R - 20f && nearTick < 2.6f) col = new Color(0.25f, 0.2f, 0.18f); // 12 hour ticks
+                        if (r < 5f) col = new Color(0.25f, 0.2f, 0.18f);
+                    }
+                    px[y * size + x] = (Color32)new Color(col.r, col.g, col.b, a);
                 }
             t.SetPixels32(px);
             return ToSprite(t, Vector4.zero);

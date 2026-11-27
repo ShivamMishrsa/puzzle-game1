@@ -10,13 +10,17 @@ namespace ColorGateBlast
         /// <summary>Emerald Enamel Green (levels 21+).</summary>
         Green = 4,
         /// <summary>Royal Amethyst Purple (levels 61+).</summary>
-        Purple = 5
+        Purple = 5,
+        /// <summary>Hammered Copper Orange #D95D1E (levels 81+).</summary>
+        Orange = 6,
+        /// <summary>Anodized Arctic Teal #0891B2 (levels 81+).</summary>
+        Cyan = 7
     }
 
     public static class ColorCount
     {
         /// <summary>Number of BlockColor values (array size for per-colour tables).</summary>
-        public const int Total = 6;
+        public const int Total = 8;
     }
 
     /// <summary>Which edge of the tray a gate is on = the direction a block moves to leave through it.</summary>
@@ -98,7 +102,18 @@ namespace ColorGateBlast
         Typebar,
         Ribbon,
         Rack,
-        Spring
+        Spring,
+        // ---- Chapter 8: Vintage Gramophone ----
+        Horn,
+        Bracket,
+        Record,
+        Governor,
+        Cabinet,
+        Mainspring,
+        // ---- Chapter 9: Celestial Brass Orrery ----
+        Ring,
+        Planet,
+        Cage
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -110,7 +125,9 @@ namespace ColorGateBlast
         PocketWatch = 3,
         EspressoMachine = 4,
         TlrCamera = 5,
-        Typewriter = 6
+        Typewriter = 6,
+        Gramophone = 7,
+        Orrery = 8
     }
 
     /// <summary>Difficulty class of a level: sets the countdown clock and whether the move limit is exact.</summary>

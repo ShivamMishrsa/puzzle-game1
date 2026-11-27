@@ -6,7 +6,7 @@ using ColorGateBlast.EditorTools;
 
 class Program
 {
-    static string C(BlockColor c) { return c == BlockColor.Red ? "R" : c == BlockColor.Blue ? "B" : c == BlockColor.Yellow ? "Y" : c == BlockColor.Green ? "G" : c == BlockColor.Purple ? "P" : "X"; }
+    static string C(BlockColor c) { return c == BlockColor.Red ? "R" : c == BlockColor.Blue ? "B" : c == BlockColor.Yellow ? "Y" : c == BlockColor.Green ? "G" : c == BlockColor.Purple ? "P" : c == BlockColor.Orange ? "O" : c == BlockColor.Cyan ? "C" : "X"; }
 
     static string Fmt(Placement p)
     {
@@ -35,7 +35,7 @@ class Program
     {
         LevelDefinition d = new LevelDefinition();
         d.levelID = t.levelID; d.gridSize = t.gridSize; d.moveLimit = t.moveLimit; d.maxTrackSlots = t.maxTrackSlots;
-        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.carriages = t.carriages; d.targetHpScale = t.targetHpScale;
+        d.targetHpScale = t.targetHpScale; d.monument = t.monument; d.placements = placed; d.gates = t.gates; d.parts = t.parts; d.portals = t.portals; d.magnets = t.magnets; d.carriages = t.carriages; d.turnstiles = t.turnstiles; d.repulsors = t.repulsors; d.megaPierces = t.megaPierces; d.timeLimit = t.timeLimit; d.targetHpScale = t.targetHpScale;
         return d;
     }
 
@@ -50,6 +50,7 @@ class Program
             Stopwatch sw = Stopwatch.StartNew();
             LevelSolver.SolveResult free = LevelSolver.Solve(d, 30000, 300000);
             LevelSolver.SolveResult within = LevelSolver.SolveWithin(d, 30000, 300000, d.moveLimit);
+            if (!within.solved) within = LevelSolver.SolveWithin(d, 200000, 1500000, d.moveLimit);
             int movable = 0;
             foreach (Placement p in d.placements) if (!p.locked && p.color != BlockColor.Gray) movable++;
             string status = within.solved ? "OK" : "FAIL";
@@ -342,11 +343,63 @@ class Program
         cab.ApplyCarriages(null);
         Check(cab.Pos[0].x == 2 && cab.CarriageDir[0] == -1, "carriage: bounced back (x=" + cab.Pos[0].x + ")");
 
+        // turnstiles: a tile at (2,1) that only accepts blocks sliding Right
+        LevelDefinition td = Tiny(5, 3);
+        td.placements.Add(Blk(BlockColor.Red, 0, 1));
+        td.placements.Add(Blk(BlockColor.Blue, 4, 0));
+        td.turnstiles.Add(new TurnstileSpec { cell = new Int2(2, 1), dir = GateDirection.Right });
+        BoardModel tb = new BoardModel(td);
+        Check(tb.Probe(0, new Int2(1, 0)) == StepResult.Moved, "turnstile: red may step toward the tile from the left");
+        tb.Commit(0, new Int2(1, 1));
+        Check(tb.Probe(0, new Int2(1, 0)) == StepResult.Moved, "turnstile: red may slide ONTO the tile moving Right");
+        tb.Commit(0, new Int2(2, 1));
+        Check(tb.Probe(0, new Int2(1, 0)) == StepResult.Moved, "turnstile: red may keep sliding Right across it");
+        tb.Commit(0, new Int2(3, 1));
+        Check(tb.Probe(0, new Int2(-1, 0)) == StepResult.Blocked, "turnstile: red cannot slide back Left onto the tile");
+        Check(tb.TurnstileBlocks(0, tb.Pos[0], new Int2(-1, 0)), "turnstile: ratchet click reported for the wrong direction");
+        tb.Commit(0, new Int2(3, 2));
+        tb.Commit(0, new Int2(2, 2));
+        Check(tb.Probe(0, new Int2(0, -1)) == StepResult.Blocked, "turnstile: red cannot drop onto the tile from above");
+
+        // repulsors: coil at (2,1): a block coming to rest next to it is shoved one tile away
+        LevelDefinition rpd = Tiny(6, 4);
+        rpd.placements.Add(Blk(BlockColor.Red, 0, 1));
+        rpd.repulsors.Add(new RepulsorSpec { cell = new Int2(3, 1) });
+        BoardModel rpb = new BoardModel(rpd);
+        rpb.Commit(0, new Int2(2, 1));
+        bool pushed = rpb.RepelAfterSlide(0, new Int2(1, 0));
+        Check(pushed && rpb.Pos[0].x == 1, "repulsor: block resting beside the coil is pushed one tile away (x=" + rpb.Pos[0].x + ")");
+        rpb.Commit(0, new Int2(3, 1));
+        pushed = rpb.RepelAfterSlide(0, new Int2(1, 0));
+        Check(pushed && rpb.Pos[0].x == 4, "repulsor: block resting ON the coil continues one tile in its move direction");
+        rpb.Commit(0, new Int2(5, 1));
+        Check(!rpb.RepelAfterSlide(0, new Int2(1, 0)), "repulsor: far away block is not touched");
+
         Console.WriteLine(selfFail == 0 ? "SELFTEST ALL PASS" : ("SELFTEST FAILURES: " + selfFail));
+    }
+
+    // Tighten a level's move count: keep asking the solver for a shorter solution until it cannot find one.
+    static void Opt(int from, int to)
+    {
+        int bfs = int.Parse(Environment.GetEnvironmentVariable("OPTB") ?? "200000"), heu = int.Parse(Environment.GetEnvironmentVariable("OPTH") ?? "1500000");
+        foreach (LevelDefinition d in LevelLibrary.Range(from, to))
+        {
+            Stopwatch sw = Stopwatch.StartNew();
+            LevelSolver.SolveResult best = LevelSolver.SolveWithin(d, bfs, heu, d.moveLimit);
+            if (!best.solved) { Console.WriteLine("L" + d.levelID + " OPT FAIL"); continue; }
+            while (best.moves > 1)
+            {
+                LevelSolver.SolveResult r = LevelSolver.SolveWithin(d, bfs, heu, best.moves - 1);
+                if (!r.solved) break;
+                best = r;
+            }
+            Console.WriteLine("L" + d.levelID + " OPT " + best.moves + (best.exact ? "e" : "h") + " (limit was " + d.moveLimit + ") " + sw.ElapsedMilliseconds + "ms");
+        }
     }
 
     static void Main(string[] args)
     {
+        if (args.Length >= 3 && args[0] == "opt") { Opt(int.Parse(args[1]), int.Parse(args[2])); return; }
         if (args.Length >= 1 && args[0] == "selftest") { SelfTest(); return; }
         if (args.Length >= 3 && args[0] == "dbg") { Dbg(int.Parse(args[1]), int.Parse(args[2])); return; }
         if (args.Length >= 2 && args[0] == "mon") { Mon(int.Parse(args[1])); return; }

@@ -30,6 +30,43 @@ namespace ColorGateBlast
             BuildBitKit(rig.GroundPoint(0.90f, 0.935f));
             BuildScrewdriver(rig.GroundPoint(0.90f, 0.80f));
             ScatterHardware(rig, loopCenter, loopHalfX, loopHalfZ, seed);
+            BuildDust(loopCenter, loopHalfX, loopHalfZ);
+        }
+
+        /// <summary>Golden workshop dust motes drifting slowly through the key-light beam above the monument and tray.</summary>
+        private void BuildDust(Vector3 center, float hx, float hz)
+        {
+            GameObject go = new GameObject("DustMotes");
+            go.transform.SetParent(root, false);
+            go.transform.position = new Vector3(center.x, 3.2f, center.z);
+            ParticleSystem ps = go.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = ps.main;
+            main.loop = true;
+            main.startLifetime = 9f;
+            main.startSpeed = 0.06f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.11f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.82f, 0.45f, 0.55f), new Color(1f, 0.93f, 0.7f, 0.25f));
+            main.maxParticles = 60;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.gravityModifier = -0.004f;
+            ParticleSystem.EmissionModule em = ps.emission;
+            em.rateOverTime = 7f;
+            ParticleSystem.ShapeModule sh = ps.shape;
+            sh.shapeType = ParticleSystemShapeType.Box;
+            sh.scale = new Vector3(hx * 1.6f, 3.5f, hz * 1.5f);
+            ParticleSystem.NoiseModule nz = ps.noise;
+            nz.enabled = true; nz.strength = 0.18f; nz.frequency = 0.3f;
+            ParticleSystem.ColorOverLifetimeModule col = ps.colorOverLifetime;
+            col.enabled = true;
+            Gradient g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            ParticleSystemRenderer pr = go.GetComponent<ParticleSystemRenderer>();
+            pr.sharedMaterial = GameMaterials.ParticleUnlit(true);
+            pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Simulate(8f, true, true);
+            ps.Play();
         }
 
         private void BuildBench()

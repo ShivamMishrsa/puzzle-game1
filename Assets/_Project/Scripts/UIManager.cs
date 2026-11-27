@@ -54,6 +54,10 @@ namespace ColorGateBlast
         [SerializeField] private Button retryButton;
 
         private Text timerText;
+        private Image clockRing;
+        private Outline movesWarning;
+        public MapScreen Map { get; private set; }
+        public event Action MapClicked;
         private float toastUntil;
         private float lastToastTime = -10f;
         private string lastToast;
@@ -64,6 +68,10 @@ namespace ColorGateBlast
         {
             BuildUI(null); // the industrial HUD is generated from code at runtime (HudSkin sprites are not serializable)
             Wire();
+            // every button gets a tactile click
+            Button[] all = GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < all.Length; i++)
+                all[i].onClick.AddListener(delegate { if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.Click, 1f, 0.7f); });
         }
 
         private void Wire()
@@ -88,6 +96,12 @@ namespace ColorGateBlast
 
         private void Update()
         {
+            if (movesWarning != null && movesWarning.enabled)
+            {
+                Color wc = movesWarning.effectColor;
+                wc.a = 0.35f + 0.55f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f));
+                movesWarning.effectColor = wc;
+            }
             if (toastText != null && toastText.gameObject.activeSelf && Time.unscaledTime > toastUntil)
                 toastText.gameObject.SetActive(false);
         }
@@ -109,18 +123,23 @@ namespace ColorGateBlast
             }
         }
 
-        /// <summary>Countdown clock between the two plaques; red and pulsing in the last 10 seconds. seconds &lt; 0 hides it.</summary>
-        public void SetTime(float seconds)
+        /// <summary>Stopwatch between the two plaques: a brass-rimmed clock face inside a ring that drains from green to red. seconds &lt; 0 hides it.</summary>
+        public void SetTime(float seconds, float total)
         {
             if (timerText == null) return;
-            timerText.transform.parent.gameObject.SetActive(seconds >= 0f);
+            GameObject clock = timerText.transform.parent.parent.gameObject;
+            clock.SetActive(seconds >= 0f);
             if (seconds < 0f) return;
-            int s = Mathf.CeilToInt(seconds);
-            timerText.text = (s / 60) + ":" + (s % 60).ToString("00");
-            bool low = s <= 10;
-            timerText.color = low ? new Color(0.78f, 0.05f, 0.05f) : PlaqueText;
-            float k = low ? 1f + 0.08f * Mathf.Sin(Time.unscaledTime * 10f) : 1f;
-            timerText.transform.parent.localScale = Vector3.one * k;
+            int sec = Mathf.CeilToInt(seconds);
+            timerText.text = (sec / 60) + ":" + (sec % 60).ToString("00");
+            float k = total > 0f ? Mathf.Clamp01(seconds / total) : 1f;
+            clockRing.fillAmount = k;
+            Color ring = k > 0.5f ? Color.Lerp(new Color(0.98f, 0.8f, 0.2f), new Color(0.3f, 0.85f, 0.4f), (k - 0.5f) * 2f) : Color.Lerp(new Color(0.9f, 0.15f, 0.1f), new Color(0.98f, 0.8f, 0.2f), k * 2f);
+            clockRing.color = ring;
+            bool low = sec <= 10;
+            timerText.color = low ? new Color(0.8f, 0.05f, 0.05f) : PlaqueText;
+            float pulse = low ? 1f + 0.07f * Mathf.Sin(Time.unscaledTime * 10f) : 1f;
+            clock.transform.localScale = Vector3.one * pulse;
         }
 
         public void SetTargets(int remaining) { targetsText.text = "REMAINING: " + remaining; }
@@ -128,7 +147,8 @@ namespace ColorGateBlast
         public void SetMoves(int left)
         {
             movesText.text = "MOVES: " + left;
-            movesText.color = left <= 2 ? new Color(0.65f, 0.05f, 0.05f) : PlaqueText;
+            movesText.color = left <= 3 ? new Color(1f, 0.32f, 0.2f) : NixieAmber;
+            if (movesWarning != null) movesWarning.enabled = left <= 3;
         }
 
         /// <summary>Track Capacity label + recessed LED pips (amber when occupied, dark socket when empty).</summary>
@@ -227,6 +247,7 @@ namespace ColorGateBlast
         // ------------------------------------------------------------------ construction
 
         private static readonly Color PlaqueText = new Color(0.1f, 0.1f, 0.12f);
+        private static readonly Color NixieAmber = new Color(1f, 0.74f, 0.25f);
         private static readonly Color CreamText = new Color(0.96f, 0.9f, 0.74f);
         private Image hintImage;
         private static readonly Color PanelColor = new Color(0.06f, 0.07f, 0.12f, 0.92f);
@@ -282,24 +303,49 @@ namespace ColorGateBlast
             banner.SetActive(false);
 
             movesText = MakePlaque(root, "MovesPlaque", font, new Vector2(0f, 1f), new Vector2(240, -190), new Vector2(430, 108), new Color(0.78f, 0.16f, 0.12f));
+            Image movesPlate = movesText.transform.parent.GetComponent<Image>();
+            movesWarning = movesPlate.gameObject.AddComponent<Outline>();
+            movesWarning.effectColor = new Color(1f, 0.1f, 0.05f, 0.9f);
+            movesWarning.effectDistance = new Vector2(7f, -7f);
+            movesWarning.enabled = false;
             targetsText = MakePlaque(root, "RemainingPlaque", font, new Vector2(1f, 1f), new Vector2(-240, -190), new Vector2(430, 108), new Color(0.2f, 0.45f, 0.85f));
             targetsText.fontSize = 32;
 
-            // --- countdown clock between the plaques ---
-            GameObject tp = new GameObject("TimerPlate", typeof(RectTransform));
+            // --- stopwatch between the plaques ---
+            GameObject tp = new GameObject("Stopwatch", typeof(RectTransform));
             tp.transform.SetParent(root, false);
             RectTransform tpr = tp.GetComponent<RectTransform>();
             tpr.anchorMin = tpr.anchorMax = topC; tpr.pivot = new Vector2(0.5f, 0.5f);
-            tpr.anchoredPosition = new Vector2(0, -190); tpr.sizeDelta = new Vector2(150, 96);
-            Image tpi = tp.AddComponent<Image>();
-            tpi.sprite = HudSkin.Plate; tpi.type = Image.Type.Sliced; tpi.raycastTarget = false;
-            timerText = MakeText(tpr, "TimerText", font, 46, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140, 80));
+            tpr.anchoredPosition = new Vector2(0, -192); tpr.sizeDelta = new Vector2(138, 138);
+            Image track = tp.AddComponent<Image>();
+            track.sprite = HudSkin.Ring; track.color = new Color(0.12f, 0.1f, 0.1f, 0.85f); track.raycastTarget = false;
+            GameObject fill = new GameObject("Arc", typeof(RectTransform));
+            fill.transform.SetParent(tpr, false);
+            RectTransform fr = fill.GetComponent<RectTransform>();
+            fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one; fr.offsetMin = Vector2.zero; fr.offsetMax = Vector2.zero;
+            clockRing = fill.AddComponent<Image>();
+            clockRing.sprite = HudSkin.Ring; clockRing.type = Image.Type.Filled; clockRing.fillMethod = Image.FillMethod.Radial360;
+            clockRing.fillOrigin = (int)Image.Origin360.Top; clockRing.fillClockwise = true; clockRing.fillAmount = 1f; clockRing.raycastTarget = false;
+            GameObject crown = new GameObject("Crown", typeof(RectTransform));
+            crown.transform.SetParent(tpr, false);
+            RectTransform cr = crown.GetComponent<RectTransform>();
+            cr.anchorMin = cr.anchorMax = new Vector2(0.5f, 1f); cr.sizeDelta = new Vector2(34, 22); cr.anchoredPosition = new Vector2(0, 8);
+            Image ci = crown.AddComponent<Image>(); ci.sprite = HudSkin.Plate; ci.type = Image.Type.Sliced; ci.color = new Color(1f, 0.82f, 0.4f); ci.raycastTarget = false;
+            GameObject face = new GameObject("Face", typeof(RectTransform));
+            face.transform.SetParent(tpr, false);
+            RectTransform fcr = face.GetComponent<RectTransform>();
+            fcr.anchorMin = fcr.anchorMax = new Vector2(0.5f, 0.5f); fcr.sizeDelta = new Vector2(106, 106);
+            Image fci = face.AddComponent<Image>(); fci.sprite = HudSkin.ClockFace; fci.raycastTarget = false;
+            timerText = MakeText(fcr, "TimerText", font, 32, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -4f), new Vector2(100, 50));
             timerText.color = PlaqueText;
             timerText.GetComponent<Outline>().enabled = false;
-            Shadow tsh = timerText.gameObject.AddComponent<Shadow>();
-            tsh.effectColor = new Color(1f, 1f, 1f, 0.5f);
-            tsh.effectDistance = new Vector2(0f, -2f);
             tp.SetActive(false);
+
+            // --- back to the story map ---
+            Button mapBtn = MakeButton(root, "MapButton", font, null, new Color(1f, 0.85f, 0.7f), "MAP", 28, new Vector2(0f, 1f), new Vector2(80, -46), new Vector2(110, 58));
+            mapBtn.GetComponentInChildren<Text>().color = PlaqueText;
+            mapBtn.GetComponentInChildren<Outline>().enabled = false;
+            mapBtn.onClick.AddListener(delegate { if (MapClicked != null) MapClicked(); });
 
             // --- bottom row: track capacity LEDs (left), Restart plaque (centre), booster medallions (right) ---
             trackText = MakeText(root, "TrackText", font, 34, TextAnchor.MiddleLeft, new Vector2(0f, 0f), new Vector2(44, 178), new Vector2(520, 50));
@@ -362,6 +408,8 @@ namespace ColorGateBlast
             winDetail = MakeText(wr, "Detail", font, 44, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 90), new Vector2(950, 360));
             nextButton = MakeButton(wr, "NextButton", font, sprite, ButtonBlue, "NEXT LEVEL", 46, new Vector2(0.5f, 0.5f), new Vector2(0, -170), new Vector2(560, 120));
             replayButton = MakeButton(wr, "ReplayButton", font, sprite, ButtonGray, "REPLAY", 38, new Vector2(0.5f, 0.5f), new Vector2(0, -320), new Vector2(400, 100));
+            Button winMap = MakeButton(wr, "WinMapButton", font, sprite, ButtonGold, "MAP", 38, new Vector2(0.5f, 0.5f), new Vector2(0, -450), new Vector2(400, 100));
+            winMap.onClick.AddListener(delegate { if (MapClicked != null) MapClicked(); });
             winPanel.SetActive(false);
 
             // --- lose overlay ---
@@ -373,8 +421,12 @@ namespace ColorGateBlast
             reviveButtonText = reviveButton.transform.Find("Label").GetComponent<Text>();
             MakeBadge(reviveButton.GetComponent<RectTransform>(), font, sprite);
             retryButton = MakeButton(lr, "RetryButton", font, sprite, ButtonBlue, "TRY AGAIN", 42, new Vector2(0.5f, 0.5f), new Vector2(0, -300), new Vector2(460, 110));
+            Button loseMap = MakeButton(lr, "LoseMapButton", font, sprite, ButtonGold, "MAP", 38, new Vector2(0.5f, 0.5f), new Vector2(0, -440), new Vector2(400, 100));
+            loseMap.onClick.AddListener(delegate { if (MapClicked != null) MapClicked(); });
             losePanel.SetActive(false);
 
+            Map = canvasGo.AddComponent<MapScreen>();
+            Map.Build(root, font);
             EnsureEventSystem();
         }
 
@@ -470,12 +522,19 @@ namespace ColorGateBlast
             Image si = sheen.AddComponent<Image>();
             si.sprite = HudSkin.Disc; si.color = new Color(1f, 1f, 1f, 0.35f); si.raycastTarget = false;
 
-            Text t = MakeText(rt, "Text", font, 38, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(40f, 0f), new Vector2(300, 90));
-            t.color = PlaqueText;
-            t.GetComponent<Outline>().enabled = false;
-            Shadow sh = t.gameObject.AddComponent<Shadow>();
-            sh.effectColor = new Color(1f, 1f, 1f, 0.5f);
-            sh.effectDistance = new Vector2(0f, -2f);
+            // recessed dark tube window with warm amber (Nixie / incandescent) numerals
+            GameObject win = new GameObject("TubeWindow", typeof(RectTransform));
+            win.transform.SetParent(rt, false);
+            RectTransform wr = win.GetComponent<RectTransform>();
+            wr.anchorMin = wr.anchorMax = new Vector2(0.5f, 0.5f);
+            wr.anchoredPosition = new Vector2(52f, 0f); wr.sizeDelta = new Vector2(290f, 70f);
+            Image wi = win.AddComponent<Image>();
+            wi.sprite = HudSkin.Plate; wi.type = Image.Type.Sliced; wi.color = new Color(0.07f, 0.05f, 0.04f, 0.96f); wi.raycastTarget = false;
+            Text t = MakeText(wr, "Text", font, 38, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 80));
+            t.color = NixieAmber;
+            Outline glow = t.GetComponent<Outline>();
+            glow.effectColor = new Color(1f, 0.45f, 0.05f, 0.55f);
+            glow.effectDistance = new Vector2(2.5f, -2.5f);
             return t;
         }
 
