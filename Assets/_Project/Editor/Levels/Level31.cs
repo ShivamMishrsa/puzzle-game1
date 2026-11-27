@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(31, "Portal Warp", 6, 6, 16, 5, LevelTier.Normal, "Only 1x1 blocks warp. Slide the lone red block onto the cyan pad - it jumps to the other side of the wall!");
+            LevelDefinition d = Make(31, "Portal Warp", 6, 6, 10, 5, LevelTier.Normal, "Only 1x1 blocks warp. Slide the lone red block onto the cyan pad - it jumps to the other side of the wall!");
             d.showRotateHint = true;
             d.placements.Add(Scrap(1, 6, 2, 0));
             d.placements.Add(Rect(R, 1, 1, 0, 2));
