@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(7, "The Maze", 6, 6, 15, 3, LevelTier.Normal, "Wind around the central wall - plan your path!");
+            LevelDefinition d = Make(7, "The Maze", 6, 6, 14, 3, LevelTier.Normal, "Wind around the central wall - plan your path!");
             d.placements.Add(Scrap(2, 2, 2, 2));
             d.placements.Add(Rect(R, 2, 2, 2, 0));
             d.placements.Add(Ell(B, 0, 4, 2));
