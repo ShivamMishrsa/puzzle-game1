@@ -7,13 +7,17 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(17, "Alternating Rhythms", 6, 6, 18, 5, LevelTier.Normal, "The left and right shutters alternate - plan the order of your exits.");
-            d.placements.Add(Rect(R, 2, 1, 3, 3));
-            d.placements.Add(Peeled(Rect(B, 1, 2, 0, 2), Y));
-            d.placements.Add(Peeled(Rect(Y, 2, 1, 1, 1), R));
-            d.placements.Add(Rect(Y, 1, 1, 1, 2));
-            d.placements.Add(Rect(B, 1, 1, 0, 1));
-            d.placements.Add(Rect(R, 1, 1, 4, 2));
+            LevelDefinition d = Make(17, "Alternating Rhythms", 7, 7, 19, 5, LevelTier.Normal, "The left and right shutters alternate - plan the order of your exits.");
+            d.placements.Add(Rect(B, 2, 2, 2, 0));
+            d.placements.Add(Ell(Y, 2, 1, 4));
+            d.placements.Add(Rect(B, 2, 1, 4, 2));
+            d.placements.Add(Rect(R, 1, 2, 6, 1));
+            d.placements.Add(Rect(R, 2, 1, 4, 6));
+            d.placements.Add(Peeled(Rect(B, 1, 2, 4, 3), Y));
+            d.placements.Add(Peeled(Rect(Y, 2, 1, 2, 2), R));
+            d.placements.Add(Rect(B, 1, 1, 0, 0));
+            d.placements.Add(Rect(R, 1, 1, 0, 2));
+            d.placements.Add(Rect(Y, 1, 1, 1, 6));
             d.gates.Add(Shutter(Left, 1, 2, R, true));
             d.gates.Add(Shutter(Right, 3, 2, B, false));
             d.gates.Add(Gate(Up, 4, 2, R));
