@@ -7,13 +7,17 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(12, "Double Thaw & Merge", 6, 6, 16, 5, LevelTier.Normal, "Thaw both red bars in turn, then send them out back-to-back to merge into a laser!");
-            d.placements.Add(Rect(Y, 1, 1, 1, 3));
-            d.placements.Add(Ice(Rect(R, 1, 2, 2, 3), 1));
-            d.placements.Add(Ice(Rect(R, 1, 2, 3, 3), 1));
-            d.placements.Add(Rect(B, 2, 1, 0, 5));
-            d.placements.Add(Rect(Y, 1, 1, 5, 0));
-            d.placements.Add(Rect(B, 1, 1, 1, 4));
+            LevelDefinition d = Make(12, "Double Thaw & Merge", 7, 7, 18, 5, LevelTier.Normal, "Thaw both red bars in turn, then send them out back-to-back to merge into a laser!");
+            d.placements.Add(Rect(Y, 1, 2, 5, 0));
+            d.placements.Add(Rect(R, 1, 2, 3, 1));
+            d.placements.Add(Rect(B, 2, 1, 4, 4));
+            d.placements.Add(Rect(B, 2, 1, 5, 2));
+            d.placements.Add(Ice(Rect(R, 1, 2, 3, 4), 1));
+            d.placements.Add(Rect(R, 2, 1, 3, 6));
+            d.placements.Add(Ice(Rect(R, 1, 2, 0, 5), 1));
+            d.placements.Add(Rect(Y, 1, 1, 2, 1));
+            d.placements.Add(Rect(Y, 1, 1, 5, 5));
+            d.placements.Add(Rect(B, 1, 1, 1, 6));
             d.gates.Add(Gate(Left, 3, 1, Y));
             d.gates.Add(Gate(Down, 0, 3, Y));
             d.gates.Add(Gate(Up, 2, 2, R));
