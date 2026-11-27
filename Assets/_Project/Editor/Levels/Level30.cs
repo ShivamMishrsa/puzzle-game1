@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(30, "Rotary Phone Finale", 7, 7, 22, 4, LevelTier.ChapterBoss, "Rotate the phone: a green screw hides on the back. Unlock the gates in order, then blow the TNT!");
+            LevelDefinition d = Make(30, "Rotary Phone Finale", 7, 7, 20, 4, LevelTier.ChapterBoss, "Rotate the phone: a green screw hides on the back. Unlock the gates in order, then blow the TNT!");
             d.reward = "Chapter 3 Complete: Vintage Rotary Phone Dismantled! Rotary Phone trophy unlocked.";
             d.showRotateHint = true;
             d.placements.Add(Scrap(1, 1, 3, 3));
