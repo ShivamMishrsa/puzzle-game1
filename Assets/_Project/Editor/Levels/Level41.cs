@@ -7,7 +7,7 @@ namespace ColorGateBlast.EditorTools
     {
         public static LevelDefinition Build()
         {
-            LevelDefinition d = Make(41, "Welded Pair", 6, 6, 11, 5, LevelTier.Normal, "Welded blocks slide together. Push the Red half into its gate - the weld snaps and frees the Blue one!");
+            LevelDefinition d = Make(41, "Welded Pair", 6, 6, 9, 5, LevelTier.Normal, "Welded blocks slide together. Push the Red half into its gate - the weld snaps and frees the Blue one!");
             d.placements.Add(Rect(R, 2, 2, 1, 4));
             d.placements.Add(Rect(B, 1, 2, 3, 0));
             d.placements.Add(Rect(Y, 1, 2, 4, 2));
