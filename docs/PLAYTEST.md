@@ -116,3 +116,9 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **11x11 trays, 3 slots (2 in Level 120):** exact optimal moves, 14-19 blocks per level.
 - [ ] **Tighter clock (111+):** par x 1.7 + 5 s, never below 40 s (clocks of 50-75 s).
 - [ ] **Music box monument:** glass dome (shatters), brass collar, steel comb, spinning dancer, two pinned spinning discs, winding key, dynamite behind the discs.
+
+## Batch 13 (levels 121-130, Cathedral Pipe Organ - extreme)
+
+- [ ] **Stored solutions:** levels 91-130 carry their solver solution, so the Hint button gives the next move instantly (and rejoins the stored route after a small detour).
+- [ ] **Extreme levels:** 35-45 exact moves, 2-3 slots, many stacked mechanics. Use the Hint.
+- [ ] **Pipe organ monument:** carved facade, pipe banks, keyboard, pumping bellows, stop rails, dynamite behind the bellows.

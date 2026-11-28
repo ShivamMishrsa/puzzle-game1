@@ -234,6 +234,12 @@ namespace ColorGateBlast
             for (int i = 0; i < levels.Length; i++) if (levels[i].LevelNumber == n) { StartLevel(i); return; }
         }
 
+        /// <summary>QA hook: ask for a hint without the rewarded ad (unityInstance.SendMessage("LevelProgressor", "QaHint", "")).</summary>
+        public void QaHint(string unused)
+        {
+            if (hint != null && state == GameState.Playing) hint.RequestHint();
+        }
+
         public void StartLevel(int index)
         {
             if (levels == null || levels.Length == 0) return;

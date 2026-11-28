@@ -137,7 +137,7 @@ namespace ColorGateBlast
             pivot = new GameObject("Pivot").transform;
             pivot.SetParent(root, false);
             pivot.position = anchor + new Vector3(0f, 0.24f, 0f);
-            pivot.localScale = Vector3.one * (Kind == MonumentKind.GrandfatherClock ? 0.92f : MonumentScale);
+            pivot.localScale = Vector3.one * (Kind == MonumentKind.GrandfatherClock ? 0.92f : (Kind == MonumentKind.PipeOrgan ? 1.0f : MonumentScale));
 
             views = new PartView[Model.Parts.Length];
             for (int i = 0; i < views.Length; i++)
@@ -578,7 +578,7 @@ namespace ColorGateBlast
                     }
                     else
                     {
-                        Prims.Make("Cornice", t, Prims.Cube, GameMaterials.Brass, Vector3.zero, new Vector3(3.1f, 0.26f, 1.2f));
+                        Prims.Make("Cornice", t, Prims.Cube, GameMaterials.Mahogany, Vector3.zero, new Vector3(3.1f, 0.26f, 1.2f));
                         Prims.Make("CorniceTrim", t, Prims.Cube, GameMaterials.Gold, new Vector3(0f, 0.17f, -0.55f), new Vector3(3.0f, 0.07f, 0.06f));
                         for (int k = -3; k <= 3; k++)
                             Prims.Make("Finial" + k, t, Prims.Cylinder, GameMaterials.Gold, new Vector3(k * 0.42f, 0.28f, -0.5f), new Vector3(0.07f, 0.12f, 0.07f));
