@@ -103,3 +103,10 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **Tourbillon monument:** rose-gold bezel, sapphire crystal (glass break), chronograph pushers, skeleton bridges, spinning tourbillon cage with ruby jewel, twin barrels, micro-rotor, dynamite behind the cage.
 - [ ] **Slots:** 4 track slots, 3 in Level 95 (mini-boss) and Level 100 (boss). Levels use exact optimal move limits (best found by deep search).
 - [ ] **Level 100:** golden "CENTENNIAL MILESTONE" win banner and the chapter-10 trophy.
+
+## Batch 11 + design pass (levels 101-110, Grandfather Clock Tower)
+
+- [ ] **10x10 trays (101-110):** smaller cells, 14-19 blocks per level, every level uses exact optimal move limits (best found by deep search).
+- [ ] **Grandfather clock monument:** carved mahogany case, hood + glass door, dial with hands, swinging brass pendulum, hanging weights, tubular chimes, dynamite behind them. The glass door shatters.
+- [ ] **Order of coil effects:** repulsor first, then polarity, in the live game and in the solver (fixed a mismatch found by the autoplay bot on Level 101).
+- [ ] **Landing page:** warm workshop splash (lamp glow, turning gears, dust motes, brass title plate with a shine sweep) and a matching HTML loader; Unity's own splash is disabled; the story map has a golden-hour wash.
