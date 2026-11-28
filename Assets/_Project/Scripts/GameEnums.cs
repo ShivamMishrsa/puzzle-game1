@@ -137,7 +137,13 @@ namespace ColorGateBlast
         Pipes,
         Keyboard,
         Bellows,
-        Stops
+        Stops,
+        // ---- Chapter 14: Steam Locomotive ----
+        Smokestack,
+        Cab,
+        Piston,
+        Driver,
+        Coal
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -155,7 +161,8 @@ namespace ColorGateBlast
         Tourbillon = 9,
         GrandfatherClock = 10,
         MusicBox = 11,
-        PipeOrgan = 12
+        PipeOrgan = 12,
+        Locomotive = 13
     }
 
     /// <summary>Difficulty class of a level: sets the countdown clock and whether the move limit is exact.</summary>

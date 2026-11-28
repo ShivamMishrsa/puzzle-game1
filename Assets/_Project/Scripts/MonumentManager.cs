@@ -137,7 +137,7 @@ namespace ColorGateBlast
             pivot = new GameObject("Pivot").transform;
             pivot.SetParent(root, false);
             pivot.position = anchor + new Vector3(0f, 0.24f, 0f);
-            pivot.localScale = Vector3.one * (Kind == MonumentKind.GrandfatherClock ? 0.92f : (Kind == MonumentKind.PipeOrgan ? 1.0f : MonumentScale));
+            pivot.localScale = Vector3.one * (Kind == MonumentKind.GrandfatherClock ? 0.92f : (Kind == MonumentKind.PipeOrgan || Kind == MonumentKind.Locomotive ? 1.0f : MonumentScale));
 
             views = new PartView[Model.Parts.Length];
             for (int i = 0; i < views.Length; i++)
@@ -200,6 +200,7 @@ namespace ColorGateBlast
                 case MonumentKind.GrandfatherClock: BuildGrandfatherPart(i, spec, lx, ly); break;
                 case MonumentKind.MusicBox: BuildMusicBoxPart(i, spec, lx, ly); break;
                 case MonumentKind.PipeOrgan: BuildOrganPart(i, spec, lx, ly); break;
+                case MonumentKind.Locomotive: BuildLocomotivePart(i, spec, lx, ly); break;
                 default: BuildWatchPart(i, spec, lx, ly); break;
             }
             if (views[i].go != null && spec.hasScrew) AddScrew(i, spec);
@@ -370,6 +371,10 @@ namespace ColorGateBlast
             {
                 BuildOrganDecor();
             }
+            else if (Kind == MonumentKind.Locomotive)
+            {
+                BuildLocomotiveDecor();
+            }
             else
             {
                 Prims.Make("DeckBack", pivot, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 1.3f, 0.5f), new Vector3(3.5f, 1.9f, 0.08f));
@@ -535,6 +540,130 @@ namespace ColorGateBlast
             Prims.Label(t, "TNT", 0.2f, Color.white, new Vector3(0f, 0f, -0.25f));
             Marker(pv, spec.color, new Vector3(0f, 0.85f, -0.2f));
             Box(pv.go, Vector3.zero, new Vector3(0.8f, 0.7f, 0.5f));
+        }
+
+        // ------------------------------------------------------------------ chapter 14: steam locomotive
+
+        private void BuildLocomotiveDecor()
+        {
+            // a short length of track under the engine: ballast bed, two steel rails, sleepers, a chassis frame and cow-catcher
+            Prims.Make("Ballast", pivot, Prims.Cube, GameMaterials.Gunmetal, new Vector3(0f, 0.1f, 0f), new Vector3(3.9f, 0.2f, 1.9f));
+            for (int k = 0; k < 9; k++)
+                Prims.Make("Sleeper" + k, pivot, Prims.Cube, GameMaterials.Mahogany, new Vector3(-1.65f + k * 0.41f, 0.24f, 0f), new Vector3(0.16f, 0.07f, 1.5f));
+            Prims.Make("RailF", pivot, Prims.Cube, GameMaterials.Steel, new Vector3(0f, 0.31f, -0.55f), new Vector3(3.8f, 0.08f, 0.08f));
+            Prims.Make("RailB", pivot, Prims.Cube, GameMaterials.Steel, new Vector3(0f, 0.31f, 0.55f), new Vector3(3.8f, 0.08f, 0.08f));
+            Prims.Make("Frame", pivot, Prims.Cube, GameMaterials.Charcoal, new Vector3(-0.1f, 0.85f, 0f), new Vector3(2.9f, 0.16f, 0.95f));
+            Prims.Make("CowCatcher", pivot, Prims.Cube, GameMaterials.Copper, new Vector3(1.55f, 0.6f, 0f), new Vector3(0.5f, 0.35f, 0.9f), new Vector3(0f, 0f, -30f));
+            Prims.Make("Headlamp", pivot, Prims.Sphere, GameMaterials.Gold, new Vector3(1.38f, 1.55f, 0f), Vector3.one * 0.2f);
+            Prims.Make("Tender", pivot, Prims.Cube, GameMaterials.Charcoal, new Vector3(-1.62f, 1.0f, 0f), new Vector3(0.7f, 0.5f, 0.95f));
+            Prims.Make("TenderTrim", pivot, Prims.Cube, GameMaterials.Brass, new Vector3(-1.62f, 1.27f, 0f), new Vector3(0.74f, 0.05f, 1.0f));
+        }
+
+        private void BuildLocomotivePart(int i, PartSpec spec, float lx, float ly)
+        {
+            Material mat = GameMaterials.ForBlock(spec.color);
+            switch (spec.type)
+            {
+                case PartType.Boiler:
+                {
+                    PartView pv = NewPart(i, "BoilerShell" + spec.slot, new Vector3(spec.slot == 0 ? 0.95f : 0.05f, 1.45f, 0f));
+                    Transform t = pv.go.transform;
+                    float len = spec.slot == 0 ? 0.75f : 1.5f;
+                    float r = spec.slot == 0 ? 0.52f : 0.58f;
+                    Prims.Make("Barrel", t, Prims.Cylinder, spec.slot == 0 ? GameMaterials.Gunmetal : GameMaterials.Charcoal, Vector3.zero, new Vector3(r * 2f, len * 0.5f, r * 2f), new Vector3(0f, 0f, 90f));
+                    for (int k = 0; k < 3; k++)
+                        Prims.Make("Band" + k, t, Prims.Cylinder, GameMaterials.Brass, new Vector3((k - 1) * len * 0.32f, 0f, 0f), new Vector3(r * 2.08f, 0.04f, r * 2.08f), new Vector3(0f, 0f, 90f));
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0f, r * 0.55f, -r * 0.85f), Vector3.one * 0.15f);
+                    Marker(pv, spec.color, new Vector3(len * 0.35f, r + 0.1f, -0.55f));
+                    Box(pv.go, Vector3.zero, new Vector3(len, r * 2f, r * 2f));
+                    pv.aim = new Vector3(0f, 0f, -r - 0.1f);
+                    break;
+                }
+                case PartType.Smokestack:
+                {
+                    PartView pv = NewPart(i, "Smokestack", new Vector3(1.05f, 2.2f, 0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Pipe", t, Prims.Cylinder, GameMaterials.Charcoal, new Vector3(0f, -0.05f, 0f), new Vector3(0.26f, 0.38f, 0.26f));
+                    Prims.Make("Funnel", t, Prims.Cylinder, GameMaterials.Charcoal, new Vector3(0f, 0.4f, 0f), new Vector3(0.5f, 0.12f, 0.5f));
+                    Prims.Make("Rim", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0.5f, 0f), new Vector3(0.54f, 0.03f, 0.54f));
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0f, 0.1f, -0.15f), Vector3.one * 0.13f);
+                    Marker(pv, spec.color, new Vector3(0.45f, 0.4f, -0.25f));
+                    Box(pv.go, Vector3.zero, new Vector3(0.6f, 1.0f, 0.6f));
+                    pv.aim = new Vector3(0f, 0f, -0.3f);
+                    break;
+                }
+                case PartType.Cab:
+                {
+                    PartView pv = NewPart(i, "DriversCab", new Vector3(-0.78f, 1.65f, 0f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Walls", t, Prims.Cube, GameMaterials.Mahogany, Vector3.zero, new Vector3(0.95f, 1.35f, 1.0f));
+                    Prims.Make("Roof", t, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 0.74f, 0f), new Vector3(1.15f, 0.1f, 1.2f));
+                    Prims.Make("Window", t, Prims.Cube, GameMaterials.Glow(spec.color), new Vector3(0f, 0.2f, -0.51f), new Vector3(0.5f, 0.4f, 0.03f));
+                    Prims.Make("Frame", t, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0.2f, -0.52f), new Vector3(0.58f, 0.48f, 0.02f));
+                    Marker(pv, spec.color, new Vector3(0.5f, 0.7f, -0.6f));
+                    Box(pv.go, Vector3.zero, new Vector3(1.0f, 1.4f, 1.05f));
+                    pv.aim = new Vector3(0f, 0.1f, -0.6f);
+                    break;
+                }
+                case PartType.Piston:
+                {
+                    float z = spec.slot == 0 ? -0.55f : 0.55f;
+                    PartView pv = NewPart(i, "SteamPiston" + spec.slot, new Vector3(0.78f, 0.82f, z));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Cylinder", t, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(0.3f, 0.4f, 0.3f), new Vector3(0f, 0f, 90f));
+                    Prims.Make("Cap", t, Prims.Sphere, GameMaterials.Gold, new Vector3(0.42f, 0f, 0f), new Vector3(0.22f, 0.3f, 0.3f));
+                    Prims.Make("Rod", t, Prims.Cube, GameMaterials.Steel, new Vector3(-0.55f, 0f, 0f), new Vector3(0.7f, 0.06f, 0.06f));
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0f, 0.2f, z < 0f ? -0.14f : 0.14f), Vector3.one * 0.12f);
+                    Marker(pv, spec.color, new Vector3(0.1f, 0.4f, z < 0f ? -0.25f : 0.25f));
+                    Box(pv.go, new Vector3(-0.1f, 0f, 0f), new Vector3(1.2f, 0.4f, 0.4f));
+                    pv.aim = new Vector3(0f, 0f, z < 0f ? -0.3f : 0.3f);
+                    break;
+                }
+                case PartType.Driver:
+                {
+                    float z = -0.58f;
+                    PartView pv = NewPart(i, "DrivingWheel" + spec.slot, new Vector3(spec.slot == 0 ? -0.35f : 0.5f, 0.55f, z));
+                    Transform t = pv.go.transform;
+                    GameObject spin = new GameObject("WheelSpin");
+                    spin.transform.SetParent(t, false);
+                    WatchRing(spin.transform, 0.46f, 26, GameMaterials.Steel, 0.09f, 0.1f, GameMaterials.Brass);
+                    for (int k = 0; k < 8; k++)
+                        Prims.Make("Spoke" + k, spin.transform, Prims.Cube, GameMaterials.Steel, Vector3.zero, new Vector3(0.9f, 0.05f, 0.05f), new Vector3(0f, 0f, k * 22.5f));
+                    Prims.Make("Hub", spin.transform, Prims.Cylinder, GameMaterials.Gold, new Vector3(0f, 0f, -0.03f), new Vector3(0.2f, 0.05f, 0.2f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Tint", spin.transform, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0.28f, 0f, -0.07f), Vector3.one * 0.12f);
+                    pv.spin = spin.transform;
+                    pv.spinSpeed = 55f;
+                    Marker(pv, spec.color, new Vector3(0.5f, 0.55f, -0.2f));
+                    Sphere(pv.go, Vector3.zero, 0.5f);
+                    pv.aim = new Vector3(0f, 0f, -0.25f);
+                    break;
+                }
+                case PartType.Coal:
+                {
+                    PartView pv = NewPart(i, "CoalBunker", new Vector3(-1.62f, 1.4f, 0f));
+                    Transform t = pv.go.transform;
+                    for (int k = 0; k < 9; k++)
+                        Prims.Make("Lump" + k, t, Prims.Sphere, k % 3 == 0 ? GameMaterials.Charcoal : GameMaterials.Gunmetal, new Vector3(-0.28f + (k % 3) * 0.28f, (k / 3) * 0.12f, -0.2f + ((k * 7) % 5) * 0.1f), new Vector3(0.3f, 0.22f, 0.28f));
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0f, 0.2f, -0.46f), Vector3.one * 0.14f);
+                    Marker(pv, spec.color, new Vector3(0.45f, 0.4f, -0.45f));
+                    Box(pv.go, new Vector3(0f, 0.1f, 0f), new Vector3(0.8f, 0.5f, 0.9f));
+                    pv.aim = new Vector3(0f, 0.1f, -0.5f);
+                    break;
+                }
+                case PartType.Tnt:
+                    BuildDynamiteBundle(i, spec, 0f, 0f, 0f);
+                    views[i].go.transform.localPosition = new Vector3(spec.slot == 0 ? -0.95f : -0.5f, 1.05f, 0.35f);
+                    views[i].go.transform.localScale = Vector3.one * 0.6f;
+                    break;
+                default:
+                {
+                    PartView pv = NewPart(i, "Part" + i, new Vector3(0f, 1.5f, 0f));
+                    Prims.Make("Block", pv.go.transform, Prims.Cube, mat, Vector3.zero, Vector3.one * 0.5f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, 0f));
+                    Box(pv.go, Vector3.zero, Vector3.one * 0.5f);
+                    break;
+                }
+            }
         }
 
         // ------------------------------------------------------------------ chapter 13: cathedral pipe organ
@@ -2122,6 +2251,7 @@ namespace ColorGateBlast
         /// A turret fires at <paramref name="part"/>. The hit is applied to the model immediately (so every observer sees
         /// consistent HP); the pellet / laser animation and the physical break-off follow when it lands.
         /// </summary>
+        private float dbgShootT;
         public bool Shoot(int target, Vector3 from, BlockColor color, bool mega, bool pierce)
         {
             if (Model == null || target < 0) return false;
@@ -2130,7 +2260,11 @@ namespace ColorGateBlast
             if (screwShot)
             {
                 int sk = MonumentModel.ScrewIndexOf(target);
-                if (!Model.IsScrewTargetable(part) || ((Model.ScrewMask[part] >> sk) & 1) == 0 || (int)Model.Parts[part].ScrewColorAt(sk) != (int)color) return false;
+                if (!Model.IsScrewTargetable(part) || ((Model.ScrewMask[part] >> sk) & 1) == 0 || (int)Model.Parts[part].ScrewColorAt(sk) != (int)color)
+                {
+                    if (Time.time > dbgShootT) { dbgShootT = Time.time + 2f; Debug.Log("[DBG] Shoot rejected: target=" + target + " part=" + part + " sk=" + sk + " color=" + color + " targetable=" + Model.IsScrewTargetable(part) + " mask=" + Model.ScrewMask[part] + " screwColor=" + Model.Parts[part].ScrewColorAt(sk)); }
+                    return false;
+                }
             }
             else if (!Model.IsTargetable(part) || (int)Model.Parts[part].color != (int)color)
             {
@@ -2191,6 +2325,7 @@ namespace ColorGateBlast
                 || (Kind == MonumentKind.TlrCamera && spec.type == PartType.Body && spec.slot == 1)
                 || (Kind == MonumentKind.Typewriter && spec.type == PartType.Keys)
                 || (Kind == MonumentKind.Orrery && spec.type == PartType.Ring && spec.slot >= 2)
+                || (Kind == MonumentKind.Locomotive && ((spec.type == PartType.Boiler && spec.slot == 1) || spec.type == PartType.Cab))
                 || (Kind == MonumentKind.PipeOrgan && ((spec.type == PartType.Facade && spec.slot == 1) || spec.type == PartType.Bellows))
                 || (Kind == MonumentKind.MusicBox && ((spec.type == PartType.Lid && spec.slot == 1) || (spec.type == PartType.Drum && spec.slot == 1)))
                 || (Kind == MonumentKind.GrandfatherClock && ((spec.type == PartType.Hood && spec.slot == 1) || (spec.type == PartType.Weight && spec.slot == 1)))

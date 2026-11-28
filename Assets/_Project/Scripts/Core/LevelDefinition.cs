@@ -320,6 +320,22 @@ namespace ColorGateBlast
                     default: x = 0.0f; y = 1.5f; return;
                 }
             }
+            if (kind == MonumentKind.Locomotive)
+            {
+                switch (type)
+                {
+                    case PartType.Boiler: x = 0.0f; y = slot == 0 ? 1.8f : 1.3f; return;
+                    case PartType.Smokestack: x = 0.0f; y = 2.9f; return;
+                    case PartType.Cab: x = 0.0f; y = 2.0f; return;
+                    case PartType.Piston: x = slot == 0 ? -0.9f : 0.9f; y = 1.0f; return;
+                    case PartType.Driver: x = slot == 0 ? -0.8f : 0.8f; y = 0.7f; return;
+                    case PartType.Coal: x = 0.0f; y = 1.6f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 1.5f; } else { x = 0.4f; y = 1.2f; }
+                        return;
+                    default: x = 0.0f; y = 1.8f; return;
+                }
+            }
             if (kind == MonumentKind.PipeOrgan)
             {
                 switch (type)

@@ -156,6 +156,80 @@ class Program
         if (best != null) foreach (Placement p in best) Console.WriteLine("d.placements.Add(" + Fmt(p) + ");");
     }
 
+    // Hill-climb the layout of an already-placed level: relocate / swap blocks and keep any change that does not shorten the solver's solution (harder = longer).
+    static void Climb(int id, double seconds)
+    {
+        LevelDefinition t = LevelLibrary.Build(id);
+        int w = t.GridWidth, h = t.GridHeight;
+        int capb = int.Parse(Environment.GetEnvironmentVariable("CAPB") ?? "40000"), caph = int.Parse(Environment.GetEnvironmentVariable("CAPH") ?? "400000"), limit = int.Parse(Environment.GetEnvironmentVariable("LIMIT") ?? "140");
+        Random rng = new Random(id * 17 + int.Parse(Environment.GetEnvironmentVariable("SEED") ?? "0"));
+        List<Placement> cur = new List<Placement>(t.placements);
+        List<int> mov = new List<int>();
+        for (int i = 0; i < cur.Count; i++) if (!cur[i].locked && !cur[i].Unplaced && cur[i].color != BlockColor.Gray) mov.Add(i);
+        LevelSolver.SolveResult r0 = LevelSolver.SolveWithin(WithPlacements(t, cur), capb, caph, limit);
+        if (!r0.solved) { Console.WriteLine("L" + id + " CLIMB start layout not solvable at these caps"); return; }
+        int curPar = r0.moves, bestPar = r0.moves;
+        List<Placement> best = new List<Placement>(cur);
+        Console.WriteLine("  start par=" + curPar);
+        Stopwatch sw = Stopwatch.StartNew();
+        int tries = 0, acc = 0;
+        while (sw.Elapsed.TotalSeconds < seconds)
+        {
+            tries++;
+            List<Placement> cand = new List<Placement>(cur);
+            int a = mov[rng.Next(0, mov.Count)];
+            if (rng.NextDouble() < 0.65)
+            {
+                bool[] occ = new bool[w * h];
+                for (int i = 0; i < cand.Count; i++) { if (i == a) continue; foreach (Int2 c in cand[i].Cells()) occ[(cand[i].y + c.y) * w + cand[i].x + c.x] = true; }
+                Placement m = cand[a]; Int2[] cells = m.Cells();
+                int ex = 0, ey = 0; foreach (Int2 c in cells) { if (c.x > ex) ex = c.x; if (c.y > ey) ey = c.y; }
+                bool done = false;
+                for (int k = 0; k < 40 && !done; k++)
+                {
+                    int ox = rng.Next(0, w - ex), oy = rng.Next(0, h - ey);
+                    bool free = true;
+                    foreach (Int2 c in cells) if (occ[(oy + c.y) * w + ox + c.x]) { free = false; break; }
+                    if (!free) continue;
+                    if (m.linkGroup != 0)
+                    {
+                        bool badLink = false;
+                        for (int i = 0; i < cand.Count; i++) if (i != a && cand[i].linkGroup == m.linkGroup && Math.Abs(cand[i].x - ox) + Math.Abs(cand[i].y - oy) > 2) badLink = true;
+                        if (badLink) continue;
+                    }
+                    m.x = ox; m.y = oy; cand[a] = m; done = true;
+                }
+                if (!done) continue;
+            }
+            else
+            {
+                int b = mov[rng.Next(0, mov.Count)];
+                if (a == b) continue;
+                Placement pa = cand[a], pb = cand[b];
+                if (pa.Cells().Length != pb.Cells().Length || pa.linkGroup != 0 || pb.linkGroup != 0) continue;
+                int ax = pa.x, ay = pa.y; pa.x = pb.x; pa.y = pb.y; pb.x = ax; pb.y = ay;
+                bool fit = true;
+                foreach (Int2 c in pa.Cells()) if (pa.x + c.x >= w || pa.y + c.y >= h) fit = false;
+                foreach (Int2 c in pb.Cells()) if (pb.x + c.x >= w || pb.y + c.y >= h) fit = false;
+                if (!fit) continue;
+                cand[a] = pa; cand[b] = pb;
+            }
+            LevelDefinition d = WithPlacements(t, cand);
+            if (d.Validate() != null) continue;
+            LevelSolver.SolveResult r = LevelSolver.SolveWithin(d, capb, caph, limit);
+            if (!r.solved) continue;
+            if (r.moves >= curPar)
+            {
+                cur = cand; acc++;
+                if (r.moves > curPar) Console.WriteLine("  t=" + (int)sw.Elapsed.TotalSeconds + "s try " + tries + " par " + curPar + " -> " + r.moves);
+                curPar = r.moves;
+                if (curPar > bestPar) { bestPar = curPar; best = new List<Placement>(cur); }
+            }
+        }
+        Console.WriteLine("tried=" + tries + " accepted=" + acc + " bestPar=" + bestPar + " (start " + r0.moves + ")");
+        foreach (Placement p in best) Console.WriteLine("d.placements.Add(" + Fmt(p) + ");");
+    }
+
     // Debug: can ANY exit order (ignoring board geometry) dismantle the monument with the available ammo?
     static bool Dfs(PuzzleState st, int depth, ref int nodes, List<int> order)
     {
@@ -432,6 +506,7 @@ class Program
     static void Main(string[] args)
     {
         if (args.Length >= 3 && args[0] == "opt") { Opt(int.Parse(args[1]), int.Parse(args[2])); return; }
+        if (args.Length >= 3 && args[0] == "climb") { Climb(int.Parse(args[1]), double.Parse(args[2])); return; }
         if (args.Length >= 1 && args[0] == "selftest") { SelfTest(); return; }
         if (args.Length >= 3 && args[0] == "replay")
         {

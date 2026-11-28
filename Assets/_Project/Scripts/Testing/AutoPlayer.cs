@@ -106,7 +106,16 @@ namespace ColorGateBlast
                     PuzzleState snap = new PuzzleState(lp.grid.Level, lp.grid.Board, lp.monument.Model, lp.track.Snapshot());
                     if (plan.Count > 0 && predKey.Length > 0 && snap.Key() != predKey)
                     {
-                        if (storedPlan && snap.KeyNoTrack() == predNoTrack) { /* only the belt differs: keep following the stored solution */ }
+                        if (storedPlan && snap.KeyNoTrack() == predNoTrack)
+                        {
+                            /* only the belt differs: keep following the stored solution */
+                            System.Text.StringBuilder bd = new System.Text.StringBuilder();
+                            bd.Append(" liveParked=");
+                            foreach (TurretInfo ti in snap.Parked) bd.Append(ti.color + ":" + ti.ammo + (ti.piercing ? "p" : "") + ",");
+                            bd.Append(" predParked=");
+                            foreach (TurretInfo ti in predState.Parked) bd.Append(ti.color + ":" + ti.ammo + (ti.piercing ? "p" : "") + ",");
+                            bd.Append(" liveFindRed=" + lp.monument.FindTarget(0) + " snapFindRed=" + snap.Monument.FindTarget(0) + " predFindRed=" + predState.Monument.FindTarget(0) + " settled=" + lp.track.IsSettled() + " inflight=" + lp.monument.InFlight + " screwMask0=" + lp.monument.Model.ScrewMask[0] + "/" + snap.Monument.ScrewMask[0]); Debug.Log("[BOT] BELT-ONLY DIFF at step " + steps + bd);
+                        }
                         else
                         {
                             if (storedPlan)
@@ -136,8 +145,25 @@ namespace ColorGateBlast
                     }
                     Move mv = plan[0];
                     plan.RemoveAt(0);
+                    if (storedPlan && lp.Level.levelID == 135)
+                    {
+                        System.Text.StringBuilder st = new System.Text.StringBuilder();
+                        st.Append("[BOT] STEP " + steps + " blk" + mv.block + "(" + snap.Board.ColorOf(mv.block) + " tiles " + snap.Board.Blocks[mv.block].Tiles + ") exit=" + mv.exit + " liveParked=");
+                        foreach (TurretInfo ti in snap.Parked) st.Append(ti.color + ":" + ti.ammo + ",");
+                        st.Append(" hpLive=");
+                        for (int hi = 0; hi < snap.Monument.Hp.Length; hi++) st.Append(snap.Monument.Hp[hi]).Append(",");
+                        Debug.Log(st.ToString());
+                    }
                     PuzzleState pred = snap.Clone();
                     pred.Apply(mv);
+                    if (storedPlan && lp.Level.levelID == 135)
+                    {
+                        System.Text.StringBuilder sp2 = new System.Text.StringBuilder("[BOT]   predAfter parked=");
+                        foreach (TurretInfo ti in pred.Parked) sp2.Append(ti.color + ":" + ti.ammo + ",");
+                        sp2.Append(" hp=");
+                        for (int hi = 0; hi < pred.Monument.Hp.Length; hi++) sp2.Append(pred.Monument.Hp[hi]).Append(",");
+                        Debug.Log(sp2.ToString());
+                    }
                     predKey = pred.Key();
                     predNoTrack = pred.KeyNoTrack();
                     predState = pred;
@@ -152,7 +178,7 @@ namespace ColorGateBlast
                             if (pe != le || (!pe && !le && !lb.Dormant[bi] && (pred.Board.Pos[bi] != lb.Pos[bi] || pred.Board.Crated[bi] != lb.Crated[bi] || pred.Board.Ice[bi] != lb.Ice[bi])))
                                 sb.Append(" block" + bi + "(" + lb.Blocks[bi].color + ") pred=" + (pe ? "exited" : pred.Board.Pos[bi].ToString()) + " live=" + (le ? "exited" : lb.Pos[bi].ToString()));
                         }
-                        if (sb.Length > 0) { plan.Clear(); Debug.Log("[BOT] DIVERGE at step " + steps + " move block" + mv.block + " dir " + mv.dir + " to " + mv.to + " exit=" + mv.exit + ":" + sb); }
+                        if (sb.Length > 0) { plan.Clear(); Debug.Log("[BOT] DIVERGE-CTX canExitBefore=" + snap.CanExit((int)snap.Board.ColorOf(mv.block)) + " parked=" + snap.Parked.Count + " lockedGates? movesLeft=" + lp.MovesLeft + " blockCells=" + snap.Board.Pos[mv.block] + " dormant=" + snap.Board.Dormant[mv.block] + " crated=" + snap.Board.Crated[mv.block] + " ice=" + snap.Board.Ice[mv.block]); Debug.Log("[BOT] DIVERGE at step " + steps + " move block" + mv.block + " dir " + mv.dir + " to " + mv.to + " exit=" + mv.exit + ":" + sb); }
                     }
                     steps++;
                     if (!ok && ++rejected > 3) { result = "MOVE_REJECTED"; break; }

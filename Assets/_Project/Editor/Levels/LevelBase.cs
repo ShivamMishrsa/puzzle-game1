@@ -174,7 +174,7 @@ namespace ColorGateBlast.EditorTools
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
             d.megaPierces = id >= 81;
-            d.monument = id >= 121 ? MonumentKind.PipeOrgan : id >= 111 ? MonumentKind.MusicBox : id >= 101 ? MonumentKind.GrandfatherClock : id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
+            d.monument = id >= 131 ? MonumentKind.Locomotive : id >= 121 ? MonumentKind.PipeOrgan : id >= 111 ? MonumentKind.MusicBox : id >= 101 ? MonumentKind.GrandfatherClock : id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -219,6 +219,20 @@ namespace ColorGateBlast.EditorTools
                         {
                             mask = MaskOf(d, PartType.GroupHead);
                             if (mask == 0) mask = MaskOf(d, PartType.Boiler);
+                        }
+                        break;
+                    case MonumentKind.Locomotive:
+                        // 4-layer: boiler shells + smokestack -> cab + pistons -> driving wheels + coal bunker -> dynamite in the firebox
+                        if (p.type == PartType.Cab || p.type == PartType.Piston) mask = MaskOf(d, PartType.Boiler) | MaskOf(d, PartType.Smokestack);
+                        else if (p.type == PartType.Driver || p.type == PartType.Coal)
+                        {
+                            mask = MaskOf(d, PartType.Cab) | MaskOf(d, PartType.Piston);
+                            if (mask == 0) mask = MaskOf(d, PartType.Boiler) | MaskOf(d, PartType.Smokestack);
+                        }
+                        else if (p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Driver) | MaskOf(d, PartType.Coal);
+                            if (mask == 0) mask = MaskOf(d, PartType.Cab) | MaskOf(d, PartType.Piston);
                         }
                         break;
                     case MonumentKind.PipeOrgan:

@@ -234,7 +234,7 @@ namespace ColorGateBlast
             bool hit = monument.Shoot(part, muzzle, Color, IsMega, Piercing);
             if (hit)
             {
-                if (!track.OverdriveActive)
+                if (!track.FreeAmmoActive)
                 {
                     Ammo--;
                     badge.text = Ammo.ToString();

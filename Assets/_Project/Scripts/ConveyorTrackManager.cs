@@ -31,6 +31,9 @@ namespace ColorGateBlast
 
         public float Speed { get { return BaseSpeed * (OverdriveActive ? 1.75f : 1f); } }
         public bool OverdriveActive { get { return Time.time < overdriveUntil; } }
+        private bool freeAmmoLevel;
+        /// <summary>Early levels (1-40): a chain overdrive also makes shots free. From level 41 the clocks, slots and exact move limits are tuned to the solver, so overdrive is only a speed boost there.</summary>
+        public bool FreeAmmoActive { get { return OverdriveActive && freeAmmoLevel; } }
         public int MaxSlots { get { return maxSlots; } }
         public bool Unlimited { get { return unlimited; } }
         public int UsedSlots { get { return turrets.Count; } }
@@ -57,6 +60,7 @@ namespace ColorGateBlast
             monument = mon;
             trayCenter = loopCenter;
             maxSlots = def.maxTrackSlots;
+            freeAmmoLevel = def.levelID < 41;
             unlimited = def.UnlimitedTrack;
             megaPierces = def.megaPierces;
             overdriveUntil = 0f;
