@@ -156,6 +156,39 @@ class Program
         if (best != null) foreach (Placement p in best) Console.WriteLine("d.placements.Add(" + Fmt(p) + ");");
     }
 
+    // Human-readable walkthrough: finds the shortest known solution and prints every move as "colour block at (col,row) -> direction".
+    static void Steps(int id)
+    {
+        int bfs = int.Parse(Environment.GetEnvironmentVariable("OPTB") ?? "200000"), heu = int.Parse(Environment.GetEnvironmentVariable("OPTH") ?? "1500000");
+        LevelDefinition d = LevelLibrary.Build(id);
+        LevelSolver.SolveResult best = (d.solution != null && d.solution.Length > 0) ? LevelSolver.Replay(d, d.solution) : null;
+        if (best == null || !best.solved) best = LevelSolver.SolveWithin(d, bfs, heu, d.moveLimit);
+        if (!best.solved) { Console.WriteLine("L" + id + " no solution found"); return; }
+        while (best.moves > 1)
+        {
+            LevelSolver.SolveResult r = LevelSolver.SolveWithin(d, bfs, heu, best.moves - 1);
+            if (!r.solved) break;
+            best = r;
+        }
+        Console.WriteLine("L" + id + " '" + d.title + "' grid " + d.GridWidth + "x" + d.GridHeight + ", move limit " + d.moveLimit + ", solution length " + best.moves);
+        PuzzleState st = new PuzzleState(d);
+        int n = 0;
+        foreach (Move m in best.path)
+        {
+            n++;
+            int color = (int)st.Board.ColorOf(m.block);
+            Int2 pos = st.Board.Pos[m.block];
+            int tiles = st.Board.Blocks[m.block].Tiles;
+            string size = tiles + "-tile";
+            string line = n + ". " + (BlockColor)color + " block (" + size + ", bottom-left cell at column " + (pos.x + 1) + ", row " + (pos.y + 1) + " counting from the left/bottom)";
+            if (m.exit) line += " -> slide " + m.dir + " and OUT through its " + (BlockColor)color + " gate";
+            else line += " -> slide " + m.dir + " until it stops at column " + (m.to.x + 1) + ", row " + (m.to.y + 1);
+            Console.WriteLine(line);
+            st.Apply(m);
+        }
+        Console.WriteLine("Total moves: " + best.moves + " (limit " + d.moveLimit + ")");
+    }
+
     // Hill-climb the layout of an already-placed level: relocate / swap blocks and keep any change that does not shorten the solver's solution (harder = longer).
     static void Climb(int id, double seconds)
     {
@@ -506,6 +539,7 @@ class Program
     static void Main(string[] args)
     {
         if (args.Length >= 3 && args[0] == "opt") { Opt(int.Parse(args[1]), int.Parse(args[2])); return; }
+        if (args.Length >= 2 && args[0] == "steps") { Steps(int.Parse(args[1])); return; }
         if (args.Length >= 3 && args[0] == "climb") { Climb(int.Parse(args[1]), double.Parse(args[2])); return; }
         if (args.Length >= 1 && args[0] == "selftest") { SelfTest(); return; }
         if (args.Length >= 3 && args[0] == "replay")

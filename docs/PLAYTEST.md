@@ -122,3 +122,9 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **Stored solutions:** levels 91-130 carry their solver solution, so the Hint button gives the next move instantly (and rejoins the stored route after a small detour).
 - [ ] **Extreme levels:** 35-45 exact moves, 2-3 slots, many stacked mechanics. Use the Hint.
 - [ ] **Pipe organ monument:** carved facade, pipe banks, keyboard, pumping bellows, stop rails, dynamite behind the bellows.
+
+## Batch 14 (levels 131-140, Steam Locomotive - extreme+)
+
+- [ ] **Longer, harder layouts:** found by hill-climbing (move blocks, keep what makes the solution longer): 46-78 exact moves. 12x12 trays from Level 135.
+- [ ] **Overdrive:** from level 41 the chain overdrive only speeds up the belt (it no longer makes shots free), so the stored solutions and the solver always agree with the live game.
+- [ ] **Locomotive monument:** boiler shells, smokestack, cab, pistons, spinning driving wheels, coal bunker, dynamite in the firebox, on a short track.

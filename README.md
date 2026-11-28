@@ -1,4 +1,5 @@
-# Color Gate Blast
+#| 14 | 131-140 | Steam Locomotive | EXTREME+: 11x11 and (from 135) 12x12 trays, 17-21 blocks, hill-climbed layouts with 46-78 move exact solutions, 3 track slots, every mechanic stacked. Solutions are stored, so Hint is instant. |
+ Color Gate Blast
 
 Hybrid-casual ASMR puzzle for Android (Unity 6.3 LTS, URP, portrait 1080x1920).
 Slide blocks into the matching-colour gate on the tray border. Each block that leaves becomes a turret (ammo = tile
