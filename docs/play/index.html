@@ -10,11 +10,27 @@
     body { display: flex; align-items: center; justify-content: center; font-family: system-ui, Segoe UI, Arial, sans-serif; color: #f3eadf; }
     #unity-container { position: relative; }
     #unity-canvas { display: block; background: #120f0f; touch-action: none; }
-    #unity-loading-bar { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: #120f0f; }
-    #unity-loading-bar h1 { margin: 0 0 18px; font-size: 1.6rem; letter-spacing: .04em; }
-    #unity-progress-bar-empty { width: 60%; max-width: 320px; height: 14px; border-radius: 8px; background: #3a3030; overflow: hidden; }
-    #unity-progress-bar-full { width: 0%; height: 100%; background: #3f7cf4; }
-    #unity-hint { margin-top: 14px; font-size: .85rem; opacity: .7; }
+    #unity-loading-bar { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: none; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 22%, #7a4519 0%, #3a1f0d 38%, #170c06 78%, #0d0704 100%); }
+    #unity-loading-bar::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.20) 0 2px, transparent 2px 46px); opacity: .55; }
+    .gear { position: absolute; width: 150px; height: 150px; border-radius: 50%; border: 18px dotted rgba(230,165,60,.22); animation: spin 14s linear infinite; }
+    .gear::after { content: ""; position: absolute; inset: 24px; border-radius: 50%; border: 6px solid rgba(230,165,60,.20); }
+    .g1 { left: -50px; top: 28px; width: 190px; height: 190px; }
+    .g2 { right: -40px; top: 36%; animation-direction: reverse; animation-duration: 10s; }
+    .g3 { left: -30px; bottom: 120px; width: 120px; height: 120px; animation-duration: 9s; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .plate { position: relative; padding: 18px 30px 20px; border-radius: 18px; text-align: center; background: linear-gradient(#2a160c, #160b06); border: 5px solid #b98a3a; box-shadow: 0 0 0 3px #5e3a14, 0 14px 40px rgba(0,0,0,.65), 0 0 60px rgba(255,160,50,.25); }
+    .plate::before, .plate::after { content: ""; position: absolute; top: 9px; width: 11px; height: 11px; border-radius: 50%; background: #ffd98a; box-shadow: inset -2px -2px 0 #b9852d; }
+    .plate::before { left: 10px; } .plate::after { right: 10px; }
+    .plate .t1 { font-size: 1.15rem; font-weight: 900; letter-spacing: .18em; color: #ffeccc; text-shadow: 0 2px 0 #4a2a0c; }
+    .plate .t2 { font-size: 2.6rem; font-weight: 900; letter-spacing: .08em; color: #ffa524; text-shadow: 0 3px 0 #5b2e0a, 0 0 22px rgba(255,150,30,.55); line-height: 1.05; }
+    .blocks { display: flex; gap: 10px; margin-bottom: 26px; }
+    .blk { width: 46px; height: 46px; border-radius: 10px; box-shadow: inset 0 0 0 3px rgba(255,255,255,.22), inset 0 -6px 0 rgba(0,0,0,.2), 0 8px 16px rgba(0,0,0,.5); animation: bob 1.6s ease-in-out infinite; }
+    .blk:nth-child(1) { background: #f0a63a; } .blk:nth-child(2) { background: #f06b7e; animation-delay: .25s; } .blk:nth-child(3) { background: #62b8f2; animation-delay: .5s; }
+    @keyframes bob { 50% { transform: translateY(-10px) rotate(-4deg); } }
+    #unity-progress-bar-empty { margin-top: 28px; width: 62%; max-width: 330px; height: 18px; border-radius: 10px; background: #1d1511; border: 3px solid #6a4a22; overflow: hidden; box-shadow: inset 0 3px 6px rgba(0,0,0,.7); }
+    #unity-progress-bar-full { width: 0%; height: 100%; background: linear-gradient(#ffcf6a, #ff9a14); box-shadow: 0 0 14px rgba(255,160,40,.8); }
+    #unity-hint { margin-top: 16px; font-size: .85rem; color: #f3dcb0; opacity: .8; letter-spacing: .03em; }
     #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; color: #111; padding: 10px; display: none; }
     #unity-fullscreen { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; border-radius: 8px; background: #ffffff22; cursor: pointer; text-align: center; line-height: 32px; font-size: 18px; user-select: none; }
   </style>
@@ -23,9 +39,11 @@
   <div id="unity-container">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
     <div id="unity-loading-bar">
-      <h1>Color Gate Blast</h1>
+      <div class="gear g1"></div><div class="gear g2"></div><div class="gear g3"></div>
+      <div class="blocks"><div class="blk"></div><div class="blk"></div><div class="blk"></div></div>
+      <div class="plate"><div class="t1">COLOR GATE</div><div class="t2">BLAST</div></div>
       <div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div>
-      <div id="unity-hint">Loading... tap the game once to enable sound.</div>
+      <div id="unity-hint">Warming up your gears... tap the game once to enable sound.</div>
     </div>
     <div id="unity-warning"></div>
     <div id="unity-fullscreen" title="Fullscreen">&#x26F6;</div>
