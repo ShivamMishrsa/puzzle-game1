@@ -11,7 +11,7 @@ physically falls apart. Same-colour turrets merge into a laser Mega-Turret.
       merging, solver (BFS + weighted best-first) - `Assets/_Project/Scripts/Core`
 - [x] Levels, one class per level in `Assets/_Project/Editor/Levels`, every one proven winnable within its move limit
 - [x] Unity runtime v1: 3D tray + conveyor + turrets, alarm clock and cassette player monuments, physics debris, TNT, procedural sound/FX, HUD, AdMob (test ids) + simulator, solver-based hints, `Tools > Color Gate Blast > Setup Phase 1`
-- [x] Levels 1-120 (12 chapters), solver-verified, one commit per level
+- [x] Levels 1-140 (14 chapters), solver-verified, one commit per level
 - [ ] Authentication / security / database (after game + levels)
 
 See `docs/PLAYTEST.md` for the in-Unity checklist (what the solver cannot prove: look, sound, feel).
@@ -46,6 +46,8 @@ One look for every `LevelData` (1-40 today, 41-150 automatically): `Assets/_Proj
 | 10 | 91-100 | Swiss Skeleton Tourbillon | 9x9, all 7 colours, Magnetic Polarity Flipper Coils (PULL/PUSH flip on every exit), coupled multi-screw plates, 4 track slots (3 in the L95 mini-boss and L100 Centennial boss), exact moves |
 | 11 | 101-110 | Grandfather Clock Tower | 10x10 trays (more blocks, 14-19 per level), all 7 colours, 4-layer armour (hood + glass door, dial + swinging pendulum, weights + chimes, dynamite), polarity coils + repulsors + coupled screws + portals + ratchets, 4 track slots (3 in L105 and L110), exact moves |
 | 12 | 111-120 | Automaton Music Box | 11x11 trays (14-19 blocks), all 7 colours, glass dome + comb/dancer + pinned discs + dynamite, three polarity coils, coupled screws, ratchets, two portal pairs, 3 track slots (2 in the L120 boss), exact moves and a tighter clock (par x 1.7 + 5 s, min 40 s) |
+| 13 | 121-130 | Cathedral Pipe Organ | EXTREME: 11x11 trays, 16-22 blocks, 29-45 move exact solutions, 2-3 track slots, every mechanic stacked. Each level ships its solver solution, so the Hint button is instant and reliable. |
+| 14 | 131-140 | Steam Locomotive | EXTREME+: 11x11 and (from 135) 12x12 trays, 17-21 blocks, hill-climbed layouts with 46-78 move exact solutions, 3 track slots, every mechanic stacked. |
 
 ## Front end
 Splash screen, then a scrolling story map with all 150 level nodes (stars, padlocks, a bobbing buddy on the current level, a world banner per chapter). `MAP` button in game and on the win / lose panels. Gear button: sound on/off and an "unlock all levels (testing)" switch. Code: `Visuals/MapScreen.cs`.
