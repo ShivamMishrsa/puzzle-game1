@@ -174,7 +174,7 @@ namespace ColorGateBlast.EditorTools
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
             d.megaPierces = id >= 81;
-            d.monument = id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
+            d.monument = id >= 101 ? MonumentKind.GrandfatherClock : id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -219,6 +219,23 @@ namespace ColorGateBlast.EditorTools
                         {
                             mask = MaskOf(d, PartType.GroupHead);
                             if (mask == 0) mask = MaskOf(d, PartType.Boiler);
+                        }
+                        break;
+                    case MonumentKind.GrandfatherClock:
+                        // 4-layer: hood + glass door -> dial + pendulum -> weights + chimes -> dynamite music-box behind them
+                        if (p.type == PartType.Dial || p.type == PartType.Pendulum)
+                        {
+                            mask = MaskOf(d, PartType.Hood) | MaskOf(d, PartType.ClockDoor);
+                        }
+                        else if (p.type == PartType.Weight || p.type == PartType.Chime)
+                        {
+                            mask = MaskOf(d, PartType.Dial) | MaskOf(d, PartType.Pendulum);
+                            if (mask == 0) mask = MaskOf(d, PartType.Hood) | MaskOf(d, PartType.ClockDoor);
+                        }
+                        else if (p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Weight) | MaskOf(d, PartType.Chime);
+                            if (mask == 0) mask = MaskOf(d, PartType.Dial) | MaskOf(d, PartType.Pendulum);
                         }
                         break;
                     case MonumentKind.Tourbillon:

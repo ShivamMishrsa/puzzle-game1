@@ -320,6 +320,22 @@ namespace ColorGateBlast
                     default: x = 0.0f; y = 1.5f; return;
                 }
             }
+            if (kind == MonumentKind.GrandfatherClock)
+            {
+                switch (type)
+                {
+                    case PartType.Hood: x = 0.0f; y = slot == 0 ? 3.55f : 3.15f; return;
+                    case PartType.ClockDoor: x = 0.0f; y = 1.7f; return;
+                    case PartType.Dial: x = 0.0f; y = 2.75f; return;
+                    case PartType.Pendulum: x = 0.0f; y = 1.7f; return;
+                    case PartType.Weight: x = slot == 0 ? -0.6f : 0.6f; y = 1.2f; return;
+                    case PartType.Chime: x = slot == 0 ? -0.35f : 0.35f; y = 2.0f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.0f; y = 1.5f; } else { x = 0.3f; y = 1.15f; }
+                        return;
+                    default: x = 0.0f; y = 2.0f; return;
+                }
+            }
             if (kind == MonumentKind.Tourbillon)
             {
                 switch (type)

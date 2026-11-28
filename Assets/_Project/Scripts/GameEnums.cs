@@ -121,7 +121,12 @@ namespace ColorGateBlast
         Bridge,
         TourbillonCage,
         MainBarrel,
-        Rotor
+        Rotor,
+        // ---- Chapter 11: Grandfather Clock Tower ----
+        ClockDoor,
+        Pendulum,
+        Weight,
+        Chime
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -136,7 +141,8 @@ namespace ColorGateBlast
         Typewriter = 6,
         Gramophone = 7,
         Orrery = 8,
-        Tourbillon = 9
+        Tourbillon = 9,
+        GrandfatherClock = 10
     }
 
     /// <summary>Difficulty class of a level: sets the countdown clock and whether the move limit is exact.</summary>

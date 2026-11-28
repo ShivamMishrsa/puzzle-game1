@@ -1243,19 +1243,19 @@ namespace ColorGateBlast
                 if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.MagnetClunk, UnityEngine.Random.Range(0.95f, 1.05f), 0.8f);
                 if (FXManager.Instance != null) { FXManager.Instance.Sparks(CellWorld(pulled) + new Vector3(0f, 0.3f, 0f), 8); FXManager.Instance.Haptic(); }
             }
-            if (board.PolarityAfterSlide(idx, lastDragDir))
-            {
-                views[idx].SetTarget(CellWorld(board.Pos[idx]));
-                SyncLinked(idx);
-                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PolarityZap, 1.1f, 0.7f);
-                if (FXManager.Instance != null) { FXManager.Instance.Sparks(views[idx].CentroidWorld + new Vector3(0f, 0.3f, 0f), 12); FXManager.Instance.Haptic(); }
-            }
             if (board.RepelAfterSlide(idx, lastDragDir))
             {
                 views[idx].SetTarget(CellWorld(board.Pos[idx]));
                 SyncLinked(idx);
                 if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.RepulsorThump);
                 if (FXManager.Instance != null) { FXManager.Instance.Sparks(views[idx].CentroidWorld + new Vector3(0f, 0.3f, 0f), 14); FXManager.Instance.Shake(0.05f, 0.1f); FXManager.Instance.Haptic(); }
+            }
+            if (board.PolarityAfterSlide(idx, lastDragDir))
+            {
+                views[idx].SetTarget(CellWorld(board.Pos[idx]));
+                SyncLinked(idx);
+                if (SoundSynth.Instance != null) SoundSynth.Instance.Play(Sfx.PolarityZap, 1.1f, 0.7f);
+                if (FXManager.Instance != null) { FXManager.Instance.Sparks(views[idx].CentroidWorld + new Vector3(0f, 0.3f, 0f), 12); FXManager.Instance.Haptic(); }
             }
             board.CountMove();
             if (MoveCommitted != null) MoveCommitted();
