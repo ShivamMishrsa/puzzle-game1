@@ -75,8 +75,10 @@ namespace ColorGateBlast
 
                 string result = "TIMEOUT";
                 int steps = 0, rejected = 0;
+                string predKey = "";
+                System.Collections.Generic.List<Move> plan = new System.Collections.Generic.List<Move>();
                 float t0 = Time.realtimeSinceStartup;
-                while (Time.realtimeSinceStartup - t0 < 400f && steps < 90)
+                while (Time.realtimeSinceStartup - t0 < 900f && steps < 90)
                 {
                     if (lp.State == GameState.Won) { result = "WON"; break; }
                     if (lp.State == GameState.Lost) { result = "LOST " + lp.LastLoseReason; break; }
@@ -95,13 +97,21 @@ namespace ColorGateBlast
                     if (lp.grid.RemainingBlocks == 0 && lp.monument.AliveCount == 0) { yield return new WaitForSeconds(0.5f); continue; }
 
                     PuzzleState snap = new PuzzleState(lp.grid.Level, lp.grid.Board, lp.monument.Model, lp.track.Snapshot());
-                    LevelSolver.SolveResult r = LevelSolver.Solve(snap, 30000, 300000, lp.MovesLeft);
-                    if (!r.solved) r = LevelSolver.Solve(snap, 200000, 1500000, lp.MovesLeft);
-                    if (!r.solved) r = LevelSolver.Solve(snap, 30000, 300000);
-                    if (!r.solved || r.moves == 0) { result = "NO_SOLUTION_FROM_LIVE_STATE"; break; }
+                    if (plan.Count > 0 && snap.Key() != predKey) plan.Clear();
+                    if (plan.Count == 0)
+                    {
+                        LevelSolver.SolveResult r = LevelSolver.Solve(snap, 30000, 300000, lp.MovesLeft);
+                        if (!r.solved) r = LevelSolver.Solve(snap, 200000, 1500000, lp.MovesLeft);
+                        if (!r.solved) r = LevelSolver.Solve(snap, 30000, 300000);
+                        if (!r.solved || r.moves == 0) { result = "NO_SOLUTION_FROM_LIVE_STATE"; break; }
+                        plan = new System.Collections.Generic.List<Move>(r.path);
+                    }
+                    Move mv = plan[0];
+                    plan.RemoveAt(0);
                     PuzzleState pred = snap.Clone();
-                    pred.Apply(r.firstMove);
-                    bool ok = lp.grid.AutoMove(r.firstMove);
+                    pred.Apply(mv);
+                    predKey = pred.Key();
+                    bool ok = lp.grid.AutoMove(mv);
                     if (true)
                     {
                         System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -112,12 +122,13 @@ namespace ColorGateBlast
                             if (pe != le || (!pe && !le && !lb.Dormant[bi] && (pred.Board.Pos[bi] != lb.Pos[bi] || pred.Board.Crated[bi] != lb.Crated[bi] || pred.Board.Ice[bi] != lb.Ice[bi])))
                                 sb.Append(" block" + bi + "(" + lb.Blocks[bi].color + ") pred=" + (pe ? "exited" : pred.Board.Pos[bi].ToString()) + " live=" + (le ? "exited" : lb.Pos[bi].ToString()));
                         }
-                        if (sb.Length > 0) Debug.Log("[BOT] DIVERGE at step " + steps + " move block" + r.firstMove.block + " dir " + r.firstMove.dir + " to " + r.firstMove.to + " exit=" + r.firstMove.exit + ":" + sb);
+                        if (sb.Length > 0) { plan.Clear(); Debug.Log("[BOT] DIVERGE at step " + steps + " move block" + mv.block + " dir " + mv.dir + " to " + mv.to + " exit=" + mv.exit + ":" + sb); }
                     }
                     steps++;
                     if (!ok && ++rejected > 3) { result = "MOVE_REJECTED"; break; }
                     yield return null;
                 }
+                if (result == "TIMEOUT") Debug.Log("[BOT] TIMEOUT-DIAG state=" + lp.State + " remaining=" + lp.grid.RemainingBlocks + " alive=" + lp.monument.AliveCount + " movesLeft=" + lp.MovesLeft + " settled=" + lp.track.IsSettled() + " inflight=" + lp.monument.InFlight);
                 if (result == "TIMEOUT" && lp.State == GameState.Won) result = "WON";
                 for (int f = 0; f < 90 && lp.State == GameState.Playing && result == "TIMEOUT"; f++) yield return null;
                 if (lp.State == GameState.Won) result = "WON";

@@ -21,6 +21,19 @@ namespace ColorGateBlast
             public int visited;
             /// <summary>First move of the found solution (valid when solved and moves &gt; 0).</summary>
             public Move firstMove;
+            /// <summary>The whole move sequence of the found solution (for replaying without re-solving).</summary>
+            public List<Move> path;
+        }
+
+        private sealed class Link { public Link parent; public Move move; }
+
+        private static List<Move> BuildPath(Link tail, Move last)
+        {
+            List<Move> p = new List<Move>();
+            p.Add(last);
+            for (Link l = tail; l != null; l = l.parent) p.Add(l.move);
+            p.Reverse();
+            return p;
         }
 
         private sealed class Node
@@ -30,6 +43,7 @@ namespace ColorGateBlast
             public double priority;
             public long order;
             public Move first;
+            public Link link;
         }
 
         public static SolveResult Solve(LevelDefinition def, int bfsStateCap, int heuristicStateCap)
@@ -80,12 +94,14 @@ namespace ColorGateBlast
                         res.moves = n.depth + 1;
                         res.visited = seen.Count;
                         res.firstMove = first;
+                        res.path = BuildPath(n.link, moves[i]);
                         return res;
                     }
                     Node c = new Node();
                     c.state = ns;
                     c.depth = n.depth + 1;
                     c.first = first;
+                    c.link = new Link(); c.link.parent = n.link; c.link.move = moves[i];
                     queue.Enqueue(c);
                 }
             }
@@ -144,12 +160,14 @@ namespace ColorGateBlast
                         res.moves = n.depth + 1;
                         res.visited = seen.Count;
                         res.firstMove = first;
+                        res.path = BuildPath(n.link, moves[i]);
                         return res;
                     }
                     Node c = new Node();
                     c.state = ns;
                     c.depth = n.depth + 1;
                     c.first = first;
+                    c.link = new Link(); c.link.parent = n.link; c.link.move = moves[i];
                     c.priority = Priority(ns, c.depth, weight, table);
                     c.order = ++counter;
                     HeapPush(heap, c);
