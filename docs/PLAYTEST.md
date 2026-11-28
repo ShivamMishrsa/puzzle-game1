@@ -110,3 +110,9 @@ moment on those. The 4-colour levels (25, 35, 39, 40) and the 2-slot level 10 ca
 - [ ] **Grandfather clock monument:** carved mahogany case, hood + glass door, dial with hands, swinging brass pendulum, hanging weights, tubular chimes, dynamite behind them. The glass door shatters.
 - [ ] **Order of coil effects:** repulsor first, then polarity, in the live game and in the solver (fixed a mismatch found by the autoplay bot on Level 101).
 - [ ] **Landing page:** warm workshop splash (lamp glow, turning gears, dust motes, brass title plate with a shine sweep) and a matching HTML loader; Unity's own splash is disabled; the story map has a golden-hour wash.
+
+## Batch 12 (levels 111-120, Automaton Music Box)
+
+- [ ] **11x11 trays, 3 slots (2 in Level 120):** exact optimal moves, 14-19 blocks per level.
+- [ ] **Tighter clock (111+):** par x 1.7 + 5 s, never below 40 s (clocks of 50-75 s).
+- [ ] **Music box monument:** glass dome (shatters), brass collar, steel comb, spinning dancer, two pinned spinning discs, winding key, dynamite behind the discs.
