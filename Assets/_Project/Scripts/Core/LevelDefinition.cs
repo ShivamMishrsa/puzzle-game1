@@ -320,6 +320,21 @@ namespace ColorGateBlast
                     default: x = 0.0f; y = 1.5f; return;
                 }
             }
+            if (kind == MonumentKind.MusicBox)
+            {
+                switch (type)
+                {
+                    case PartType.Lid: x = 0.0f; y = slot == 0 ? 2.1f : 1.15f; return;
+                    case PartType.Crank: x = 1.55f; y = 0.9f; return;
+                    case PartType.Comb: x = 0.0f; y = 1.25f; return;
+                    case PartType.Dancer: x = 0.0f; y = 2.0f; return;
+                    case PartType.Drum: x = slot == 0 ? 0.0f : 0.5f; y = slot == 0 ? 1.7f : 1.3f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.45f; y = 1.35f; } else { x = -0.45f; y = 1.35f; }
+                        return;
+                    default: x = 0.0f; y = 1.8f; return;
+                }
+            }
             if (kind == MonumentKind.GrandfatherClock)
             {
                 switch (type)
@@ -533,7 +548,8 @@ namespace ColorGateBlast
                 case DifficultyClass.Hard: baseSec = 60; break;
                 default: baseSec = 120; break;
             }
-            int need = levelID >= 81 ? (int)Math.Ceiling(par * 2.5) + 10 : par * 2 + 10;
+            int need = levelID >= 111 ? (int)Math.Ceiling(par * 1.7) + 5 : (levelID >= 81 ? (int)Math.Ceiling(par * 2.5) + 10 : par * 2 + 10);
+            if (levelID >= 111) baseSec = 40; // chapter 12 onward: a tight clock, barely more than the solution needs
             int t = Math.Max(baseSec, need);
             return ((t + 4) / 5) * 5;
         }

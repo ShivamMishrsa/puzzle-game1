@@ -174,7 +174,7 @@ namespace ColorGateBlast.EditorTools
             d.levelID = id; d.title = title; d.gridSize = new Int2(w, h);
             d.moveLimit = moves; d.maxTrackSlots = slots; d.tier = tier; d.hint = hint;
             d.megaPierces = id >= 81;
-            d.monument = id >= 101 ? MonumentKind.GrandfatherClock : id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
+            d.monument = id >= 111 ? MonumentKind.MusicBox : id >= 101 ? MonumentKind.GrandfatherClock : id >= 91 ? MonumentKind.Tourbillon : id >= 81 ? MonumentKind.Orrery : id >= 71 ? MonumentKind.Gramophone : id >= 61 ? MonumentKind.Typewriter : id >= 51 ? MonumentKind.TlrCamera : (id >= 41 ? MonumentKind.EspressoMachine : (id >= 31 ? MonumentKind.PocketWatch : (id >= 21 ? MonumentKind.RotaryPhone : (id >= 11 ? MonumentKind.CassettePlayer : MonumentKind.AlarmClock))));
             return d;
         }
 
@@ -219,6 +219,20 @@ namespace ColorGateBlast.EditorTools
                         {
                             mask = MaskOf(d, PartType.GroupHead);
                             if (mask == 0) mask = MaskOf(d, PartType.Boiler);
+                        }
+                        break;
+                    case MonumentKind.MusicBox:
+                        // 4-layer: glass dome + brass collar -> dancer + comb -> pinned discs -> dynamite behind the discs
+                        if (p.type == PartType.Dancer || p.type == PartType.Comb) mask = MaskOf(d, PartType.Lid);
+                        else if (p.type == PartType.Drum)
+                        {
+                            mask = MaskOf(d, PartType.Dancer) | MaskOf(d, PartType.Comb);
+                            if (mask == 0) mask = MaskOf(d, PartType.Lid);
+                        }
+                        else if (p.type == PartType.Tnt)
+                        {
+                            mask = MaskOf(d, PartType.Drum);
+                            if (mask == 0) mask = MaskOf(d, PartType.Dancer) | MaskOf(d, PartType.Comb);
                         }
                         break;
                     case MonumentKind.GrandfatherClock:

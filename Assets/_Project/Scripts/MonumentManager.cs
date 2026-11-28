@@ -198,6 +198,7 @@ namespace ColorGateBlast
                 case MonumentKind.Orrery: BuildOrreryPart(i, spec, lx, ly); break;
                 case MonumentKind.Tourbillon: BuildTourbillonPart(i, spec, lx, ly); break;
                 case MonumentKind.GrandfatherClock: BuildGrandfatherPart(i, spec, lx, ly); break;
+                case MonumentKind.MusicBox: BuildMusicBoxPart(i, spec, lx, ly); break;
                 default: BuildWatchPart(i, spec, lx, ly); break;
             }
             if (views[i].go != null && spec.hasScrew) AddScrew(i, spec);
@@ -359,6 +360,10 @@ namespace ColorGateBlast
             else if (Kind == MonumentKind.GrandfatherClock)
             {
                 BuildGrandfatherDecor();
+            }
+            else if (Kind == MonumentKind.MusicBox)
+            {
+                BuildMusicBoxDecor();
             }
             else
             {
@@ -525,6 +530,138 @@ namespace ColorGateBlast
             Prims.Label(t, "TNT", 0.2f, Color.white, new Vector3(0f, 0f, -0.25f));
             Marker(pv, spec.color, new Vector3(0f, 0.85f, -0.2f));
             Box(pv.go, Vector3.zero, new Vector3(0.8f, 0.7f, 0.5f));
+        }
+
+        // ------------------------------------------------------------------ chapter 12: automaton music box
+
+        private void BuildMusicBoxDecor()
+        {
+            // inlaid mahogany case with brass trim, bun feet and a velvet-dark interior
+            Prims.Make("Case", pivot, Prims.Cube, GameMaterials.Mahogany, new Vector3(0f, 0.6f, 0.1f), new Vector3(2.8f, 0.75f, 1.8f));
+            Prims.Make("Inlay", pivot, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0.6f, -0.81f), new Vector3(2.5f, 0.12f, 0.04f));
+            Prims.Make("InlayTop", pivot, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0.99f, -0.78f), new Vector3(2.85f, 0.05f, 0.05f));
+            Prims.Make("Interior", pivot, Prims.Cube, GameMaterials.Charcoal, new Vector3(0f, 1.0f, 0.1f), new Vector3(2.5f, 0.05f, 1.55f));
+            Prims.Make("BackWall", pivot, Prims.Cube, GameMaterials.Mahogany, new Vector3(0f, 1.55f, 0.88f), new Vector3(2.8f, 1.2f, 0.12f));
+            for (int k = 0; k < 4; k++)
+                Prims.Make("Foot" + k, pivot, Prims.Sphere, GameMaterials.Brass, new Vector3(k < 2 ? -1.2f : 1.2f, 0.12f, k % 2 == 0 ? -0.7f : 0.9f), Vector3.one * 0.3f);
+        }
+
+        private void BuildMusicBoxPart(int i, PartSpec spec, float lx, float ly)
+        {
+            Material mat = GameMaterials.ForBlock(spec.color);
+            switch (spec.type)
+            {
+                case PartType.Lid:
+                {
+                    PartView pv = NewPart(i, "MusicLid" + spec.slot, new Vector3(0f, spec.slot == 0 ? 2.1f : 1.15f, 0.05f));
+                    Transform t = pv.go.transform;
+                    if (spec.slot == 0)
+                    {
+                        Prims.Make("Dome", t, Prims.Sphere, GameMaterials.Acrylic(spec.color), Vector3.zero, new Vector3(2.55f, 1.9f, 1.75f));
+                        Prims.Make("Glint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(-0.7f, 0.55f, -0.62f), new Vector3(0.5f, 0.1f, 0.05f), new Vector3(0f, 0f, 30f));
+                        Marker(pv, spec.color, new Vector3(0.95f, 0.8f, -0.8f));
+                        Sphere(pv.go, Vector3.zero, 1.0f);
+                        pv.aim = new Vector3(0f, 0.2f, -0.8f);
+                    }
+                    else
+                    {
+                        Prims.Make("Collar", t, Prims.Cylinder, GameMaterials.Brass, Vector3.zero, new Vector3(2.7f, 0.1f, 1.8f));
+                        Prims.Make("CollarTrim", t, Prims.Cylinder, GameMaterials.Gold, new Vector3(0f, 0.08f, 0f), new Vector3(2.5f, 0.05f, 1.62f));
+                        Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(-1.0f, 0.05f, -0.6f), Vector3.one * 0.15f);
+                        Marker(pv, spec.color, new Vector3(-1.2f, 0.3f, -0.6f));
+                        Box(pv.go, Vector3.zero, new Vector3(2.7f, 0.25f, 1.8f));
+                        pv.aim = new Vector3(0f, 0f, 0.6f);
+                    }
+                    break;
+                }
+                case PartType.Crank:
+                {
+                    PartView pv = NewPart(i, "WindingKey", new Vector3(1.55f, 0.9f, -0.1f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Shaft", t, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(0.1f, 0.2f, 0.1f), new Vector3(0f, 0f, 90f));
+                    GameObject spin = new GameObject("CrankSpin");
+                    spin.transform.SetParent(t, false);
+                    spin.transform.localPosition = new Vector3(0.22f, 0f, -0.1f);
+                    Prims.Make("Arm", spin.transform, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0.22f, 0f), new Vector3(0.09f, 0.5f, 0.05f));
+                    Prims.Make("Knob", spin.transform, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0f, 0.5f, 0f), Vector3.one * 0.2f);
+                    Prims.Make("Bow", spin.transform, Prims.Sphere, GameMaterials.Gold, new Vector3(0f, -0.2f, 0f), new Vector3(0.28f, 0.2f, 0.08f));
+                    pv.spin = spin.transform;
+                    pv.spinSpeed = 55f;
+                    Marker(pv, spec.color, new Vector3(0.3f, 0.7f, -0.3f));
+                    Sphere(pv.go, new Vector3(0.2f, 0.1f, 0f), 0.5f);
+                    break;
+                }
+                case PartType.Comb:
+                {
+                    PartView pv = NewPart(i, "SteelComb", new Vector3(0f, 1.25f, -0.45f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Bed", t, Prims.Cube, GameMaterials.Brass, new Vector3(0f, 0f, 0.1f), new Vector3(1.9f, 0.1f, 0.18f));
+                    for (int k = 0; k < 14; k++)
+                        Prims.Make("Tooth" + k, t, Prims.Cube, GameMaterials.Steel, new Vector3(-0.86f + k * 0.132f, 0.03f, -0.1f - (k % 3) * 0.02f), new Vector3(0.05f, 0.025f, 0.34f - (k % 5) * 0.03f));
+                    Prims.Make("Tint", t, Prims.Sphere, GameMaterials.Glow(spec.color), new Vector3(0.9f, 0.08f, 0.1f), Vector3.one * 0.13f);
+                    Marker(pv, spec.color, new Vector3(1.0f, 0.4f, -0.2f));
+                    Box(pv.go, new Vector3(0f, 0f, 0f), new Vector3(2.0f, 0.3f, 0.5f));
+                    pv.aim = new Vector3(0f, 0.1f, -0.3f);
+                    break;
+                }
+                case PartType.Dancer:
+                {
+                    PartView pv = NewPart(i, "BalletDancer", new Vector3(0f, 1.55f, -0.05f));
+                    Transform t = pv.go.transform;
+                    Prims.Make("Plinth", t, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0f, 0f), new Vector3(0.7f, 0.06f, 0.7f));
+                    GameObject spin = new GameObject("GovSpin");
+                    spin.transform.SetParent(t, false);
+                    Prims.Make("Tutu", spin.transform, Prims.Cylinder, GameMaterials.Cream, new Vector3(0f, 0.38f, 0f), new Vector3(0.62f, 0.05f, 0.62f));
+                    Prims.Make("Bodice", spin.transform, Prims.Cylinder, mat, new Vector3(0f, 0.6f, 0f), new Vector3(0.22f, 0.2f, 0.22f));
+                    Prims.Make("Head", spin.transform, Prims.Sphere, GameMaterials.Cream, new Vector3(0f, 0.92f, 0f), Vector3.one * 0.2f);
+                    Prims.Make("Bun", spin.transform, Prims.Sphere, GameMaterials.Charcoal, new Vector3(0f, 1.04f, 0.05f), Vector3.one * 0.09f);
+                    Prims.Make("ArmL", spin.transform, Prims.Cube, GameMaterials.Cream, new Vector3(-0.25f, 0.8f, 0f), new Vector3(0.3f, 0.04f, 0.04f), new Vector3(0f, 0f, 35f));
+                    Prims.Make("ArmR", spin.transform, Prims.Cube, GameMaterials.Cream, new Vector3(0.25f, 0.8f, 0f), new Vector3(0.3f, 0.04f, 0.04f), new Vector3(0f, 0f, -35f));
+                    Prims.Make("Leg", spin.transform, Prims.Cylinder, GameMaterials.Cream, new Vector3(0f, 0.15f, 0f), new Vector3(0.07f, 0.2f, 0.07f));
+                    pv.spin = spin.transform;
+                    pv.spinSpeed = 45f;
+                    Marker(pv, spec.color, new Vector3(0.45f, 0.9f, -0.3f));
+                    Sphere(pv.go, new Vector3(0f, 0.55f, 0f), 0.5f);
+                    pv.aim = new Vector3(0f, 0.55f, -0.3f);
+                    break;
+                }
+                case PartType.Drum:
+                {
+                    PartView pv = NewPart(i, "PinnedDisc" + spec.slot, new Vector3(spec.slot == 0 ? 0f : 0.5f, spec.slot == 0 ? 1.75f : 1.3f, spec.slot == 0 ? 0.5f : 0.2f));
+                    Transform t = pv.go.transform;
+                    GameObject spin = new GameObject("DiscSpin");
+                    spin.transform.SetParent(t, false);
+                    float r = spec.slot == 0 ? 0.85f : 0.55f;
+                    Prims.Make("Disc", spin.transform, Prims.Cylinder, GameMaterials.Steel, Vector3.zero, new Vector3(r * 2f, 0.03f, r * 2f), new Vector3(90f, 0f, 0f));
+                    Prims.Make("Rim", spin.transform, Prims.Cylinder, GameMaterials.Brass, new Vector3(0f, 0f, 0.015f), new Vector3(r * 2.05f, 0.015f, r * 2.05f), new Vector3(90f, 0f, 0f));
+                    for (int k = 0; k < 16; k++)
+                    {
+                        float a = k * 22.5f * Mathf.Deg2Rad;
+                        float rr = r * (0.35f + (k % 3) * 0.2f);
+                        Prims.Make("Pin" + k, spin.transform, Prims.Sphere, GameMaterials.Gold, new Vector3(Mathf.Cos(a) * rr, Mathf.Sin(a) * rr, -0.03f), Vector3.one * 0.06f);
+                    }
+                    Prims.Make("Tint", spin.transform, Prims.Cylinder, GameMaterials.Glow(spec.color), new Vector3(0f, 0f, -0.04f), new Vector3(0.22f, 0.02f, 0.22f), new Vector3(90f, 0f, 0f));
+                    pv.spin = spin.transform;
+                    pv.spinSpeed = spec.slot == 0 ? 22f : -30f;
+                    Marker(pv, spec.color, new Vector3(r * 0.8f, r * 0.8f, -0.25f));
+                    Sphere(pv.go, Vector3.zero, r * 0.9f);
+                    pv.aim = new Vector3(0f, 0f, -0.3f);
+                    break;
+                }
+                case PartType.Tnt:
+                    BuildDynamiteBundle(i, spec, 0f, 0f, 0f);
+                    views[i].go.transform.localPosition = new Vector3(spec.slot == 0 ? 0.45f : -0.45f, 1.3f, 0.65f);
+                    views[i].go.transform.localScale = Vector3.one * 0.62f;
+                    break;
+                default:
+                {
+                    PartView pv = NewPart(i, "Part" + i, new Vector3(0f, 1.8f, 0f));
+                    Prims.Make("Block", pv.go.transform, Prims.Cube, mat, Vector3.zero, Vector3.one * 0.5f);
+                    Marker(pv, spec.color, new Vector3(0f, 0.5f, 0f));
+                    Box(pv.go, Vector3.zero, Vector3.one * 0.5f);
+                    break;
+                }
+            }
         }
 
         // ------------------------------------------------------------------ chapter 11: grandfather clock tower
@@ -1916,6 +2053,7 @@ namespace ColorGateBlast
                 || (Kind == MonumentKind.TlrCamera && spec.type == PartType.Body && spec.slot == 1)
                 || (Kind == MonumentKind.Typewriter && spec.type == PartType.Keys)
                 || (Kind == MonumentKind.Orrery && spec.type == PartType.Ring && spec.slot >= 2)
+                || (Kind == MonumentKind.MusicBox && ((spec.type == PartType.Lid && spec.slot == 1) || (spec.type == PartType.Drum && spec.slot == 1)))
                 || (Kind == MonumentKind.GrandfatherClock && ((spec.type == PartType.Hood && spec.slot == 1) || (spec.type == PartType.Weight && spec.slot == 1)))
                 || (Kind == MonumentKind.Tourbillon && ((spec.type == PartType.Bezel && spec.slot >= 2) || (spec.type == PartType.Bridge && spec.slot == 1)))
                 || (Kind == MonumentKind.Gramophone && (spec.type == PartType.Bracket || spec.type == PartType.Horn && spec.slot == 1));
@@ -2062,7 +2200,7 @@ namespace ColorGateBlast
 
             FXManager fx = FXManager.Instance;
             SoundSynth snd = SoundSynth.Instance;
-            bool glass = spec.type == PartType.Glass || spec.type == PartType.Crystal || spec.type == PartType.ClockDoor || spec.type == PartType.Door || spec.type == PartType.Lens || spec.type == PartType.SightTube;
+            bool glass = (spec.type == PartType.Lid && spec.slot == 0) || spec.type == PartType.Glass || spec.type == PartType.Crystal || spec.type == PartType.ClockDoor || spec.type == PartType.Door || spec.type == PartType.Lens || spec.type == PartType.SightTube;
             if (fx != null)
             {
                 if (glass) fx.GlassBreak(pos);

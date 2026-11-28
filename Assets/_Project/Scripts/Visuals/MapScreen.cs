@@ -23,7 +23,7 @@ namespace ColorGateBlast
         private static readonly string[] WorldNames =
         {
             "Alarm Clock Alley", "Cassette Cove", "Rotary Ridge", "Pocket Watch Pond", "Espresso Estate", "Camera Canyon", "Typewriter Town",
-            "Gramophone Glen", "Orrery Observatory", "Tourbillon Tower", "Clocktower Court", "Mystery World", "Mystery World", "Mystery World", "Mystery World"
+            "Gramophone Glen", "Orrery Observatory", "Tourbillon Tower", "Clocktower Court", "Automaton Arcade", "Mystery World", "Mystery World", "Mystery World"
         };
         private static readonly Color[] WorldTints =
         {

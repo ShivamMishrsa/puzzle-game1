@@ -126,7 +126,12 @@ namespace ColorGateBlast
         ClockDoor,
         Pendulum,
         Weight,
-        Chime
+        Chime,
+        // ---- Chapter 12: Automaton Music Box ----
+        Lid,
+        Comb,
+        Drum,
+        Dancer
     }
 
     /// <summary>Which 3D monument a level disassembles.</summary>
@@ -142,7 +147,8 @@ namespace ColorGateBlast
         Gramophone = 7,
         Orrery = 8,
         Tourbillon = 9,
-        GrandfatherClock = 10
+        GrandfatherClock = 10,
+        MusicBox = 11
     }
 
     /// <summary>Difficulty class of a level: sets the countdown clock and whether the move limit is exact.</summary>

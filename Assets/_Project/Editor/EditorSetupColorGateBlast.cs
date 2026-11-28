@@ -293,6 +293,8 @@ namespace ColorGateBlast.EditorTools
         public static void From91() { SetStart(91); }
         [MenuItem("Tools/Color Gate Blast/Play From Level/Level 101", false, 32)]
         public static void From101() { SetStart(101); }
+        [MenuItem("Tools/Color Gate Blast/Play From Level/Level 111", false, 33)]
+        public static void From111() { SetStart(111); }
 
         private static void SetStart(int level)
         {
