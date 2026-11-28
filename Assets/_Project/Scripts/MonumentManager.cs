@@ -137,7 +137,7 @@ namespace ColorGateBlast
             pivot = new GameObject("Pivot").transform;
             pivot.SetParent(root, false);
             pivot.position = anchor + new Vector3(0f, 0.24f, 0f);
-            pivot.localScale = Vector3.one * MonumentScale;
+            pivot.localScale = Vector3.one * (Kind == MonumentKind.GrandfatherClock ? 0.92f : MonumentScale);
 
             views = new PartView[Model.Parts.Length];
             for (int i = 0; i < views.Length; i++)

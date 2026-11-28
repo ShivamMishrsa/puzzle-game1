@@ -23,7 +23,7 @@ namespace ColorGateBlast
         private static readonly string[] WorldNames =
         {
             "Alarm Clock Alley", "Cassette Cove", "Rotary Ridge", "Pocket Watch Pond", "Espresso Estate", "Camera Canyon", "Typewriter Town",
-            "Gramophone Glen", "Orrery Observatory", "Tourbillon Tower", "Mystery World", "Mystery World", "Mystery World", "Mystery World", "Mystery World"
+            "Gramophone Glen", "Orrery Observatory", "Tourbillon Tower", "Clocktower Court", "Mystery World", "Mystery World", "Mystery World", "Mystery World"
         };
         private static readonly Color[] WorldTints =
         {
@@ -176,36 +176,123 @@ namespace ColorGateBlast
             return body.rectTransform;
         }
 
+        private static Sprite radialSprite;
+        private static Sprite RadialSprite()
+        {
+            if (radialSprite != null) return radialSprite;
+            const int n = 128;
+            Texture2D t = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            t.wrapMode = TextureWrapMode.Clamp;
+            Color[] px = new Color[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Mathf.Clamp01(1f - r);
+                    a = a * a * (3f - 2f * a);
+                    px[y * n + x] = new Color(1f, 1f, 1f, a);
+                }
+            t.SetPixels(px);
+            t.Apply();
+            radialSprite = Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+            return radialSprite;
+        }
+
+        private static Sprite VGradient(Color top, Color bottom)
+        {
+            Texture2D t = new Texture2D(2, 128, TextureFormat.RGBA32, false);
+            t.wrapMode = TextureWrapMode.Clamp;
+            Color[] px = new Color[256];
+            for (int y = 0; y < 128; y++)
+            {
+                float k = y / 127f;
+                Color c = Color.Lerp(bottom, top, k);
+                px[y * 2] = c; px[y * 2 + 1] = c;
+            }
+            t.SetPixels(px);
+            t.Apply();
+            return Sprite.Create(t, new Rect(0, 0, 2, 128), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        private RectTransform[] splashGears;
+        private float[] splashGearSpeed;
+        private RectTransform[] splashMotes;
+        private Vector2[] splashMoteBase;
+        private RectTransform splashShine;
+        private Image splashGlow;
+
         private void BuildSplash()
         {
-            splash = Panel("Splash", new Color(0.62f, 0.83f, 0.95f));
-            Image grad = Img(splash, "Sky", GradientSprite(), new Color(0.55f, 0.8f, 0.96f), Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero);
-            grad.rectTransform.anchorMin = Vector2.zero; grad.rectTransform.anchorMax = Vector2.one; grad.rectTransform.offsetMin = Vector2.zero; grad.rectTransform.offsetMax = Vector2.zero;
-            Image meadow = Img(splash, "Meadow", HudSkin.Blob, new Color(0.62f, 0.86f, 0.55f), new Vector2(2600, 1100), new Vector2(0.5f, 0f), new Vector2(0, -520));
-            for (int i = 0; i < 4; i++)
-                Img(splash, "Cloud" + i, HudSkin.Blob, new Color(1f, 1f, 1f, 0.9f), new Vector2(220 + i * 40, 90 + i * 12), new Vector2(i % 2 == 0 ? 0.12f : 0.88f, 0.9f - i * 0.1f), Vector2.zero);
+            // warm golden-hour workshop: mahogany gradient, lamp glow, wood-plank lines, turning brass gears and drifting dust
+            splash = Panel("Splash", new Color(0.12f, 0.07f, 0.045f));
+            Image bg = Img(splash, "Wood", VGradient(new Color(0.34f, 0.19f, 0.09f), new Color(0.09f, 0.05f, 0.035f)), Color.white, Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero);
+            bg.rectTransform.anchorMin = Vector2.zero; bg.rectTransform.anchorMax = Vector2.one; bg.rectTransform.offsetMin = Vector2.zero; bg.rectTransform.offsetMax = Vector2.zero;
+            for (int i = 0; i < 14; i++)
+            {
+                Image plank = Img(splash, "Plank" + i, null, new Color(0f, 0f, 0f, 0.22f), new Vector2(3000, 3), new Vector2(0.5f, i / 14f), Vector2.zero);
+                plank.raycastTarget = false;
+            }
+            splashGlow = Img(splash, "LampGlow", RadialSprite(), new Color(1f, 0.66f, 0.24f, 0.55f), new Vector2(1500, 1300), new Vector2(0.5f, 0.78f), Vector2.zero);
+            Img(splash, "LampCore", RadialSprite(), new Color(1f, 0.82f, 0.45f, 0.45f), new Vector2(760, 640), new Vector2(0.5f, 0.74f), Vector2.zero);
 
-            RectTransform b1 = MakeBuddy(splash, 230, new Color(1f, 0.72f, 0.32f)); b1.anchorMin = b1.anchorMax = new Vector2(0.5f, 0.66f); b1.anchoredPosition = new Vector2(-150, 0); b1.localRotation = Quaternion.Euler(0, 0, 8f);
-            RectTransform b2 = MakeBuddy(splash, 230, new Color(1f, 0.52f, 0.68f)); b2.anchorMin = b2.anchorMax = new Vector2(0.5f, 0.66f); b2.anchoredPosition = new Vector2(90, 70); b2.localRotation = Quaternion.Euler(0, 0, -10f);
-            RectTransform b3 = MakeBuddy(splash, 200, new Color(0.55f, 0.62f, 0.96f)); b3.anchorMin = b3.anchorMax = new Vector2(0.5f, 0.66f); b3.anchoredPosition = new Vector2(-30, -150); b3.localRotation = Quaternion.Euler(0, 0, 4f);
+            splashGears = new RectTransform[5];
+            splashGearSpeed = new float[] { 14f, -20f, 11f, -17f, 9f };
+            Vector2[] ga = { new Vector2(0.02f, 0.93f), new Vector2(0.98f, 0.82f), new Vector2(0.0f, 0.36f), new Vector2(1.0f, 0.26f), new Vector2(0.5f, 0.0f) };
+            float[] gs = { 420f, 330f, 300f, 380f, 520f };
+            for (int i = 0; i < 5; i++)
+            {
+                Image g = Img(splash, "Gear" + i, HudSkin.Gear, new Color(0.86f, 0.62f, 0.22f, 0.20f), new Vector2(gs[i], gs[i]), ga[i], Vector2.zero);
+                g.raycastTarget = false;
+                splashGears[i] = g.rectTransform;
+            }
+
+            splashMotes = new RectTransform[18];
+            splashMoteBase = new Vector2[18];
+            for (int i = 0; i < 18; i++)
+            {
+                float sz = 5f + (i % 4) * 3f;
+                Image m = Img(splash, "Mote" + i, HudSkin.Disc, new Color(1f, 0.86f, 0.55f, 0.18f + (i % 3) * 0.1f), new Vector2(sz, sz), new Vector2(0.06f + (i * 0.173f) % 0.9f, 0.1f + (i * 0.311f) % 0.85f), Vector2.zero);
+                m.raycastTarget = false;
+                splashMotes[i] = m.rectTransform;
+                splashMoteBase[i] = new Vector2(m.rectTransform.anchorMin.x, m.rectTransform.anchorMin.y);
+            }
+
+            // the three block buddies, bobbing in the lamp light with a soft contact shadow
+            Img(splash, "Shadow", HudSkin.Blob, new Color(0f, 0f, 0f, 0.38f), new Vector2(620, 90), new Vector2(0.5f, 0.585f), new Vector2(0, -20));
+            RectTransform b1 = MakeBuddy(splash, 230, new Color(1f, 0.72f, 0.32f)); b1.anchorMin = b1.anchorMax = new Vector2(0.5f, 0.72f); b1.anchoredPosition = new Vector2(-150, 0); b1.localRotation = Quaternion.Euler(0, 0, 8f);
+            RectTransform b2 = MakeBuddy(splash, 230, new Color(1f, 0.46f, 0.52f)); b2.anchorMin = b2.anchorMax = new Vector2(0.5f, 0.72f); b2.anchoredPosition = new Vector2(90, 70); b2.localRotation = Quaternion.Euler(0, 0, -6f);
+            RectTransform b3 = MakeBuddy(splash, 200, new Color(0.45f, 0.78f, 0.98f)); b3.anchorMin = b3.anchorMax = new Vector2(0.5f, 0.72f); b3.anchoredPosition = new Vector2(-30, -150); b3.localRotation = Quaternion.Euler(0, 0, 4f);
             splashBuddies = new[] { b1, b2, b3 };
 
-            Text t1 = Label(splash, "COLOR GATE", 128, new Color(1f, 0.62f, 0.12f), new Vector2(0.5f, 0.42f), new Vector2(0, 40), new Vector2(1000, 150), true);
-            Text t2 = Label(splash, "BLAST", 170, new Color(1f, 0.62f, 0.12f), new Vector2(0.5f, 0.42f), new Vector2(0, -105), new Vector2(1000, 190), true);
-            Image pill = Img(splash, "Pill", HudSkin.Plate, new Color(0.18f, 0.2f, 0.4f), new Vector2(620, 84), new Vector2(0.5f, 0.42f), new Vector2(0, -280));
-            pill.type = Image.Type.Sliced;
-            Label(pill.rectTransform, "BRAIN PUZZLE GAME", 38, Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(600, 80), false);
+            // brass title plate with rivets and a shine that sweeps across
+            Image plate = Img(splash, "TitlePlate", HudSkin.Plate, new Color(0.72f, 0.5f, 0.2f, 0.96f), new Vector2(940, 400), new Vector2(0.5f, 0.43f), new Vector2(0, 10));
+            plate.type = Image.Type.Sliced;
+            Image inner = Img(splash, "TitleInner", HudSkin.Plate, new Color(0.16f, 0.09f, 0.06f, 0.96f), new Vector2(890, 350), new Vector2(0.5f, 0.43f), new Vector2(0, 10));
+            inner.type = Image.Type.Sliced;
+            for (int s = 0; s < 4; s++)
+                Img(splash, "Rivet" + s, HudSkin.Disc, new Color(1f, 0.86f, 0.5f), new Vector2(26, 26), new Vector2(0.5f, 0.43f), new Vector2((s % 2 == 0 ? -1 : 1) * 440f, 10f + (s < 2 ? 185f : -185f)));
+            Label(splash, "COLOR GATE", 120, new Color(1f, 0.93f, 0.78f), new Vector2(0.5f, 0.43f), new Vector2(0, 85), new Vector2(1000, 150), true);
+            Label(splash, "BLAST", 190, new Color(1f, 0.64f, 0.14f), new Vector2(0.5f, 0.43f), new Vector2(0, -70), new Vector2(1000, 210), true);
+            Image shine = Img(splash, "Shine", HudSkin.Plate, new Color(1f, 1f, 1f, 0.20f), new Vector2(60, 380), new Vector2(0.5f, 0.43f), new Vector2(-520, 10));
+            shine.rectTransform.localRotation = Quaternion.Euler(0, 0, 18f);
+            shine.raycastTarget = false;
+            splashShine = shine.rectTransform;
 
-            Image track = Img(splash, "Track", HudSkin.Plate, new Color(0.55f, 0.58f, 0.62f), new Vector2(760, 44), new Vector2(0.5f, 0.2f), new Vector2(0, 60));
+            Image pill = Img(splash, "Pill", HudSkin.Plate, new Color(0.62f, 0.4f, 0.14f), new Vector2(640, 86), new Vector2(0.5f, 0.43f), new Vector2(0, -250));
+            pill.type = Image.Type.Sliced;
+            Label(pill.rectTransform, "BRAIN PUZZLE  -  110 LEVELS", 34, new Color(1f, 0.95f, 0.82f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620, 80), true);
+
+            Image track = Img(splash, "Track", HudSkin.Plate, new Color(0.2f, 0.17f, 0.15f), new Vector2(760, 46), new Vector2(0.5f, 0.16f), new Vector2(0, 60));
             track.type = Image.Type.Sliced;
-            splashFill = Img(track.rectTransform, "Fill", HudSkin.Plate, new Color(1f, 0.62f, 0.12f), new Vector2(20, 30), new Vector2(0f, 0.5f), new Vector2(18, 0));
+            splashFill = Img(track.rectTransform, "Fill", HudSkin.Plate, new Color(1f, 0.66f, 0.16f), new Vector2(20, 30), new Vector2(0f, 0.5f), new Vector2(18, 0));
             splashFill.type = Image.Type.Sliced;
             splashFill.rectTransform.pivot = new Vector2(0f, 0.5f);
-            splashText = Label(splash, "Warming up your gears... 0%", 40, new Color(0.12f, 0.32f, 0.2f), new Vector2(0.5f, 0.2f), new Vector2(0, -30), new Vector2(900, 60), false);
-            Image tip = Img(splash, "Tip", HudSkin.Plate, new Color(1f, 1f, 1f, 0.95f), new Vector2(900, 120), new Vector2(0.5f, 0.07f), Vector2.zero);
+            splashText = Label(splash, "Warming up your gears... 0%", 38, new Color(1f, 0.86f, 0.6f), new Vector2(0.5f, 0.16f), new Vector2(0, -30), new Vector2(900, 60), false);
+            Image tip = Img(splash, "Tip", HudSkin.Plate, new Color(0.17f, 0.11f, 0.08f, 0.96f), new Vector2(900, 120), new Vector2(0.5f, 0.07f), Vector2.zero);
             tip.type = Image.Type.Sliced;
             Img(tip.rectTransform, "Bulb", HudSkin.Disc, new Color(1f, 0.82f, 0.25f), new Vector2(62, 62), new Vector2(0f, 0.5f), new Vector2(70, 0));
-            splashTip = Label(tip.rectTransform, Tips[0], 30, new Color(0.25f, 0.22f, 0.3f), new Vector2(0.5f, 0.5f), new Vector2(40, 0), new Vector2(740, 100), false);
+            splashTip = Label(tip.rectTransform, Tips[0], 30, new Color(0.96f, 0.9f, 0.78f), new Vector2(0.5f, 0.5f), new Vector2(40, 0), new Vector2(740, 100), false);
             splashTip.horizontalOverflow = HorizontalWrapMode.Wrap;
         }
 
@@ -225,7 +312,8 @@ namespace ColorGateBlast
             float t = 0f;
             while (t < seconds)
             {
-                t += Mathf.Min(Time.unscaledDeltaTime, 0.05f); // the first frames after loading are long: do not let them skip the splash
+                float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f); // the first frames after loading are long: do not let them skip the splash
+                t += dt;
                 float p = Mathf.Clamp01(t / seconds);
                 float eased = 1f - (1f - p) * (1f - p);
                 int pct = Mathf.RoundToInt(eased * 100f);
@@ -233,9 +321,20 @@ namespace ColorGateBlast
                 splashText.text = "Warming up your gears... " + pct + "%";
                 for (int i = 0; i < splashBuddies.Length; i++)
                 {
-                    Vector2 ap = splashBuddies[i].anchoredPosition;
-                    splashBuddies[i].localScale = Vector3.one * (1f + 0.04f * Mathf.Sin(Time.unscaledTime * 3f + i * 1.7f));
+                    float ph = Time.unscaledTime * 2.6f + i * 1.7f;
+                    splashBuddies[i].localScale = Vector3.one * (1f + 0.04f * Mathf.Sin(ph));
                 }
+                for (int i = 0; i < splashGears.Length; i++) splashGears[i].Rotate(0f, 0f, splashGearSpeed[i] * dt);
+                for (int i = 0; i < splashMotes.Length; i++)
+                {
+                    float k = (Time.unscaledTime * (0.012f + (i % 5) * 0.004f) + i * 0.137f) % 1f;
+                    Vector2 a = new Vector2(splashMoteBase[i].x + Mathf.Sin(Time.unscaledTime * 0.7f + i) * 0.02f, k);
+                    splashMotes[i].anchorMin = splashMotes[i].anchorMax = a;
+                }
+                float sweep = (Time.unscaledTime * 0.45f) % 1.8f;
+                splashShine.anchoredPosition = new Vector2(-420f + Mathf.Min(sweep, 1f) * 840f, 10f);
+                splashShine.GetComponent<Image>().color = new Color(1f, 1f, 1f, sweep <= 1f ? 0.16f : 0f);
+                if (splashGlow != null) splashGlow.color = new Color(1f, 0.66f, 0.24f, 0.28f + 0.04f * Mathf.Sin(Time.unscaledTime * 2.1f));
                 yield return null;
             }
             splash.gameObject.SetActive(false);
@@ -261,6 +360,13 @@ namespace ColorGateBlast
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 60f;
             scroll.viewport = svr;
+
+            // golden-hour wash over the whole map: warm lamp glow top-right and a soft brown fade at the bottom, so it matches the workshop
+            Image glow = Img(mapRoot, "WarmGlow", RadialSprite(), new Color(1f, 0.74f, 0.34f, 0.30f), new Vector2(1700, 1500), new Vector2(0.92f, 0.96f), Vector2.zero);
+            glow.raycastTarget = false;
+            Image fade = Img(mapRoot, "WarmFade", VGradient(new Color(0.35f, 0.18f, 0.06f, 0f), new Color(0.35f, 0.18f, 0.06f, 0.34f)), Color.white, Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero);
+            fade.rectTransform.anchorMin = Vector2.zero; fade.rectTransform.anchorMax = Vector2.one; fade.rectTransform.offsetMin = Vector2.zero; fade.rectTransform.offsetMax = Vector2.zero;
+            fade.raycastTarget = false;
 
             contentHeight = 240f + TotalLevels * 170f + 700f;
             GameObject c = new GameObject("Content", typeof(RectTransform));

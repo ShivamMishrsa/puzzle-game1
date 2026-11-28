@@ -50,6 +50,7 @@ namespace ColorGateBlast.EditorTools
             PlayerSettings.defaultWebScreenWidth = 540;
             PlayerSettings.defaultWebScreenHeight = 960;
             PlayerSettings.productName = "Color Gate Blast";
+            PlayerSettings.SplashScreen.show = false;
 
             if (Directory.Exists(folder)) Directory.Delete(folder, true);
             Directory.CreateDirectory(folder);
