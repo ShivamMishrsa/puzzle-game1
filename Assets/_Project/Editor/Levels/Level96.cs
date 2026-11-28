@@ -49,6 +49,7 @@ namespace ColorGateBlast.EditorTools
             d.parts.Add(Part(PartType.Rotor, 0, C, 3, 2));
             d.parts.Add(Part(PartType.Tnt, 0, O, 2, 3));
             ResolveHidden(d, false);
+            d.solution = new int[] { 67371011, 83887878, 201785611, 134611212, 67175694, 201720847, 184811523, 17302024, 17302282, 17302533, 17302543, 134610956, 67436811, 17301516, 67110158, 218105870, 218105863, 201328130, 83886089, 83887618, 218302477, 218236932, 184877067 };
             return d;
         }
     }
