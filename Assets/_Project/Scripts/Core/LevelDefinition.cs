@@ -320,6 +320,21 @@ namespace ColorGateBlast
                     default: x = 0.0f; y = 1.5f; return;
                 }
             }
+            if (kind == MonumentKind.PipeOrgan)
+            {
+                switch (type)
+                {
+                    case PartType.Facade: x = 0.0f; y = slot == 0 ? 2.1f : 3.1f; return;
+                    case PartType.Pipes: x = slot == 0 ? 0.0f : 1.0f; y = slot == 0 ? 2.1f : 2.0f; return;
+                    case PartType.Keyboard: x = 0.0f; y = 1.2f; return;
+                    case PartType.Bellows: x = 0.0f; y = 1.0f; return;
+                    case PartType.Stops: x = slot == 0 ? -0.9f : 0.9f; y = 1.7f; return;
+                    case PartType.Tnt:
+                        if (slot == 0) { x = 0.4f; y = 1.1f; } else { x = -0.4f; y = 1.1f; }
+                        return;
+                    default: x = 0.0f; y = 2.0f; return;
+                }
+            }
             if (kind == MonumentKind.MusicBox)
             {
                 switch (type)
@@ -512,6 +527,8 @@ namespace ColorGateBlast
         public List<TurnstileSpec> turnstiles = new List<TurnstileSpec>();
         public List<RepulsorSpec> repulsors = new List<RepulsorSpec>();
         public List<PolaritySpec> polarities = new List<PolaritySpec>();
+        /// <summary>Optional stored solution (packed moves, see LevelSolver.Pack): the hint replays it instantly and level generation verifies it by replay instead of searching.</summary>
+        public int[] solution;
         /// <summary>Merged (Mega) turrets punch through the layer behind their target, like a clockwork piercing gate (levels 81+).</summary>
         public bool megaPierces;
         /// <summary>Countdown in seconds (0 = untimed).</summary>

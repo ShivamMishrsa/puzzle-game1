@@ -49,6 +49,9 @@ namespace ColorGateBlast.EditorTools
         [MenuItem("Tools/Color Gate Blast/Generate Levels 111-120", false, 21)]
         public static void Generate111To120() { GenerateRange(111, 120); }
 
+        [MenuItem("Tools/Color Gate Blast/Generate Levels 121-130", false, 22)]
+        public static void Generate121To130() { GenerateRange(121, 130); }
+
         [MenuItem("Tools/Color Gate Blast/Verify All Levels (solver)", false, 30)]
         public static void VerifyAll()
         {
@@ -79,6 +82,12 @@ namespace ColorGateBlast.EditorTools
         /// <summary>Fast search first; the zero-margin levels whose exact optimum needs a deeper search get a second, bigger budget.</summary>
         private static LevelSolver.SolveResult SolveExact(LevelDefinition def)
         {
+            // a stored solution is verified by replaying it (instant, deterministic) before any searching
+            if (def.solution != null && def.solution.Length > 0)
+            {
+                LevelSolver.SolveResult rep = LevelSolver.Replay(def, def.solution);
+                if (rep.solved && rep.moves <= def.moveLimit) return rep;
+            }
             LevelSolver.SolveResult r = LevelSolver.SolveWithin(def, 30000, 300000, def.moveLimit);
             if (!r.solved) r = LevelSolver.SolveWithin(def, 200000, 1500000, def.moveLimit);
             return r;

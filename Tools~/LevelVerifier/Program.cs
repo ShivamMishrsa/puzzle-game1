@@ -425,6 +425,7 @@ class Program
                 best = r;
             }
             Console.WriteLine("L" + d.levelID + " OPT " + best.moves + (best.exact ? "e" : "h") + " (limit was " + d.moveLimit + ") " + sw.ElapsedMilliseconds + "ms");
+            if (best.path != null) { List<string> ps = new List<string>(); foreach (Move pm in best.path) ps.Add(LevelSolver.Pack(pm).ToString()); Console.WriteLine("L" + d.levelID + " PATH " + string.Join(",", ps.ToArray())); }
         }
     }
 
@@ -432,6 +433,15 @@ class Program
     {
         if (args.Length >= 3 && args[0] == "opt") { Opt(int.Parse(args[1]), int.Parse(args[2])); return; }
         if (args.Length >= 1 && args[0] == "selftest") { SelfTest(); return; }
+        if (args.Length >= 3 && args[0] == "replay")
+        {
+            foreach (LevelDefinition d in LevelLibrary.Range(int.Parse(args[1]), int.Parse(args[2])))
+            {
+                LevelSolver.SolveResult r = LevelSolver.Replay(d, d.solution);
+                Console.WriteLine("L" + d.levelID + " REPLAY " + (r.solved ? "WON in " + r.moves + " (limit " + d.moveLimit + (r.moves <= d.moveLimit ? ")" : ") TOO LONG") : "FAIL (no solution stored or not winning)"));
+            }
+            return;
+        }
         if (args.Length >= 3 && args[0] == "dbg") { Dbg(int.Parse(args[1]), int.Parse(args[2])); return; }
         if (args.Length >= 2 && args[0] == "mon") { Mon(int.Parse(args[1])); return; }
         if (args.Length >= 3 && args[0] == "search") { Search(int.Parse(args[1]), double.Parse(args[2]), args.Length > 3 ? int.Parse(args[3]) : 0, args.Length > 4 ? int.Parse(args[4]) : 0); return; }

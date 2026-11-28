@@ -75,8 +75,15 @@ namespace ColorGateBlast
 
                 string result = "TIMEOUT";
                 int steps = 0, rejected = 0;
-                string predKey = "";
+                string predKey = "", predNoTrack = "";
+                PuzzleState predState = null;
                 System.Collections.Generic.List<Move> plan = new System.Collections.Generic.List<Move>();
+                bool storedPlan = false, storedBroken = false;
+                if (lp.Level.solution != null && lp.Level.solution.Length > 0)
+                {
+                    for (int si = 0; si < lp.Level.solution.Length; si++) plan.Add(LevelSolver.Unpack(lp.Level.solution[si]));
+                    storedPlan = true;
+                }
                 float t0 = Time.realtimeSinceStartup;
                 while (Time.realtimeSinceStartup - t0 < 900f && steps < 90)
                 {
@@ -97,7 +104,28 @@ namespace ColorGateBlast
                     if (lp.grid.RemainingBlocks == 0 && lp.monument.AliveCount == 0) { yield return new WaitForSeconds(0.5f); continue; }
 
                     PuzzleState snap = new PuzzleState(lp.grid.Level, lp.grid.Board, lp.monument.Model, lp.track.Snapshot());
-                    if (plan.Count > 0 && snap.Key() != predKey) plan.Clear();
+                    if (plan.Count > 0 && predKey.Length > 0 && snap.Key() != predKey)
+                    {
+                        if (storedPlan && snap.KeyNoTrack() == predNoTrack) { /* only the belt differs: keep following the stored solution */ }
+                        else
+                        {
+                            if (storedPlan)
+                            {
+                                storedBroken = true;
+                                System.Text.StringBuilder dg = new System.Text.StringBuilder();
+                                dg.Append(" liveHp=");
+                                for (int hi = 0; hi < snap.Monument.Hp.Length; hi++) dg.Append(snap.Monument.Hp[hi]).Append(',');
+                                dg.Append(" predHp=");
+                                for (int hi = 0; hi < predState.Monument.Hp.Length; hi++) dg.Append(predState.Monument.Hp[hi]).Append(',');
+                                dg.Append(" liveParked=");
+                                foreach (TurretInfo ti in snap.Parked) dg.Append(ti.color + ":" + ti.ammo + ",");
+                                dg.Append(" predParked=");
+                                foreach (TurretInfo ti in predState.Parked) dg.Append(ti.color + ":" + ti.ammo + ",");
+                                Debug.Log("[BOT] STORED SOLUTION DIVERGED at step " + steps + dg);
+                            }
+                            plan.Clear();
+                        }
+                    }
                     if (plan.Count == 0)
                     {
                         LevelSolver.SolveResult r = LevelSolver.Solve(snap, 30000, 300000, lp.MovesLeft);
@@ -111,6 +139,8 @@ namespace ColorGateBlast
                     PuzzleState pred = snap.Clone();
                     pred.Apply(mv);
                     predKey = pred.Key();
+                    predNoTrack = pred.KeyNoTrack();
+                    predState = pred;
                     bool ok = lp.grid.AutoMove(mv);
                     if (true)
                     {
@@ -136,7 +166,7 @@ namespace ColorGateBlast
 
                 int used = lp.Level.moveLimit - lp.MovesLeft;
                 string line = "[BOT] Level " + num + " '" + lp.Level.title + "': " + result + " | moves used " + used + "/" + lp.Level.moveLimit +
-                              " | solver steps " + steps + " | errors " + errors.Count;
+                              " | solver steps " + steps + " | errors " + errors.Count + (storedPlan ? (storedBroken ? " | stored=DIVERGED" : " | stored=ok") : "");
                 report.AppendLine(line);
                 Debug.Log(line);
                 for (int e = 0; e < errors.Count && e < 4; e++) report.AppendLine("      " + errors[e]);

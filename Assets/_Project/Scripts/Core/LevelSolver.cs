@@ -27,6 +27,39 @@ namespace ColorGateBlast
 
         private sealed class Link { public Link parent; public Move move; }
 
+        public static int Pack(Move m)
+        {
+            return (m.block & 255) | ((m.to.x & 255) << 8) | ((m.to.y & 255) << 16) | ((m.exit ? 1 : 0) << 24) | ((m.piercing ? 1 : 0) << 25) | (((int)m.dir & 3) << 26);
+        }
+
+        public static Move Unpack(int v)
+        {
+            Move m = new Move();
+            m.block = v & 255;
+            m.to = new Int2((v >> 8) & 255, (v >> 16) & 255);
+            m.exit = ((v >> 24) & 1) == 1;
+            m.piercing = ((v >> 25) & 1) == 1;
+            m.dir = (GateDirection)((v >> 26) & 3);
+            return m;
+        }
+
+        /// <summary>Replays a stored solution from the start: solved when the last move wins; moves = number of moves played.</summary>
+        public static SolveResult Replay(LevelDefinition def, int[] steps)
+        {
+            SolveResult r = new SolveResult();
+            if (steps == null || steps.Length == 0) return r;
+            PuzzleState s = new PuzzleState(def);
+            r.path = new List<Move>();
+            for (int i = 0; i < steps.Length; i++)
+            {
+                Move m = Unpack(steps[i]);
+                s.Apply(m);
+                r.path.Add(m);
+                if (s.IsWon) { r.solved = true; r.moves = i + 1; r.firstMove = Unpack(steps[0]); return r; }
+            }
+            return r;
+        }
+
         private static List<Move> BuildPath(Link tail, Move last)
         {
             List<Move> p = new List<Move>();

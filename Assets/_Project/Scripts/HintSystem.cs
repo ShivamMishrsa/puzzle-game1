@@ -51,12 +51,86 @@ namespace ColorGateBlast
             return r;
         }
 
+        private LevelSolver.SolveResult StoredStep(int[] sol, int k, int extra)
+        {
+            LevelSolver.SolveResult r = new LevelSolver.SolveResult();
+            r.solved = true;
+            r.moves = sol.Length - k + extra;
+            r.firstMove = LevelSolver.Unpack(sol[k]);
+            return r;
+        }
+
+        /// <summary>
+        /// Instant hint from the level's stored solution: finds the player's position on it (or rejoins it within a few moves)
+        /// so even the deepest levels get a reliable hint without any search.
+        /// </summary>
+        private bool TryStoredHint(PuzzleState snap)
+        {
+            int[] sol = grid.Level.solution;
+            if (sol == null || sol.Length == 0) return false;
+            Dictionary<string, int> onPath = new Dictionary<string, int>();
+            PuzzleState cur = new PuzzleState(grid.Level);
+            string full = snap.Key(), loose = snap.KeyNoTrack();
+            for (int k = 0; k < sol.Length; k++)
+            {
+                string lk = cur.KeyNoTrack();
+                if (!onPath.ContainsKey(lk)) onPath.Add(lk, k);
+                if (cur.Key() == full || lk == loose) { Present(StoredStep(sol, k, 0)); return true; }
+                cur.Apply(LevelSolver.Unpack(sol[k]));
+            }
+            // the tray matches a stored position even though the monument/belt bookkeeping differs slightly (ties in turret targeting): the stored move is still the right tray move
+            {
+                string board = snap.KeyBoard();
+                PuzzleState c2 = new PuzzleState(grid.Level);
+                for (int k = 0; k < sol.Length; k++)
+                {
+                    if (c2.KeyBoard() == board) { Present(StoredStep(sol, k, 0)); return true; }
+                    c2.Apply(LevelSolver.Unpack(sol[k]));
+                }
+            }
+            // the player strayed: look a few moves ahead for a way back onto the stored solution that still fits the moves left
+            Queue<PuzzleState> qs = new Queue<PuzzleState>();
+            Queue<int> qd = new Queue<int>();
+            Queue<Move> qf = new Queue<Move>();
+            HashSet<string> seen = new HashSet<string>();
+            seen.Add(loose);
+            qs.Enqueue(snap); qd.Enqueue(0); qf.Enqueue(new Move());
+            List<Move> moves = new List<Move>();
+            int budget = 60000;
+            while (qs.Count > 0 && budget-- > 0)
+            {
+                PuzzleState s = qs.Dequeue(); int d = qd.Dequeue(); Move first = qf.Dequeue();
+                if (d >= 3) continue;
+                moves.Clear();
+                s.GenerateMoves(moves);
+                for (int i = 0; i < moves.Count; i++)
+                {
+                    PuzzleState ns = s.Clone();
+                    ns.Apply(moves[i]);
+                    string nk = ns.KeyNoTrack();
+                    if (!seen.Add(nk)) continue;
+                    Move f = d == 0 ? moves[i] : first;
+                    int j;
+                    if (onPath.TryGetValue(nk, out j) && (MovesLeft <= 0 || d + 1 + (sol.Length - j) <= MovesLeft))
+                    {
+                        LevelSolver.SolveResult r = new LevelSolver.SolveResult();
+                        r.solved = true; r.moves = d + 1 + (sol.Length - j); r.firstMove = f;
+                        Present(r);
+                        return true;
+                    }
+                    qs.Enqueue(ns); qd.Enqueue(d + 1); qf.Enqueue(f);
+                }
+            }
+            return false;
+        }
+
         /// <summary>Starts a background solve of the current position.</summary>
         public void RequestHint()
         {
             if (pending != null || grid == null || grid.Board == null || monument.Model == null) return;
             ClearHint();
             PuzzleState snap = new PuzzleState(grid.Level, grid.Board, monument.Model, track.Snapshot());
+            if (TryStoredHint(snap)) return;
 #if UNITY_WEBGL && !UNITY_EDITOR
             // WebGL has no threads: solve on the main thread with a smaller budget so the page stays responsive.
             Present(SolveBudget(snap, 12000, 90000));

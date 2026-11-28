@@ -151,6 +151,23 @@ namespace ColorGateBlast
             }
         }
 
+        /// <summary>Key ignoring the turrets parked on the belt (used to recognise a position on a stored solution while turrets are still moving).</summary>
+        /// <summary>Tray-only key (block positions, exits, ice, crates, prism colours, toggles); ignores monument HP and the belt.</summary>
+        public string KeyBoard()
+        {
+            List<char> k = new List<char>(Board.BlockCount + 8);
+            Board.AppendKey(k);
+            return new string(k.ToArray());
+        }
+
+        public string KeyNoTrack()
+        {
+            List<char> k = new List<char>(Board.BlockCount + Monument.Hp.Length + 8);
+            Board.AppendKey(k);
+            Monument.AppendKey(k);
+            return new string(k.ToArray());
+        }
+
         public string Key()
         {
             List<char> k = new List<char>(Board.BlockCount + Monument.Hp.Length + 8);
